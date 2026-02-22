@@ -1,0 +1,28 @@
+name: OpenAlarm
+options:
+  minimumXcodeGenVersion: 2.44.1
+  createIntermediateGroups: true
+settings:
+  base:
+    DEVELOPMENT_LANGUAGE: en
+
+targets:
+  OpenAlarm:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: OpenAlarm
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.watsonorg.openalarm
+        PRODUCT_NAME: OpenAlarm
+        SWIFT_VERSION: 5.0
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: 0.1.0
+        GENERATE_INFOPLIST_FILE: YES
+        LOCALIZATIONS: "en de"
+        INFOPLIST_KEY_CFBundleDevelopmentRegion: en
+        INFOPLIST_KEY_CFBundleLocalizations: "$(LOCALIZATIONS)"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
+        TARGETED_DEVICE_FAMILY: "1,2"
