@@ -34,6 +34,8 @@ This repo uses `xcodegen`.
 
 ```bash
 xcodegen generate
+# or
+make generate
 ```
 
 Then open `OpenAlarm.xcodeproj` in Xcode.
