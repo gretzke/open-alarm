@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+./scripts/check_no_literals.sh
+./scripts/check_i18n.sh

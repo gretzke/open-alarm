@@ -45,6 +45,12 @@ Run locally:
 make check
 ```
 
+Optional local hard-stop before every commit:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 ## Generate Xcode project
 
 This repo uses `xcodegen`.
