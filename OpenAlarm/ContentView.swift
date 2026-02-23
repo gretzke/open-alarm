@@ -3,10 +3,10 @@ import SwiftUI
 struct ContentView: View {
     var body: some View {
         VStack(spacing: 12) {
-            Text("hello_world_title")
+            Text(L10n.helloWorldTitle)
                 .font(.largeTitle.bold())
 
-            Text("hello_world_subtitle")
+            Text(L10n.helloWorldSubtitle)
                 .font(.body)
                 .foregroundStyle(.secondary)
         }

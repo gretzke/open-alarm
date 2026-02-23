@@ -1,0 +1,20 @@
+name: i18n guardrails
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check no direct UI literals
+        run: ./scripts/check_no_literals.sh
+
+      - name: Check localization key parity
+        run: ./scripts/check_i18n.sh

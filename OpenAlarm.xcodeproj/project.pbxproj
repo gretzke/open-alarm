@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1068E5E14AAA376BDD6E846B /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0511AEB1608CC1DFD19C495 /* L10n.swift */; };
 		4796FE34E7D27B854FB78CB6 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 8E679FED54733251272BD0A9 /* Localizable.strings */; };
 		7A6C9625D2A75EB1C003316B /* OpenAlarmApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 764BB1926C868CDA8BB0801A /* OpenAlarmApp.swift */; };
 		D7AEB563A9ECA01A3ACA9D55 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93EBF54B81515242AEB7A8B5 /* ContentView.swift */; };
@@ -17,6 +18,7 @@
 		59535AE7D6830B97391FD0E5 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Localizable.strings; sourceTree = "<group>"; };
 		764BB1926C868CDA8BB0801A /* OpenAlarmApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAlarmApp.swift; sourceTree = "<group>"; };
 		93EBF54B81515242AEB7A8B5 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		B0511AEB1608CC1DFD19C495 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		E9ACF85F89CF9D011BF26A5E /* OpenAlarm.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OpenAlarm.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -41,6 +43,7 @@
 			isa = PBXGroup;
 			children = (
 				93EBF54B81515242AEB7A8B5 /* ContentView.swift */,
+				B0511AEB1608CC1DFD19C495 /* L10n.swift */,
 				764BB1926C868CDA8BB0801A /* OpenAlarmApp.swift */,
 				FD7B31457CC502B622019E4F /* Resources */,
 			);
@@ -122,6 +125,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D7AEB563A9ECA01A3ACA9D55 /* ContentView.swift in Sources */,
+				1068E5E14AAA376BDD6E846B /* L10n.swift in Sources */,
 				7A6C9625D2A75EB1C003316B /* OpenAlarmApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

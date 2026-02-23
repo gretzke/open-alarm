@@ -22,10 +22,27 @@ Minimal iOS app skeleton for the Open Alarm project.
 ```text
 OpenAlarm/
   ContentView.swift
+  L10n.swift
   OpenAlarmApp.swift
   Resources/
     en.lproj/Localizable.strings
     de.lproj/Localizable.strings
+scripts/
+  check_no_literals.sh
+  check_i18n.sh
+```
+
+## i18n guardrails
+
+- **No direct UI literals**: use `L10n.*` keys in SwiftUI instead of hardcoded strings.
+- `scripts/check_no_literals.sh` fails if someone adds things like `Text("Hello")`.
+- `scripts/check_i18n.sh` fails if `en/de/...` key sets drift.
+- GitHub Action runs both checks on push/PR.
+
+Run locally:
+
+```bash
+make check
 ```
 
 ## Generate Xcode project
@@ -46,8 +63,9 @@ Then open `OpenAlarm.xcodeproj` in Xcode.
    - `OpenAlarm/Resources/<lang>.lproj/Localizable.strings`
 2. Add translated keys.
 3. Add `<lang>` to `LOCALIZATIONS` in `project.yml`.
-4. Re-run:
+4. Re-run project generation and checks:
 
 ```bash
-xcodegen generate
+make generate
+make check
 ```
