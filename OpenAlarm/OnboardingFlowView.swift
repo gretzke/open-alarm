@@ -52,13 +52,16 @@ private struct WelcomeStepView: View {
                     .foregroundStyle(OAColor.textPrimary)
                     .multilineTextAlignment(.center)
 
-                VStack(alignment: .leading, spacing: 12) {
-                    BenefitRow(text: L10n.onboardingWelcomeNoSubscriptions)
-                    BenefitRow(text: L10n.onboardingWelcomeNoAds)
-                    BenefitRow(text: L10n.onboardingWelcomeNoTracking)
-                    BenefitRow(text: L10n.onboardingWelcomeOpenSource)
+                VStack(spacing: 14) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        BenefitRow(text: L10n.onboardingWelcomeNoSubscriptions)
+                        BenefitRow(text: L10n.onboardingWelcomeNoAds)
+                        BenefitRow(text: L10n.onboardingWelcomeNoTracking)
+                        BenefitRow(text: L10n.onboardingWelcomeOpenSource)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-                    HStack(spacing: 10) {
+                    HStack(spacing: 8) {
                         Image(systemName: "infinity")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(OAColor.actionCyan)
@@ -67,9 +70,9 @@ private struct WelcomeStepView: View {
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(OAColor.actionCyan)
                     }
-                    .padding(.top, 6)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 2)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(24)
             .oaGlassCard()
@@ -151,11 +154,6 @@ private struct AlarmPermissionPrePromptStepView: View {
             .buttonStyle(.plain)
             .disabled(isRequesting)
             .accessibilityIdentifier("onboarding_permission_request_next")
-
-            Text(L10n.onboardingPermissionRequestHint)
-                .font(.footnote)
-                .foregroundStyle(OAColor.textSecondary)
-                .multilineTextAlignment(.center)
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)

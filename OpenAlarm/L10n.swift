@@ -21,7 +21,6 @@ enum L10n {
 
     static let onboardingPermissionRequestTitle: LocalizedStringKey = "onboarding_permission_request_title"
     static let onboardingPermissionRequestBody: LocalizedStringKey = "onboarding_permission_request_body"
-    static let onboardingPermissionRequestHint: LocalizedStringKey = "onboarding_permission_request_hint"
 
     static let onboardingPermissionDeniedTitle: LocalizedStringKey = "onboarding_permission_denied_title"
     static let onboardingPermissionDeniedBody: LocalizedStringKey = "onboarding_permission_denied_body"
