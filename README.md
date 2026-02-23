@@ -5,6 +5,7 @@ Minimal iOS app skeleton for the Open Alarm project.
 ## Design spec
 
 - See `docs/design-spec.md` for the locked visual language and UI decisions.
+- See `docs/onboarding-architecture.md` for onboarding flow architecture.
 
 ## Current scope
 

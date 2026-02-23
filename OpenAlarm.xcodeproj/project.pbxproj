@@ -7,23 +7,36 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0137578A7C3DB65015FC02BE /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22E4F6FF18C9BE1617CD7543 /* OnboardingFlowView.swift */; };
+		0B5A2C2BC6692B00E79A988E /* AlarmPermissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83400772796DC9406DADEF9F /* AlarmPermissionService.swift */; };
 		1068E5E14AAA376BDD6E846B /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0511AEB1608CC1DFD19C495 /* L10n.swift */; };
+		42DA53AB032443282ACAC432 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E55D19BAE63F4BCAD183A095 /* MainTabView.swift */; };
+		43A37EA685F224896032D009 /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D65E8CA1DA583D987D1FDE53 /* AppRootView.swift */; };
 		4796FE34E7D27B854FB78CB6 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 8E679FED54733251272BD0A9 /* Localizable.strings */; };
 		5824049B9D337E771858C73B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CFE2D4CDA835E9DD606528A0 /* Assets.xcassets */; };
+		58BDACC5F57BBA0A5953274E /* OpenAlarmTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91529C2531FED87446559016 /* OpenAlarmTheme.swift */; };
 		7A6C9625D2A75EB1C003316B /* OpenAlarmApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 764BB1926C868CDA8BB0801A /* OpenAlarmApp.swift */; };
 		A07CAFA80E4CC40C1C53496B /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = E43A03F552339F3CF4DBCF2C /* LaunchScreen.storyboard */; };
-		D7AEB563A9ECA01A3ACA9D55 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93EBF54B81515242AEB7A8B5 /* ContentView.swift */; };
+		BDD2C5EBBA247FBB4FD16F4D /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 2E7F4014449CC01093832222 /* InfoPlist.strings */; };
+		E072A215F811DC860E8ED2F1 /* OnboardingEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6981BF284D917EBC650816B /* OnboardingEngine.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		0D166817BB079DD4546C285D /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		1AAB5EE73D1350495BF00CA8 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		22E4F6FF18C9BE1617CD7543 /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowView.swift; sourceTree = "<group>"; };
 		59535AE7D6830B97391FD0E5 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Localizable.strings; sourceTree = "<group>"; };
 		764BB1926C868CDA8BB0801A /* OpenAlarmApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAlarmApp.swift; sourceTree = "<group>"; };
-		93EBF54B81515242AEB7A8B5 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		83400772796DC9406DADEF9F /* AlarmPermissionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmPermissionService.swift; sourceTree = "<group>"; };
+		91529C2531FED87446559016 /* OpenAlarmTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAlarmTheme.swift; sourceTree = "<group>"; };
+		A6981BF284D917EBC650816B /* OnboardingEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingEngine.swift; sourceTree = "<group>"; };
 		B0511AEB1608CC1DFD19C495 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		CFE2D4CDA835E9DD606528A0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		D65E8CA1DA583D987D1FDE53 /* AppRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRootView.swift; sourceTree = "<group>"; };
 		E43A03F552339F3CF4DBCF2C /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		E55D19BAE63F4BCAD183A095 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		E9ACF85F89CF9D011BF26A5E /* OpenAlarm.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OpenAlarm.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F68BF27EA97B5D8C42193398 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -46,11 +59,16 @@
 		BCC1989FF6463FB02B837C9B /* OpenAlarm */ = {
 			isa = PBXGroup;
 			children = (
+				83400772796DC9406DADEF9F /* AlarmPermissionService.swift */,
+				D65E8CA1DA583D987D1FDE53 /* AppRootView.swift */,
 				CFE2D4CDA835E9DD606528A0 /* Assets.xcassets */,
-				93EBF54B81515242AEB7A8B5 /* ContentView.swift */,
 				B0511AEB1608CC1DFD19C495 /* L10n.swift */,
 				E43A03F552339F3CF4DBCF2C /* LaunchScreen.storyboard */,
+				E55D19BAE63F4BCAD183A095 /* MainTabView.swift */,
+				A6981BF284D917EBC650816B /* OnboardingEngine.swift */,
+				22E4F6FF18C9BE1617CD7543 /* OnboardingFlowView.swift */,
 				764BB1926C868CDA8BB0801A /* OpenAlarmApp.swift */,
+				91529C2531FED87446559016 /* OpenAlarmTheme.swift */,
 				FD7B31457CC502B622019E4F /* Resources */,
 			);
 			path = OpenAlarm;
@@ -59,6 +77,7 @@
 		FD7B31457CC502B622019E4F /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				2E7F4014449CC01093832222 /* InfoPlist.strings */,
 				8E679FED54733251272BD0A9 /* Localizable.strings */,
 			);
 			path = Resources;
@@ -126,6 +145,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5824049B9D337E771858C73B /* Assets.xcassets in Resources */,
+				BDD2C5EBBA247FBB4FD16F4D /* InfoPlist.strings in Resources */,
 				A07CAFA80E4CC40C1C53496B /* LaunchScreen.storyboard in Resources */,
 				4796FE34E7D27B854FB78CB6 /* Localizable.strings in Resources */,
 			);
@@ -138,15 +158,29 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D7AEB563A9ECA01A3ACA9D55 /* ContentView.swift in Sources */,
+				0B5A2C2BC6692B00E79A988E /* AlarmPermissionService.swift in Sources */,
+				43A37EA685F224896032D009 /* AppRootView.swift in Sources */,
 				1068E5E14AAA376BDD6E846B /* L10n.swift in Sources */,
+				42DA53AB032443282ACAC432 /* MainTabView.swift in Sources */,
+				E072A215F811DC860E8ED2F1 /* OnboardingEngine.swift in Sources */,
+				0137578A7C3DB65015FC02BE /* OnboardingFlowView.swift in Sources */,
 				7A6C9625D2A75EB1C003316B /* OpenAlarmApp.swift in Sources */,
+				58BDACC5F57BBA0A5953274E /* OpenAlarmTheme.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
+		2E7F4014449CC01093832222 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				1AAB5EE73D1350495BF00CA8 /* de */,
+				F68BF27EA97B5D8C42193398 /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
 		8E679FED54733251272BD0A9 /* Localizable.strings */ = {
 			isa = PBXVariantGroup;
 			children = (
@@ -172,9 +206,11 @@
 				INFOPLIST_KEY_CFBundleIconName = AppIcon;
 				INFOPLIST_KEY_CFBundleLocalizations = "$(LOCALIZATIONS)";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSAlarmKitUsageDescription = "OpenAlarm needs alarm access to schedule alarms and timers you create.";
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -265,9 +301,11 @@
 				INFOPLIST_KEY_CFBundleIconName = AppIcon;
 				INFOPLIST_KEY_CFBundleLocalizations = "$(LOCALIZATIONS)";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSAlarmKitUsageDescription = "OpenAlarm needs alarm access to schedule alarms and timers you create.";
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

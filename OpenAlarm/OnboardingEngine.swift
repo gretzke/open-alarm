@@ -1,0 +1,121 @@
+import Foundation
+import UIKit
+
+enum OneTimeOnboardingStep: String, CaseIterable {
+    case welcome
+}
+
+enum ReusableOnboardingStep: Hashable {
+    case alarmPermissionPrePrompt
+    case alarmPermissionDenied
+}
+
+enum OnboardingStep: Hashable, Identifiable {
+    case oneTime(OneTimeOnboardingStep)
+    case reusable(ReusableOnboardingStep)
+
+    var id: String {
+        switch self {
+        case let .oneTime(step):
+            return "oneTime_\(step.rawValue)"
+        case let .reusable(step):
+            return "reusable_\(String(describing: step))"
+        }
+    }
+}
+
+struct ReusableOnboardingRule {
+    let id: String
+    let priority: Int
+    let buildStep: (OnboardingEvaluationContext) -> ReusableOnboardingStep?
+}
+
+struct OnboardingEvaluationContext {
+    let alarmPermissionStatus: AlarmPermissionStatus
+}
+
+@MainActor
+final class OnboardingEngine: ObservableObject {
+    @Published private(set) var activeStep: OnboardingStep?
+
+    private let userDefaults: UserDefaults
+    private let alarmPermissionService: AlarmPermissionService
+    private let onboardingCompleteKey = "ONBOARDING_COMPLETE"
+
+    private let oneTimeSteps: [OneTimeOnboardingStep] = [.welcome]
+    private lazy var reusableRules: [ReusableOnboardingRule] = [
+        ReusableOnboardingRule(id: "alarm_permission", priority: 0) { context in
+            switch context.alarmPermissionStatus {
+            case .authorized:
+                return nil
+            case .notDetermined:
+                return .alarmPermissionPrePrompt
+            case .denied:
+                return .alarmPermissionDenied
+            }
+        }
+    ]
+
+    init(
+        userDefaults: UserDefaults = .standard,
+        alarmPermissionService: AlarmPermissionService? = nil
+    ) {
+        self.userDefaults = userDefaults
+        self.alarmPermissionService = alarmPermissionService ?? AlarmPermissionService()
+        refreshWorkflow()
+    }
+
+    var isPresentingOnboarding: Bool {
+        activeStep != nil
+    }
+
+    func handleAppOpened() {
+        refreshWorkflow()
+    }
+
+    func completeOneTimeWelcome() {
+        userDefaults.set(true, forKey: onboardingCompleteKey)
+        refreshWorkflow()
+    }
+
+    func requestAlarmPermission() async {
+        _ = await alarmPermissionService.requestAuthorization()
+        refreshWorkflow()
+    }
+
+    func openSettings() {
+        guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else {
+            return
+        }
+        UIApplication.shared.open(settingsURL)
+    }
+
+    func recheckReusableScreens() {
+        refreshWorkflow()
+    }
+
+    private func refreshWorkflow() {
+        let context = OnboardingEvaluationContext(
+            alarmPermissionStatus: alarmPermissionService.currentStatus()
+        )
+
+        var workflow: [OnboardingStep] = []
+
+        if !userDefaults.bool(forKey: onboardingCompleteKey) {
+            workflow.append(contentsOf: oneTimeSteps.map(OnboardingStep.oneTime))
+        }
+
+        let reusableWorkflow = reusableRules
+            .sorted { lhs, rhs in
+                if lhs.priority == rhs.priority {
+                    return lhs.id < rhs.id
+                }
+                return lhs.priority < rhs.priority
+            }
+            .compactMap { $0.buildStep(context) }
+            .map(OnboardingStep.reusable)
+
+        workflow.append(contentsOf: reusableWorkflow)
+        activeStep = workflow.first
+    }
+}

@@ -1,2 +1,27 @@
-"hello_world_title" = "Hello, World!";
-"hello_world_subtitle" = "Welcome to Open Alarm.";
+"app_title" = "OpenAlarm";
+
+"tab_alarm" = "Alarm";
+"tab_settings" = "Settings";
+
+"alarm_home_title" = "Hello, World!";
+"alarm_home_subtitle" = "OpenAlarm is ready. Next step: onboarding + permissions.";
+
+"settings_title" = "Settings";
+"settings_subtitle" = "More options will land here soon.";
+
+"onboarding_welcome_title" = "Welcome to OpenAlarm";
+"onboarding_welcome_no_subscriptions" = "No subscriptions";
+"onboarding_welcome_no_ads" = "No ads";
+"onboarding_welcome_no_tracking" = "No tracking";
+"onboarding_welcome_open_source" = "Open source forever";
+
+"onboarding_permission_request_title" = "Allow alarm scheduling";
+"onboarding_permission_request_body" = "OpenAlarm needs permission to schedule alarms and timers. We will ask iOS for this on the next step.";
+
+"onboarding_permission_denied_title" = "Alarm scheduling is disabled";
+"onboarding_permission_denied_body" = "To use OpenAlarm, allow Alarms & Timers in Settings for this app.";
+
+"action_next" = "Next";
+"action_open_settings" = "Open Settings";
+"action_i_enabled_permission" = "I enabled it";
+"action_requesting" = "Requesting…";

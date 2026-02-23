@@ -4,7 +4,7 @@ import SwiftUI
 struct OpenAlarmApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            AppRootView()
         }
     }
 }
