@@ -162,7 +162,7 @@
 				);
 				LOCALIZATIONS = "en de";
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.watsonorg.openalarm;
+				PRODUCT_BUNDLE_IDENTIFIER = com.gretzke.openalarm;
 				PRODUCT_NAME = OpenAlarm;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.0;
@@ -250,7 +250,7 @@
 				);
 				LOCALIZATIONS = "en de";
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.watsonorg.openalarm;
+				PRODUCT_BUNDLE_IDENTIFIER = com.gretzke.openalarm;
 				PRODUCT_NAME = OpenAlarm;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.0;

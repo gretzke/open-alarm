@@ -15,7 +15,7 @@ targets:
       - path: OpenAlarm
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.watsonorg.openalarm
+        PRODUCT_BUNDLE_IDENTIFIER: com.gretzke.openalarm
         PRODUCT_NAME: OpenAlarm
         SWIFT_VERSION: 5.0
         CURRENT_PROJECT_VERSION: 1
