@@ -2,6 +2,10 @@
 
 Minimal iOS app skeleton for the Open Alarm project.
 
+## Design spec
+
+- See `docs/design-spec.md` for the locked visual language and UI decisions.
+
 ## Current scope
 
 - SwiftUI app with a single screen
