@@ -3,11 +3,46 @@
 "tab_alarm" = "Alarm";
 "tab_settings" = "Einstellungen";
 
-"alarm_home_title" = "Hallo, Welt!";
-"alarm_home_subtitle" = "OpenAlarm ist bereit. Nächster Schritt: Onboarding + Berechtigungen.";
+"alarm_list_title" = "Alarme";
+"alarm_list_empty_title" = "Noch keine Alarme";
+"alarm_list_empty_subtitle" = "Tippe auf +, um deinen ersten Alarm zu erstellen.";
+
+"alarm_row_repeat_one_time" = "Einmalig";
+"alarm_row_repeat_prefix" = "Wiederholt";
+"alarm_row_delete_after_use" = "Nach Nutzung löschen";
+"alarm_row_keep_after_use" = "Nach Nutzung behalten";
+
+"alarm_state_scheduled" = "Geplant";
+"alarm_state_alerting" = "Klingelt";
+"alarm_state_awaiting_wake_check" = "Wake-Check ausstehend";
+"alarm_state_completed" = "Abgeschlossen";
+
+"alarm_editor_new_title" = "Neuer Alarm";
+"alarm_editor_edit_title" = "Alarm bearbeiten";
+"alarm_editor_time_title" = "Uhrzeit";
+"alarm_editor_behavior_title" = "Verhalten";
+"alarm_editor_delete_after_use_toggle" = "Alarm nach Nutzung löschen";
+"alarm_editor_repeat_days_title" = "An Tagen wiederholen";
+"alarm_editor_try_out" = "Ausprobieren";
+"alarm_editor_try_out_description" = "Erstellt einen temporären Test-Alarm auf Basis dieser Einstellungen. Er bleibt in der Alarmliste unsichtbar und wird nach dem Klingeln automatisch entfernt.";
+
+"alarm_editor_error_permission_denied" = "Alarm-Berechtigung wird benötigt. Aktiviere „Alarme & Timer“ in den Einstellungen.";
+"alarm_editor_error_generic" = "Etwas ist schiefgelaufen. Bitte versuche es erneut.";
+
+"tryout_sheet_title" = "Ausprobieren";
+"tryout_option_5_seconds" = "In 5 Sekunden";
+"tryout_option_10_seconds" = "In 10 Sekunden";
+"tryout_option_30_seconds" = "In 30 Sekunden";
+"tryout_option_1_minute" = "In 1 Minute";
+"tryout_option_2_minutes" = "In 2 Minuten";
+"tryout_option_5_minutes" = "In 5 Minuten";
 
 "settings_title" = "Einstellungen";
-"settings_subtitle" = "Weitere Optionen folgen hier bald.";
+"settings_permission_title" = "Alarm-Berechtigung";
+"settings_permission_status_label" = "Status";
+"settings_permission_authorized" = "Erlaubt";
+"settings_permission_not_determined" = "Nicht angefragt";
+"settings_permission_denied" = "Abgelehnt";
 
 "onboarding_welcome_title" = "Willkommen bei OpenAlarm";
 "onboarding_welcome_no_subscriptions" = "Keine Abos";
@@ -25,3 +60,7 @@
 "action_next" = "Weiter";
 "action_open_settings" = "Einstellungen öffnen";
 "action_requesting" = "Wird angefragt…";
+"action_cancel" = "Abbrechen";
+"action_add" = "Hinzufügen";
+"action_save" = "Speichern";
+"action_delete" = "Löschen";

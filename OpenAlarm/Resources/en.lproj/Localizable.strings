@@ -3,11 +3,46 @@
 "tab_alarm" = "Alarm";
 "tab_settings" = "Settings";
 
-"alarm_home_title" = "Hello, World!";
-"alarm_home_subtitle" = "OpenAlarm is ready. Next step: onboarding + permissions.";
+"alarm_list_title" = "Alarms";
+"alarm_list_empty_title" = "No alarms yet";
+"alarm_list_empty_subtitle" = "Tap + to create your first alarm.";
+
+"alarm_row_repeat_one_time" = "One time";
+"alarm_row_repeat_prefix" = "Repeats";
+"alarm_row_delete_after_use" = "Delete after use";
+"alarm_row_keep_after_use" = "Keeps after use";
+
+"alarm_state_scheduled" = "Scheduled";
+"alarm_state_alerting" = "Ringing";
+"alarm_state_awaiting_wake_check" = "Pending wake check";
+"alarm_state_completed" = "Completed";
+
+"alarm_editor_new_title" = "New Alarm";
+"alarm_editor_edit_title" = "Edit Alarm";
+"alarm_editor_time_title" = "Time";
+"alarm_editor_behavior_title" = "Behavior";
+"alarm_editor_delete_after_use_toggle" = "Delete alarm after use";
+"alarm_editor_repeat_days_title" = "Repeat on days";
+"alarm_editor_try_out" = "Try it out";
+"alarm_editor_try_out_description" = "Creates a temporary test alarm based on this setup. It is hidden from your alarm list and auto-cleans after ringing.";
+
+"alarm_editor_error_permission_denied" = "Alarm permission is required. Enable Alarms & Timers in Settings.";
+"alarm_editor_error_generic" = "Something went wrong. Please try again.";
+
+"tryout_sheet_title" = "Try it out";
+"tryout_option_5_seconds" = "In 5 seconds";
+"tryout_option_10_seconds" = "In 10 seconds";
+"tryout_option_30_seconds" = "In 30 seconds";
+"tryout_option_1_minute" = "In 1 minute";
+"tryout_option_2_minutes" = "In 2 minutes";
+"tryout_option_5_minutes" = "In 5 minutes";
 
 "settings_title" = "Settings";
-"settings_subtitle" = "More options will land here soon.";
+"settings_permission_title" = "Alarm permission";
+"settings_permission_status_label" = "Status";
+"settings_permission_authorized" = "Authorized";
+"settings_permission_not_determined" = "Not requested";
+"settings_permission_denied" = "Denied";
 
 "onboarding_welcome_title" = "Welcome to OpenAlarm";
 "onboarding_welcome_no_subscriptions" = "No subscriptions";
@@ -25,3 +60,7 @@
 "action_next" = "Next";
 "action_open_settings" = "Open Settings";
 "action_requesting" = "Requesting…";
+"action_cancel" = "Cancel";
+"action_add" = "Add";
+"action_save" = "Save";
+"action_delete" = "Delete";
