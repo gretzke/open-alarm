@@ -20,9 +20,6 @@ struct OnboardingFlowView: View {
                 AlarmPermissionDeniedStepView(
                     onOpenSettings: {
                         engine.openSettings()
-                    },
-                    onRecheck: {
-                        engine.recheckReusableScreens()
                     }
                 )
 
@@ -163,7 +160,6 @@ private struct AlarmPermissionPrePromptStepView: View {
 
 private struct AlarmPermissionDeniedStepView: View {
     let onOpenSettings: () -> Void
-    let onRecheck: () -> Void
 
     var body: some View {
         VStack(spacing: 24) {
@@ -185,40 +181,20 @@ private struct AlarmPermissionDeniedStepView: View {
             .padding(24)
             .oaGlassCard()
 
-            VStack(spacing: 12) {
-                Button(action: onOpenSettings) {
-                    Text(L10n.actionOpenSettings)
-                        .font(.headline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .foregroundStyle(OAColor.background)
-                        .background(
-                            RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                .fill(OAColor.actionCyan)
-                        )
-                        .shadow(color: OAColor.actionCyan.opacity(0.36), radius: 16, x: 0, y: 10)
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("onboarding_permission_denied_open_settings")
-
-                Button(action: onRecheck) {
-                    Text(L10n.actionIEnabledPermission)
-                        .font(.headline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .foregroundStyle(OAColor.textPrimary)
-                        .background(
-                            RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                .fill(OAColor.glassFill)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                .stroke(OAColor.glassStroke, lineWidth: 1)
-                        )
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("onboarding_permission_denied_recheck")
+            Button(action: onOpenSettings) {
+                Text(L10n.actionOpenSettings)
+                    .font(.headline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .foregroundStyle(OAColor.background)
+                    .background(
+                        RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                            .fill(OAColor.actionCyan)
+                    )
+                    .shadow(color: OAColor.actionCyan.opacity(0.36), radius: 16, x: 0, y: 10)
             }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("onboarding_permission_denied_open_settings")
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)

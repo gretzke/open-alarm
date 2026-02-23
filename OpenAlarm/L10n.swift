@@ -27,6 +27,5 @@ enum L10n {
 
     static let actionNext: LocalizedStringKey = "action_next"
     static let actionOpenSettings: LocalizedStringKey = "action_open_settings"
-    static let actionIEnabledPermission: LocalizedStringKey = "action_i_enabled_permission"
     static let actionRequesting: LocalizedStringKey = "action_requesting"
 }
