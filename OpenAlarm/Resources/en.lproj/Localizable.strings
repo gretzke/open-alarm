@@ -17,6 +17,7 @@
 
 "onboarding_permission_request_title" = "Allow alarm scheduling";
 "onboarding_permission_request_body" = "OpenAlarm needs permission to schedule alarms and timers. We will ask iOS for this on the next step.";
+"onboarding_permission_request_hint" = "If Alarms & Timers doesn’t appear in Settings yet, tap Next once to trigger the iOS permission prompt first.";
 
 "onboarding_permission_denied_title" = "Alarm scheduling is disabled";
 "onboarding_permission_denied_body" = "To use OpenAlarm, allow Alarms & Timers in Settings for this app.";

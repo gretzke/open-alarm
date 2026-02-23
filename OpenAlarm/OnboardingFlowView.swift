@@ -40,8 +40,6 @@ private struct WelcomeStepView: View {
 
     var body: some View {
         VStack(spacing: 24) {
-            Spacer(minLength: 0)
-
             VStack(spacing: 20) {
                 Image("BrandIcon")
                     .resizable()
@@ -92,8 +90,6 @@ private struct AlarmPermissionPrePromptStepView: View {
 
     var body: some View {
         VStack(spacing: 24) {
-            Spacer(minLength: 0)
-
             VStack(spacing: 16) {
                 Image(systemName: "alarm.waves.left.and.right.fill")
                     .font(.system(size: 52, weight: .semibold))
@@ -144,6 +140,11 @@ private struct AlarmPermissionPrePromptStepView: View {
             .buttonStyle(.plain)
             .disabled(isRequesting)
             .accessibilityIdentifier("onboarding_permission_request_next")
+
+            Text(L10n.onboardingPermissionRequestHint)
+                .font(.footnote)
+                .foregroundStyle(OAColor.textSecondary)
+                .multilineTextAlignment(.center)
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -157,8 +158,6 @@ private struct AlarmPermissionDeniedStepView: View {
 
     var body: some View {
         VStack(spacing: 24) {
-            Spacer(minLength: 0)
-
             VStack(spacing: 16) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 50, weight: .semibold))
