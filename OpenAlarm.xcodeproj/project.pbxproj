@@ -9,7 +9,9 @@
 /* Begin PBXBuildFile section */
 		1068E5E14AAA376BDD6E846B /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0511AEB1608CC1DFD19C495 /* L10n.swift */; };
 		4796FE34E7D27B854FB78CB6 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 8E679FED54733251272BD0A9 /* Localizable.strings */; };
+		5824049B9D337E771858C73B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CFE2D4CDA835E9DD606528A0 /* Assets.xcassets */; };
 		7A6C9625D2A75EB1C003316B /* OpenAlarmApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 764BB1926C868CDA8BB0801A /* OpenAlarmApp.swift */; };
+		A07CAFA80E4CC40C1C53496B /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = E43A03F552339F3CF4DBCF2C /* LaunchScreen.storyboard */; };
 		D7AEB563A9ECA01A3ACA9D55 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93EBF54B81515242AEB7A8B5 /* ContentView.swift */; };
 /* End PBXBuildFile section */
 
@@ -19,6 +21,8 @@
 		764BB1926C868CDA8BB0801A /* OpenAlarmApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAlarmApp.swift; sourceTree = "<group>"; };
 		93EBF54B81515242AEB7A8B5 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		B0511AEB1608CC1DFD19C495 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
+		CFE2D4CDA835E9DD606528A0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		E43A03F552339F3CF4DBCF2C /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		E9ACF85F89CF9D011BF26A5E /* OpenAlarm.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OpenAlarm.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -42,8 +46,10 @@
 		BCC1989FF6463FB02B837C9B /* OpenAlarm */ = {
 			isa = PBXGroup;
 			children = (
+				CFE2D4CDA835E9DD606528A0 /* Assets.xcassets */,
 				93EBF54B81515242AEB7A8B5 /* ContentView.swift */,
 				B0511AEB1608CC1DFD19C495 /* L10n.swift */,
+				E43A03F552339F3CF4DBCF2C /* LaunchScreen.storyboard */,
 				764BB1926C868CDA8BB0801A /* OpenAlarmApp.swift */,
 				FD7B31457CC502B622019E4F /* Resources */,
 			);
@@ -119,6 +125,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5824049B9D337E771858C73B /* Assets.xcassets in Resources */,
+				A07CAFA80E4CC40C1C53496B /* LaunchScreen.storyboard in Resources */,
 				4796FE34E7D27B854FB78CB6 /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -161,7 +169,9 @@
 				DEVELOPMENT_TEAM = 7P7CKKPH5L;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDevelopmentRegion = en;
+				INFOPLIST_KEY_CFBundleIconName = AppIcon;
 				INFOPLIST_KEY_CFBundleLocalizations = "$(LOCALIZATIONS)";
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -174,7 +184,7 @@
 				PRODUCT_NAME = OpenAlarm;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -251,7 +261,9 @@
 				DEVELOPMENT_TEAM = 7P7CKKPH5L;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDevelopmentRegion = en;
+				INFOPLIST_KEY_CFBundleIconName = AppIcon;
 				INFOPLIST_KEY_CFBundleLocalizations = "$(LOCALIZATIONS)";
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -264,7 +276,7 @@
 				PRODUCT_NAME = OpenAlarm;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};

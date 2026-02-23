@@ -26,5 +26,8 @@ targets:
         LOCALIZATIONS: "en de"
         INFOPLIST_KEY_CFBundleDevelopmentRegion: en
         INFOPLIST_KEY_CFBundleLocalizations: "$(LOCALIZATIONS)"
+        INFOPLIST_KEY_CFBundleIconName: AppIcon
+        INFOPLIST_KEY_UILaunchStoryboardName: LaunchScreen
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
-        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1"
