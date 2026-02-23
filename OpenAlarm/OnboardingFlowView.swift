@@ -57,6 +57,17 @@ private struct WelcomeStepView: View {
                     BenefitRow(text: L10n.onboardingWelcomeNoAds)
                     BenefitRow(text: L10n.onboardingWelcomeNoTracking)
                     BenefitRow(text: L10n.onboardingWelcomeOpenSource)
+
+                    HStack(spacing: 10) {
+                        Image(systemName: "infinity")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(OAColor.actionCyan)
+
+                        Text(L10n.onboardingWelcomeForever)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(OAColor.actionCyan)
+                    }
+                    .padding(.top, 6)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }

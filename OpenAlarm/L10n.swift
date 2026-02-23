@@ -17,6 +17,7 @@ enum L10n {
     static let onboardingWelcomeNoAds: LocalizedStringKey = "onboarding_welcome_no_ads"
     static let onboardingWelcomeNoTracking: LocalizedStringKey = "onboarding_welcome_no_tracking"
     static let onboardingWelcomeOpenSource: LocalizedStringKey = "onboarding_welcome_open_source"
+    static let onboardingWelcomeForever: LocalizedStringKey = "onboarding_welcome_forever"
 
     static let onboardingPermissionRequestTitle: LocalizedStringKey = "onboarding_permission_request_title"
     static let onboardingPermissionRequestBody: LocalizedStringKey = "onboarding_permission_request_body"
