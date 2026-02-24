@@ -27,7 +27,9 @@
 "alarm_editor_snooze_max_label" = "Max. Snoozes";
 "alarm_editor_snooze_unlimited" = "Unbegrenzt";
 "alarm_editor_snooze_minutes_unit" = "Min";
+"alarm_editor_snooze_debug_5_seconds" = "5 Sek";
 "alarm_editor_try_out" = "Ausprobieren";
+"alarm_editor_try_out_starts_in_5_seconds" = "Test-Alarm klingelt in 5 Sekunden";
 
 "alarm_editor_error_permission_denied" = "Alarm-Berechtigung wird benötigt. Aktiviere „Alarme & Timer“ in den Einstellungen.";
 "alarm_editor_error_generic" = "Etwas ist schiefgelaufen. Bitte versuche es erneut.";

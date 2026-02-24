@@ -29,6 +29,7 @@ enum L10n {
     static let alarmEditorSnoozeDurationLabel: LocalizedStringKey = "alarm_editor_snooze_duration_label"
     static let alarmEditorSnoozeMaxLabel: LocalizedStringKey = "alarm_editor_snooze_max_label"
     static let alarmEditorTryOut: LocalizedStringKey = "alarm_editor_try_out"
+    static let alarmEditorTryOutStartsIn5Seconds: LocalizedStringKey = "alarm_editor_try_out_starts_in_5_seconds"
 
     static let alarmEditorErrorPermissionDenied: LocalizedStringKey = "alarm_editor_error_permission_denied"
     static let alarmEditorErrorGeneric: LocalizedStringKey = "alarm_editor_error_generic"

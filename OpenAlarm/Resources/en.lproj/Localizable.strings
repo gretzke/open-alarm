@@ -27,7 +27,9 @@
 "alarm_editor_snooze_max_label" = "Max snoozes";
 "alarm_editor_snooze_unlimited" = "Unlimited";
 "alarm_editor_snooze_minutes_unit" = "min";
+"alarm_editor_snooze_debug_5_seconds" = "5 sec";
 "alarm_editor_try_out" = "Try it out";
+"alarm_editor_try_out_starts_in_5_seconds" = "Test alarm will ring in 5 seconds";
 
 "alarm_editor_error_permission_denied" = "Alarm permission is required. Enable Alarms & Timers in Settings.";
 "alarm_editor_error_generic" = "Something went wrong. Please try again.";

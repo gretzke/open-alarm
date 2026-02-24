@@ -181,7 +181,7 @@ final class AlarmStore: ObservableObject {
         let showSnoozeButton = alarm.canSnoozeAgain
 
         let alertPresentation = AlarmPresentation.Alert(
-            title: LocalizedStringResource("app_title"),
+            title: LocalizedStringResource("OpenAlarm"),
             stopButton: .stopButton,
             secondaryButton: showSnoozeButton ? .snoozeButton : nil,
             secondaryButtonBehavior: showSnoozeButton ? .custom : nil
@@ -202,7 +202,7 @@ final class AlarmStore: ObservableObject {
         }
 
         let countdownDuration: Alarm.CountdownDuration? = if showSnoozeButton {
-            .init(preAlert: nil, postAlert: TimeInterval(alarm.snoozeDurationMinutes * 60))
+            .init(preAlert: nil, postAlert: snoozeInterval(for: alarm.snoozeDurationMinutes))
         } else {
             nil
         }
@@ -484,6 +484,13 @@ final class AlarmStore: ObservableObject {
             }
         }
         return changed
+    }
+
+    private func snoozeInterval(for minutes: Int) -> TimeInterval {
+        if minutes == 0 {
+            return 5
+        }
+        return TimeInterval(minutes * 60)
     }
 
     private func sortAlarms(_ alarms: [UserAlarm]) -> [UserAlarm] {
