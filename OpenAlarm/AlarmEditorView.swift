@@ -36,6 +36,14 @@ enum AlarmEditorRoute: Identifiable, Equatable {
     }
 }
 
+private enum AlarmEditorSelectionSheet: String, Identifiable {
+    case snoozeDuration
+    case maxSnoozes
+    case tryOut
+
+    var id: String { rawValue }
+}
+
 struct AlarmEditorView: View {
     @EnvironmentObject private var alarmStore: AlarmStore
     @Environment(\.dismiss) private var dismiss
@@ -44,7 +52,7 @@ struct AlarmEditorView: View {
 
     @State private var draft: AlarmDraft
     @State private var isSaving = false
-    @State private var isTryOutSheetPresented = false
+    @State private var selectionSheet: AlarmEditorSelectionSheet?
     @State private var errorMessage: LocalizedStringKey?
 
     private let snoozeDurationOptions = [1, 3, 5, 10, 15, 20, 30, 45, 60]
@@ -106,16 +114,66 @@ struct AlarmEditorView: View {
             }
         }
         .preferredColorScheme(.dark)
-        .sheet(isPresented: $isTryOutSheetPresented) {
-            TryOutPickerView(
-                isBusy: isSaving,
-                onSelect: { seconds in
-                    runTryOut(after: seconds)
-                }
-            )
-            .presentationDetents([.medium])
-            .presentationDragIndicator(.visible)
-            .preferredColorScheme(.dark)
+        .sheet(item: $selectionSheet) { item in
+            switch item {
+            case .snoozeDuration:
+                SelectionSheetView(
+                    title: L10n.alarmEditorSnoozeDurationLabel,
+                    options: snoozeDurationOptions.map { .value($0) },
+                    selected: .value(draft.snoozeDurationMinutes),
+                    format: { option in
+                        switch option {
+                        case let .value(minutes):
+                            return "\(minutes) \(String(localized: "alarm_editor_snooze_minutes_unit"))"
+                        case .unlimited:
+                            return String(localized: "alarm_editor_snooze_unlimited")
+                        }
+                    },
+                    onSelect: { option in
+                        if case let .value(minutes) = option {
+                            draft.snoozeDurationMinutes = minutes
+                        }
+                        selectionSheet = nil
+                    }
+                )
+                .preferredColorScheme(.dark)
+
+            case .maxSnoozes:
+                SelectionSheetView(
+                    title: L10n.alarmEditorSnoozeMaxLabel,
+                    options: maxSnoozeOptions.map { value in
+                        value.map(SelectionOption.value) ?? .unlimited
+                    },
+                    selected: draft.maxSnoozes.map(SelectionOption.value) ?? .unlimited,
+                    format: { option in
+                        switch option {
+                        case let .value(number):
+                            return "\(number)"
+                        case .unlimited:
+                            return String(localized: "alarm_editor_snooze_unlimited")
+                        }
+                    },
+                    onSelect: { option in
+                        switch option {
+                        case let .value(number):
+                            draft.maxSnoozes = number
+                        case .unlimited:
+                            draft.maxSnoozes = nil
+                        }
+                        selectionSheet = nil
+                    }
+                )
+                .preferredColorScheme(.dark)
+
+            case .tryOut:
+                TryOutPickerView(
+                    isBusy: isSaving,
+                    onSelect: { seconds in
+                        runTryOut(after: seconds)
+                    }
+                )
+                .preferredColorScheme(.dark)
+            }
         }
     }
 
@@ -165,105 +223,54 @@ struct AlarmEditorView: View {
 
     private var snoozeSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(L10n.alarmEditorSnoozeTitle)
-                .font(.headline)
-                .foregroundStyle(OAColor.textSecondary)
-
-            VStack(spacing: 0) {
-                snoozeDurationRow
-
-                Divider()
-                    .overlay(OAColor.glassStroke.opacity(0.8))
-
-                maxSnoozesRow
-            }
-            .frame(maxWidth: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                    .fill(OAColor.glassFill)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                    .stroke(OAColor.glassStroke, lineWidth: 1)
-            )
-        }
-    }
-
-    private var snoozeDurationRow: some View {
-        Menu {
-            ForEach(snoozeDurationOptions, id: \.self) { minutes in
-                Button {
-                    draft.snoozeDurationMinutes = minutes
-                } label: {
-                    if draft.snoozeDurationMinutes == minutes {
-                        Label(snoozeDurationDisplay(minutes: minutes), systemImage: "checkmark")
-                    } else {
-                        Text(snoozeDurationDisplay(minutes: minutes))
-                    }
-                }
-            }
-        } label: {
-            HStack(spacing: 12) {
-                Text(L10n.alarmEditorSnoozeDurationLabel)
-                    .font(.body)
-                    .foregroundStyle(OAColor.textPrimary)
+            HStack {
+                Text(L10n.alarmEditorSnoozeTitle)
+                    .font(.headline)
+                    .foregroundStyle(OAColor.textSecondary)
 
                 Spacer(minLength: 0)
 
-                Text(snoozeDurationDisplay(minutes: draft.snoozeDurationMinutes))
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(OAColor.textSecondary)
-
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.footnote)
-                    .foregroundStyle(OAColor.textSecondary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var maxSnoozesRow: some View {
-        Menu {
-            ForEach(maxSnoozeOptions, id: \.self) { value in
-                Button {
-                    draft.maxSnoozes = value
-                } label: {
-                    if draft.maxSnoozes == value {
-                        Label(maxSnoozeDisplay(value), systemImage: "checkmark")
-                    } else {
-                        Text(maxSnoozeDisplay(value))
-                    }
+                Toggle(isOn: $draft.snoozeEnabled) {
+                    EmptyView()
                 }
+                .labelsHidden()
+                .tint(OAColor.actionCyan)
             }
-        } label: {
-            HStack(spacing: 12) {
-                Text(L10n.alarmEditorSnoozeMaxLabel)
-                    .font(.body)
-                    .foregroundStyle(OAColor.textPrimary)
 
-                Spacer(minLength: 0)
+            if draft.snoozeEnabled {
+                VStack(spacing: 0) {
+                    selectionRow(
+                        title: L10n.alarmEditorSnoozeDurationLabel,
+                        value: "\(draft.snoozeDurationMinutes) \(String(localized: "alarm_editor_snooze_minutes_unit"))",
+                        action: { selectionSheet = .snoozeDuration }
+                    )
 
-                Text(maxSnoozeDisplay(draft.maxSnoozes))
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(OAColor.textSecondary)
+                    Divider()
+                        .overlay(OAColor.glassStroke.opacity(0.8))
 
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.footnote)
-                    .foregroundStyle(OAColor.textSecondary)
+                    selectionRow(
+                        title: L10n.alarmEditorSnoozeMaxLabel,
+                        value: draft.maxSnoozes.map(String.init) ?? String(localized: "alarm_editor_snooze_unlimited"),
+                        action: { selectionSheet = .maxSnoozes }
+                    )
+                }
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                        .fill(OAColor.glassFill)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                        .stroke(OAColor.glassStroke, lineWidth: 1)
+                )
+                .shadow(color: OAColor.glassGlow.opacity(0.7), radius: 10, x: 0, y: 6)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
         }
-        .buttonStyle(.plain)
     }
 
     private var tryOutSection: some View {
         Button {
-            isTryOutSheetPresented = true
+            selectionSheet = .tryOut
         } label: {
             Text(L10n.alarmEditorTryOut)
                 .font(.headline.weight(.semibold))
@@ -278,6 +285,30 @@ struct AlarmEditorView: View {
         }
         .buttonStyle(.plain)
         .disabled(isSaving)
+    }
+
+    private func selectionRow(title: LocalizedStringKey, value: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Text(title)
+                    .font(.body)
+                    .foregroundStyle(OAColor.textPrimary)
+
+                Spacer(minLength: 0)
+
+                Text(value)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(OAColor.textSecondary)
+
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(OAColor.textSecondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+        }
+        .buttonStyle(.plain)
     }
 
     private func dayChip(for day: AlarmWeekday) -> some View {
@@ -297,17 +328,6 @@ struct AlarmEditorView: View {
                 )
         }
         .buttonStyle(.plain)
-    }
-
-    private func snoozeDurationDisplay(minutes: Int) -> String {
-        "\(minutes) \(String(localized: "alarm_editor_snooze_minutes_unit"))"
-    }
-
-    private func maxSnoozeDisplay(_ value: Int?) -> String {
-        if let value {
-            return "\(value)"
-        }
-        return String(localized: "alarm_editor_snooze_unlimited")
     }
 
     private func saveAlarm() {
@@ -344,11 +364,64 @@ struct AlarmEditorView: View {
         Task {
             do {
                 try await alarmStore.scheduleTryOut(from: draft, after: seconds)
-                isTryOutSheetPresented = false
+                selectionSheet = nil
             } catch {
                 errorMessage = alarmStore.userFacingErrorMessage(for: error)
             }
             isSaving = false
+        }
+    }
+}
+
+private enum SelectionOption: Hashable {
+    case value(Int)
+    case unlimited
+}
+
+private struct SelectionSheetView: View {
+    let title: LocalizedStringKey
+    let options: [SelectionOption]
+    let selected: SelectionOption
+    let format: (SelectionOption) -> String
+    let onSelect: (SelectionOption) -> Void
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 10) {
+                    ForEach(options, id: \.self) { option in
+                        Button {
+                            onSelect(option)
+                        } label: {
+                            HStack {
+                                Text(format(option))
+                                    .foregroundStyle(OAColor.textPrimary)
+                                Spacer(minLength: 0)
+                                if option == selected {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(OAColor.actionCyan)
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                    .fill(OAColor.glassFill)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                    .stroke(OAColor.glassStroke, lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(20)
+            }
+            .background(OAColor.background.ignoresSafeArea())
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
         }
     }
 }
@@ -374,18 +447,35 @@ private struct TryOutPickerView: View {
 
     var body: some View {
         NavigationStack {
-            List(options) { option in
-                Button {
-                    onSelect(option.seconds)
-                } label: {
-                    Text(option.label)
-                        .foregroundStyle(OAColor.textPrimary)
+            ScrollView {
+                VStack(spacing: 10) {
+                    ForEach(options) { option in
+                        Button {
+                            onSelect(option.seconds)
+                        } label: {
+                            HStack {
+                                Text(option.label)
+                                    .foregroundStyle(OAColor.textPrimary)
+                                Spacer(minLength: 0)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                    .fill(OAColor.glassFill)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                    .stroke(OAColor.glassStroke, lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isBusy)
+                    }
                 }
-                .disabled(isBusy)
-                .listRowBackground(OAColor.background)
+                .padding(20)
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
             .background(OAColor.background.ignoresSafeArea())
             .navigationTitle(L10n.tryOutSheetTitle)
             .navigationBarTitleDisplayMode(.inline)

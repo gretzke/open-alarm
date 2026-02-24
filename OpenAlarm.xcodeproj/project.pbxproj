@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0137578A7C3DB65015FC02BE /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22E4F6FF18C9BE1617CD7543 /* OnboardingFlowView.swift */; };
+		05162562A0170BE9098361EE /* AlarmIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85010326D24CEF7C1A38D50D /* AlarmIntents.swift */; };
 		0B5A2C2BC6692B00E79A988E /* AlarmPermissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83400772796DC9406DADEF9F /* AlarmPermissionService.swift */; };
 		1068E5E14AAA376BDD6E846B /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0511AEB1608CC1DFD19C495 /* L10n.swift */; };
 		42DA53AB032443282ACAC432 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E55D19BAE63F4BCAD183A095 /* MainTabView.swift */; };
@@ -21,6 +22,7 @@
 		A07CAFA80E4CC40C1C53496B /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = E43A03F552339F3CF4DBCF2C /* LaunchScreen.storyboard */; };
 		BDD2C5EBBA247FBB4FD16F4D /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 2E7F4014449CC01093832222 /* InfoPlist.strings */; };
 		BF8889E27B6255835899C3B5 /* AlarmModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7C07703BA4BEC265B421B03 /* AlarmModels.swift */; };
+		D0827BEDA4B4C360461E9F23 /* AlarmPersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0F3414FB10A9E51937B6877 /* AlarmPersistence.swift */; };
 		E072A215F811DC860E8ED2F1 /* OnboardingEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6981BF284D917EBC650816B /* OnboardingEngine.swift */; };
 /* End PBXBuildFile section */
 
@@ -33,7 +35,9 @@
 		6093C9086BF89A5DE696608D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		764BB1926C868CDA8BB0801A /* OpenAlarmApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAlarmApp.swift; sourceTree = "<group>"; };
 		83400772796DC9406DADEF9F /* AlarmPermissionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmPermissionService.swift; sourceTree = "<group>"; };
+		85010326D24CEF7C1A38D50D /* AlarmIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmIntents.swift; sourceTree = "<group>"; };
 		91529C2531FED87446559016 /* OpenAlarmTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAlarmTheme.swift; sourceTree = "<group>"; };
+		A0F3414FB10A9E51937B6877 /* AlarmPersistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmPersistence.swift; sourceTree = "<group>"; };
 		A6981BF284D917EBC650816B /* OnboardingEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingEngine.swift; sourceTree = "<group>"; };
 		A7C07703BA4BEC265B421B03 /* AlarmModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmModels.swift; sourceTree = "<group>"; };
 		B0511AEB1608CC1DFD19C495 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
@@ -67,8 +71,10 @@
 			isa = PBXGroup;
 			children = (
 				3C5513FF1DE8CF198A077C38 /* AlarmEditorView.swift */,
+				85010326D24CEF7C1A38D50D /* AlarmIntents.swift */,
 				A7C07703BA4BEC265B421B03 /* AlarmModels.swift */,
 				83400772796DC9406DADEF9F /* AlarmPermissionService.swift */,
+				A0F3414FB10A9E51937B6877 /* AlarmPersistence.swift */,
 				B70862277833BF001ABA7BBE /* AlarmStore.swift */,
 				D65E8CA1DA583D987D1FDE53 /* AppRootView.swift */,
 				CFE2D4CDA835E9DD606528A0 /* Assets.xcassets */,
@@ -170,8 +176,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				4349AE16DB928CA08CA1900B /* AlarmEditorView.swift in Sources */,
+				05162562A0170BE9098361EE /* AlarmIntents.swift in Sources */,
 				BF8889E27B6255835899C3B5 /* AlarmModels.swift in Sources */,
 				0B5A2C2BC6692B00E79A988E /* AlarmPermissionService.swift in Sources */,
+				D0827BEDA4B4C360461E9F23 /* AlarmPersistence.swift in Sources */,
 				75F6F1776DF5731E152893A0 /* AlarmStore.swift in Sources */,
 				43A37EA685F224896032D009 /* AppRootView.swift in Sources */,
 				1068E5E14AAA376BDD6E846B /* L10n.swift in Sources */,
