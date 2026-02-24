@@ -65,36 +65,26 @@ struct AlarmEditorView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                OAColor.background
-                    .ignoresSafeArea()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    timeSection
+                    deleteAfterUseSection
+                    repeatDaysSection
+                    snoozeSection
+                    tryOutSection
 
-                Rectangle()
-                    .fill(.clear)
-                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 0, style: .continuous))
-                    .ignoresSafeArea()
-                    .allowsHitTesting(false)
-
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 22) {
-                        timeSection
-                        deleteAfterUseSection
-                        repeatDaysSection
-                        snoozeSection
-                        tryOutSection
-
-                        if let errorMessage {
-                            Text(errorMessage)
-                                .font(.footnote)
-                                .foregroundStyle(OAColor.danger)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 4)
-                        }
+                    if let errorMessage {
+                        Text(errorMessage)
+                            .font(.footnote)
+                            .foregroundStyle(OAColor.danger)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 4)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 16)
                 }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
             }
+            .background(.clear)
             .navigationTitle(route.existingAlarm == nil ? L10n.alarmEditorNewTitle : L10n.alarmEditorEditTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -124,6 +114,7 @@ struct AlarmEditorView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .presentationBackground(.clear)
         .sheet(item: $selectionSheet) { item in
             sheetContent(for: item)
                 .preferredColorScheme(.dark)
@@ -139,10 +130,13 @@ struct AlarmEditorView: View {
                     .foregroundStyle(OAColor.textPrimary)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
-                    .glassEffect(.regular, in: Capsule(style: .continuous))
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(OAColor.glassFill)
+                    )
                     .overlay(
                         Capsule(style: .continuous)
-                            .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.7)
+                            .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
                     )
                     .padding(.bottom, 24)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -237,7 +231,6 @@ struct AlarmEditorView: View {
                     RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
                         .stroke(OAColor.glassStroke, lineWidth: 1)
                 )
-                .shadow(color: OAColor.glassGlow.opacity(0.7), radius: 10, x: 0, y: 6)
             }
         }
     }
@@ -444,10 +437,13 @@ private struct SelectionSheetView: View {
                             .padding(.vertical, 14)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .contentShape(Rectangle())
-                            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: OARadius.button, style: .continuous))
+                            .background(
+                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                    .fill(Color.clear)
+                            )
                             .overlay(
                                 RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                    .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.7)
+                                    .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
                             )
                         }
                         .frame(maxWidth: .infinity)
@@ -456,6 +452,7 @@ private struct SelectionSheetView: View {
                 }
                 .padding(20)
             }
+            .background(Color.clear)
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
         }

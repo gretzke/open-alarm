@@ -85,6 +85,26 @@ final class AlarmStore: ObservableObject {
     func scheduleTryOut(from draft: AlarmDraft, after seconds: TimeInterval) async throws {
         try await ensureAuthorizedForScheduling()
 
+        // Keep only one active trial alarm at a time.
+        var existingTrials = AlarmPersistence.loadShadowTrials(from: userDefaults)
+        if !existingTrials.isEmpty {
+            for trial in existingTrials {
+                try? alarmManager.stop(id: trial.id)
+                try? alarmManager.cancel(id: trial.id)
+                lastKnownAlarmState.removeValue(forKey: trial.id)
+                remoteStates.removeValue(forKey: trial.id)
+            }
+
+            var pending = AlarmPersistence.loadPendingSnoozeIDs(from: userDefaults)
+            for trial in existingTrials {
+                pending.remove(trial.id)
+            }
+            AlarmPersistence.savePendingSnoozeIDs(pending, to: userDefaults)
+
+            existingTrials.removeAll()
+            AlarmPersistence.saveShadowTrials(existingTrials, to: userDefaults)
+        }
+
         let shadowID = UUID()
         let baseAlarm = draft.toUserAlarm(id: shadowID, existingCreatedAt: nil)
         let trialDate = Date.now.addingTimeInterval(seconds)
@@ -93,7 +113,6 @@ final class AlarmStore: ObservableObject {
         _ = try await alarmManager.schedule(id: shadowID, configuration: config)
 
         var trials = AlarmPersistence.loadShadowTrials(from: userDefaults)
-        trials.removeAll { $0.id == shadowID }
         trials.append(ShadowTrialAlarm(
             id: shadowID,
             snoozeEnabled: baseAlarm.snoozeEnabled,
