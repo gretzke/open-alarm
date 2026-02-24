@@ -95,6 +95,8 @@ private struct AlarmHomeView: View {
         .sheet(item: $editorRoute) { route in
             AlarmEditorView(route: route)
                 .environmentObject(alarmStore)
+                .presentationBackground(.clear)
+                .presentationBackgroundInteraction(.enabled)
         }
     }
 }
