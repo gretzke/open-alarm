@@ -23,6 +23,8 @@ enum L10n {
     static let alarmEditorNewTitle: LocalizedStringKey = "alarm_editor_new_title"
     static let alarmEditorEditTitle: LocalizedStringKey = "alarm_editor_edit_title"
     static let alarmEditorTimeTitle: LocalizedStringKey = "alarm_editor_time_title"
+    static let alarmEditorLabelTitle: LocalizedStringKey = "alarm_editor_label_title"
+    static let alarmEditorDefaultLabel: LocalizedStringKey = "alarm_editor_default_label"
     static let alarmEditorDeleteAfterUseToggle: LocalizedStringKey = "alarm_editor_delete_after_use_toggle"
     static let alarmEditorRepeatDaysTitle: LocalizedStringKey = "alarm_editor_repeat_days_title"
     static let alarmEditorSnoozeTitle: LocalizedStringKey = "alarm_editor_snooze_title"
@@ -33,14 +35,6 @@ enum L10n {
 
     static let alarmEditorErrorPermissionDenied: LocalizedStringKey = "alarm_editor_error_permission_denied"
     static let alarmEditorErrorGeneric: LocalizedStringKey = "alarm_editor_error_generic"
-
-    static let tryOutSheetTitle: LocalizedStringKey = "tryout_sheet_title"
-    static let tryOutOption5Seconds: LocalizedStringKey = "tryout_option_5_seconds"
-    static let tryOutOption10Seconds: LocalizedStringKey = "tryout_option_10_seconds"
-    static let tryOutOption30Seconds: LocalizedStringKey = "tryout_option_30_seconds"
-    static let tryOutOption1Minute: LocalizedStringKey = "tryout_option_1_minute"
-    static let tryOutOption2Minutes: LocalizedStringKey = "tryout_option_2_minutes"
-    static let tryOutOption5Minutes: LocalizedStringKey = "tryout_option_5_minutes"
 
     static let settingsTitle: LocalizedStringKey = "settings_title"
     static let settingsPermissionTitle: LocalizedStringKey = "settings_permission_title"

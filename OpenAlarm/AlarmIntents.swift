@@ -124,7 +124,7 @@ struct SnoozeIntent: LiveActivityIntent {
         let showSnoozeButton = alarm.canSnoozeAgain
 
         let alertPresentation = AlarmPresentation.Alert(
-            title: LocalizedStringResource("OpenAlarm"),
+            title: localizedResource(from: resolvedAlarmTitle(from: alarm.name)),
             stopButton: .stopButton,
             secondaryButton: showSnoozeButton ? .snoozeButton : nil,
             secondaryButtonBehavior: showSnoozeButton ? .custom : nil
@@ -166,7 +166,7 @@ struct SnoozeIntent: LiveActivityIntent {
         let showSnoozeButton = trial.canSnoozeAgain
 
         let alertPresentation = AlarmPresentation.Alert(
-            title: LocalizedStringResource("OpenAlarm"),
+            title: localizedResource(from: resolvedAlarmTitle(from: trial.name)),
             stopButton: .stopButton,
             secondaryButton: showSnoozeButton ? .snoozeButton : nil,
             secondaryButtonBehavior: showSnoozeButton ? .custom : nil
@@ -206,5 +206,17 @@ struct SnoozeIntent: LiveActivityIntent {
             return 5
         }
         return TimeInterval(minutes * 60)
+    }
+
+    private func resolvedAlarmTitle(from name: String) -> String {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return NSLocalizedString("alarm_editor_default_label", comment: "")
+        }
+        return trimmed
+    }
+
+    private func localizedResource(from text: String) -> LocalizedStringResource {
+        LocalizedStringResource(String.LocalizationValue(text))
     }
 }

@@ -20,6 +20,8 @@
 "alarm_editor_new_title" = "New Alarm";
 "alarm_editor_edit_title" = "Edit Alarm";
 "alarm_editor_time_title" = "Time";
+"alarm_editor_label_title" = "Label";
+"alarm_editor_default_label" = "Alarm";
 "alarm_editor_delete_after_use_toggle" = "Delete alarm after use";
 "alarm_editor_repeat_days_title" = "Repeat on days";
 "alarm_editor_snooze_title" = "Snooze";
@@ -33,14 +35,6 @@
 
 "alarm_editor_error_permission_denied" = "Alarm permission is required. Enable Alarms & Timers in Settings.";
 "alarm_editor_error_generic" = "Something went wrong. Please try again.";
-
-"tryout_sheet_title" = "Try it out";
-"tryout_option_5_seconds" = "In 5 seconds";
-"tryout_option_10_seconds" = "In 10 seconds";
-"tryout_option_30_seconds" = "In 30 seconds";
-"tryout_option_1_minute" = "In 1 minute";
-"tryout_option_2_minutes" = "In 2 minutes";
-"tryout_option_5_minutes" = "In 5 minutes";
 
 "settings_title" = "Settings";
 "settings_permission_title" = "Alarm permission";

@@ -95,6 +95,8 @@ private struct AlarmHomeView: View {
         .sheet(item: $editorRoute) { route in
             AlarmEditorView(route: route)
                 .environmentObject(alarmStore)
+                .presentationBackground(.clear)
+                .presentationBackgroundInteraction(.enabled)
         }
     }
 }
@@ -109,6 +111,14 @@ private struct AlarmRowView: View {
         }
 
         return "\(String(localized: "alarm_row_repeat_prefix")): \(alarm.sortedRepeatDays.repeatSummary())"
+    }
+
+    private var resolvedName: String {
+        let trimmed = alarm.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return String(localized: "alarm_editor_default_label")
+        }
+        return trimmed
     }
 
     var body: some View {
@@ -130,6 +140,10 @@ private struct AlarmRowView: View {
                             .fill(OAColor.actionCyan)
                     )
             }
+
+            Text(resolvedName)
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(OAColor.textPrimary)
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(repeatDescription)

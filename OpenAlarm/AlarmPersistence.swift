@@ -2,6 +2,7 @@ import Foundation
 
 struct ShadowTrialAlarm: Codable, Equatable, Sendable {
     var id: UUID
+    var name: String
     var snoozeEnabled: Bool
     var snoozeDurationMinutes: Int
     var maxSnoozes: Int?
@@ -19,6 +20,57 @@ struct ShadowTrialAlarm: Codable, Equatable, Sendable {
             return true
         }
         return snoozeCount < maxSnoozes
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case snoozeEnabled
+        case snoozeDurationMinutes
+        case maxSnoozes
+        case snoozeCount
+        case wakeUpCheckEnabled
+        case lifecycleState
+        case createdAt
+        case updatedAt
+    }
+
+    init(
+        id: UUID,
+        name: String,
+        snoozeEnabled: Bool,
+        snoozeDurationMinutes: Int,
+        maxSnoozes: Int?,
+        snoozeCount: Int,
+        wakeUpCheckEnabled: Bool,
+        lifecycleState: AlarmLifecycleState,
+        createdAt: Date,
+        updatedAt: Date
+    ) {
+        self.id = id
+        self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.snoozeEnabled = snoozeEnabled
+        self.snoozeDurationMinutes = snoozeDurationMinutes
+        self.maxSnoozes = maxSnoozes
+        self.snoozeCount = snoozeCount
+        self.wakeUpCheckEnabled = wakeUpCheckEnabled
+        self.lifecycleState = lifecycleState
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = (try container.decodeIfPresent(String.self, forKey: .name) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        snoozeEnabled = try container.decodeIfPresent(Bool.self, forKey: .snoozeEnabled) ?? true
+        snoozeDurationMinutes = try container.decodeIfPresent(Int.self, forKey: .snoozeDurationMinutes) ?? 5
+        maxSnoozes = try container.decodeIfPresent(Int.self, forKey: .maxSnoozes) ?? 3
+        snoozeCount = try container.decodeIfPresent(Int.self, forKey: .snoozeCount) ?? 0
+        wakeUpCheckEnabled = try container.decodeIfPresent(Bool.self, forKey: .wakeUpCheckEnabled) ?? false
+        lifecycleState = try container.decodeIfPresent(AlarmLifecycleState.self, forKey: .lifecycleState) ?? .scheduled
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? .now
+        updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? .now
     }
 }
 

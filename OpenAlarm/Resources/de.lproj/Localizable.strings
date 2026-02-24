@@ -20,6 +20,8 @@
 "alarm_editor_new_title" = "Neuer Alarm";
 "alarm_editor_edit_title" = "Alarm bearbeiten";
 "alarm_editor_time_title" = "Uhrzeit";
+"alarm_editor_label_title" = "Name";
+"alarm_editor_default_label" = "Wecker";
 "alarm_editor_delete_after_use_toggle" = "Alarm nach Nutzung löschen";
 "alarm_editor_repeat_days_title" = "An Tagen wiederholen";
 "alarm_editor_snooze_title" = "Snooze";
@@ -33,14 +35,6 @@
 
 "alarm_editor_error_permission_denied" = "Alarm-Berechtigung wird benötigt. Aktiviere „Alarme & Timer“ in den Einstellungen.";
 "alarm_editor_error_generic" = "Etwas ist schiefgelaufen. Bitte versuche es erneut.";
-
-"tryout_sheet_title" = "Ausprobieren";
-"tryout_option_5_seconds" = "In 5 Sekunden";
-"tryout_option_10_seconds" = "In 10 Sekunden";
-"tryout_option_30_seconds" = "In 30 Sekunden";
-"tryout_option_1_minute" = "In 1 Minute";
-"tryout_option_2_minutes" = "In 2 Minuten";
-"tryout_option_5_minutes" = "In 5 Minuten";
 
 "settings_title" = "Einstellungen";
 "settings_permission_title" = "Alarm-Berechtigung";

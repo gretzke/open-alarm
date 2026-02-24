@@ -68,6 +68,7 @@ struct AlarmEditorView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     timeSection
+                    labelSection
                     deleteAfterUseSection
                     repeatDaysSection
                     snoozeSection
@@ -114,6 +115,7 @@ struct AlarmEditorView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .presentationBackground(.clear)
         .sheet(item: $selectionSheet) { item in
             sheetContent(for: item)
@@ -160,6 +162,31 @@ struct AlarmEditorView: View {
             .labelsHidden()
             .colorScheme(.dark)
             .frame(maxWidth: .infinity)
+        }
+    }
+
+    private var labelSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(L10n.alarmEditorLabelTitle)
+                .font(.headline)
+                .foregroundStyle(OAColor.textSecondary)
+
+            TextField(
+                "",
+                text: $draft.name,
+                prompt: Text(L10n.alarmEditorDefaultLabel)
+                    .foregroundStyle(OAColor.textSecondary)
+            )
+            .textInputAutocapitalization(.sentences)
+            .disableAutocorrection(true)
+            .foregroundStyle(OAColor.textPrimary)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: OARadius.button, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                    .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
+            )
         }
     }
 
@@ -229,7 +256,7 @@ struct AlarmEditorView: View {
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                        .stroke(OAColor.glassStroke, lineWidth: 1)
+                        .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
                 )
             }
         }

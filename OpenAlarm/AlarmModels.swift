@@ -81,6 +81,7 @@ enum AlarmWeekday: Int, CaseIterable, Codable, Hashable, Sendable, Identifiable 
 
 struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
     var id: UUID
+    var name: String
     var hour: Int
     var minute: Int
     var repeatDays: [AlarmWeekday]
@@ -98,6 +99,7 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
 
     init(
         id: UUID,
+        name: String,
         hour: Int,
         minute: Int,
         repeatDays: [AlarmWeekday],
@@ -112,6 +114,7 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         updatedAt: Date
     ) {
         self.id = id
+        self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         self.hour = hour
         self.minute = minute
         self.repeatDays = repeatDays.sorted { $0.rawValue < $1.rawValue }
@@ -154,21 +157,6 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         ))
     }
 
-    var snoozeSummary: String {
-        guard snoozeEnabled else {
-            return "Off"
-        }
-
-        let duration = "\(snoozeDurationMinutes)m"
-        let maxPart: String
-        if let maxSnoozes {
-            maxPart = "max \(maxSnoozes)"
-        } else {
-            maxPart = "∞"
-        }
-        return "\(duration), \(maxPart)"
-    }
-
     var canSnoozeAgain: Bool {
         guard snoozeEnabled else {
             return false
@@ -179,9 +167,9 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         return snoozeCount < maxSnoozes
     }
 
-    // Backward-compatible decoding (older stored alarms may not have snooze fields).
     enum CodingKeys: String, CodingKey {
         case id
+        case name
         case hour
         case minute
         case repeatDays
@@ -200,6 +188,7 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
         id = try container.decode(UUID.self, forKey: .id)
+        name = (try container.decodeIfPresent(String.self, forKey: .name) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         hour = try container.decode(Int.self, forKey: .hour)
         minute = try container.decode(Int.self, forKey: .minute)
         repeatDays = (try container.decodeIfPresent([AlarmWeekday].self, forKey: .repeatDays) ?? [])
@@ -220,6 +209,7 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
         try container.encode(hour, forKey: .hour)
         try container.encode(minute, forKey: .minute)
         try container.encode(repeatDays, forKey: .repeatDays)
@@ -236,6 +226,7 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
 }
 
 struct AlarmDraft: Equatable {
+    var name: String
     var time: Date
     var repeatDays: Set<AlarmWeekday>
     var deleteAfterUse: Bool
@@ -246,6 +237,7 @@ struct AlarmDraft: Equatable {
     var maxSnoozes: Int?
 
     init(
+        name: String = "",
         time: Date = .now,
         repeatDays: Set<AlarmWeekday> = [],
         deleteAfterUse: Bool = true,
@@ -254,6 +246,7 @@ struct AlarmDraft: Equatable {
         snoozeDurationMinutes: Int = 5,
         maxSnoozes: Int? = 3
     ) {
+        self.name = name
         self.time = time
         self.repeatDays = repeatDays
         self.deleteAfterUse = deleteAfterUse
@@ -264,6 +257,7 @@ struct AlarmDraft: Equatable {
     }
 
     init(alarm: UserAlarm) {
+        self.name = alarm.name
         self.time = alarm.triggerDateForDisplay
         self.repeatDays = Set(alarm.repeatDays)
         self.deleteAfterUse = alarm.deleteAfterUse
@@ -299,6 +293,7 @@ struct AlarmDraft: Equatable {
 
         return UserAlarm(
             id: id,
+            name: name,
             hour: hour,
             minute: minute,
             repeatDays: Array(repeatDays),

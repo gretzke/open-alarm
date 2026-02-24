@@ -115,6 +115,7 @@ final class AlarmStore: ObservableObject {
         var trials = AlarmPersistence.loadShadowTrials(from: userDefaults)
         trials.append(ShadowTrialAlarm(
             id: shadowID,
+            name: baseAlarm.name,
             snoozeEnabled: baseAlarm.snoozeEnabled,
             snoozeDurationMinutes: baseAlarm.snoozeDurationMinutes,
             maxSnoozes: baseAlarm.maxSnoozes,
@@ -206,7 +207,7 @@ final class AlarmStore: ObservableObject {
         let showSnoozeButton = alarm.canSnoozeAgain
 
         let alertPresentation = AlarmPresentation.Alert(
-            title: LocalizedStringResource("OpenAlarm"),
+            title: localizedResource(from: resolvedAlarmTitle(from: alarm.name)),
             stopButton: .stopButton,
             secondaryButton: showSnoozeButton ? .snoozeButton : nil,
             secondaryButtonBehavior: showSnoozeButton ? .custom : nil
@@ -558,6 +559,18 @@ final class AlarmStore: ObservableObject {
             return 5
         }
         return TimeInterval(minutes * 60)
+    }
+
+    private func resolvedAlarmTitle(from name: String) -> String {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return NSLocalizedString("alarm_editor_default_label", comment: "")
+        }
+        return trimmed
+    }
+
+    private func localizedResource(from text: String) -> LocalizedStringResource {
+        LocalizedStringResource(String.LocalizationValue(text))
     }
 
     private func sortAlarms(_ alarms: [UserAlarm]) -> [UserAlarm] {
