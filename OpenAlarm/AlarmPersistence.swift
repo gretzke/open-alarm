@@ -10,6 +10,16 @@ struct ShadowTrialAlarm: Codable, Equatable, Sendable {
     var lifecycleState: AlarmLifecycleState
     var createdAt: Date
     var updatedAt: Date
+
+    var canSnoozeAgain: Bool {
+        guard snoozeEnabled else {
+            return false
+        }
+        guard let maxSnoozes else {
+            return true
+        }
+        return snoozeCount < maxSnoozes
+    }
 }
 
 enum AlarmPersistence {

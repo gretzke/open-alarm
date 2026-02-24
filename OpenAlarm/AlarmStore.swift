@@ -16,6 +16,7 @@ final class AlarmStore: ObservableObject {
 
     private var alarmUpdatesTask: Task<Void, Never>?
     private var lastKnownAlarmState: [UUID: Alarm.State] = [:]
+    private var pendingRepeatRestores: Set<UUID> = []
 
     init(
         alarmManager: AlarmManager = .shared,
@@ -177,33 +178,16 @@ final class AlarmStore: ObservableObject {
         schedule: Alarm.Schedule,
         isShadowTrial: Bool
     ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
-        let secondaryButton: AlarmButton? = alarm.snoozeEnabled ? .snoozeButton : nil
-        let secondaryBehavior: AlarmPresentation.Alert.SecondaryButtonBehavior? = alarm.snoozeEnabled ? .custom : nil
+        let showSnoozeButton = alarm.canSnoozeAgain
 
         let alertPresentation = AlarmPresentation.Alert(
             title: LocalizedStringResource("app_title"),
             stopButton: .stopButton,
-            secondaryButton: secondaryButton,
-            secondaryButtonBehavior: secondaryBehavior
+            secondaryButton: showSnoozeButton ? .snoozeButton : nil,
+            secondaryButtonBehavior: showSnoozeButton ? .custom : nil
         )
 
-        let countdownPresentation: AlarmPresentation.Countdown? = if alarm.snoozeEnabled {
-            .init(title: LocalizedStringResource("app_title"), pauseButton: .pauseButton)
-        } else {
-            nil
-        }
-
-        let pausedPresentation: AlarmPresentation.Paused? = if alarm.snoozeEnabled {
-            .init(title: LocalizedStringResource("app_title"), resumeButton: .resumeButton)
-        } else {
-            nil
-        }
-
-        let presentation = AlarmPresentation(
-            alert: alertPresentation,
-            countdown: countdownPresentation,
-            paused: pausedPresentation
-        )
+        let presentation = AlarmPresentation(alert: alertPresentation)
 
         let attributes = AlarmAttributes(
             presentation: presentation,
@@ -211,20 +195,14 @@ final class AlarmStore: ObservableObject {
             tintColor: OAColor.actionCyan
         )
 
-        let countdownDuration: Alarm.CountdownDuration? = if alarm.snoozeEnabled {
-            .init(preAlert: nil, postAlert: TimeInterval(alarm.snoozeDurationMinutes * 60))
-        } else {
-            nil
-        }
-
-        let secondaryIntent: (any LiveActivityIntent)? = if alarm.snoozeEnabled {
+        let secondaryIntent: (any LiveActivityIntent)? = if showSnoozeButton {
             SnoozeIntent(alarmID: alarm.id.uuidString)
         } else {
             nil
         }
 
         return .init(
-            countdownDuration: countdownDuration,
+            countdownDuration: nil,
             schedule: schedule,
             attributes: attributes,
             stopIntent: nil,
@@ -261,11 +239,13 @@ final class AlarmStore: ObservableObject {
     private func applyRemoteAlarms(_ incoming: [Alarm]) {
         let remoteByID = Dictionary(uniqueKeysWithValues: incoming.map { ($0.id, $0) })
 
-        syncSnoozeCountsFromPersistence()
+        var updated = alarms
+        var changed = mergeSnoozeCountsFromPersistence(into: &updated)
+
         handleShadowTrials(remoteByID: remoteByID)
 
         remoteStates = Dictionary(
-            uniqueKeysWithValues: alarms.compactMap { alarm in
+            uniqueKeysWithValues: updated.compactMap { alarm in
                 guard let state = remoteByID[alarm.id]?.state else {
                     return nil
                 }
@@ -273,9 +253,7 @@ final class AlarmStore: ObservableObject {
             }
         )
 
-        var updated = alarms
         var idsToAutoDelete: Set<UUID> = []
-        var changed = false
 
         for index in updated.indices {
             let alarmID = updated[index].id
@@ -340,7 +318,10 @@ final class AlarmStore: ObservableObject {
         idsToAutoDelete: inout Set<UUID>,
         changed: inout Bool
     ) {
-        if currentState == .countdown || currentState == .paused {
+        let hadSnoozes = alarm.snoozeCount > 0
+
+        // Snooze was tapped and alarm got rescheduled by SnoozeIntent.
+        if currentState == .scheduled, alarm.snoozeEnabled, hadSnoozes {
             if alarm.lifecycleState != .scheduled {
                 alarm.lifecycleState = .scheduled
                 changed = true
@@ -348,14 +329,18 @@ final class AlarmStore: ObservableObject {
             return
         }
 
-        alarm.snoozeCount = 0
-        alarm.updatedAt = .now
+        if hadSnoozes {
+            alarm.snoozeCount = 0
+            alarm.updatedAt = .now
+            changed = true
+        }
 
         if alarm.isRepeating {
+            if hadSnoozes {
+                scheduleRepeatRestore(for: alarm)
+            }
             if alarm.lifecycleState != .scheduled {
                 alarm.lifecycleState = .scheduled
-                changed = true
-            } else {
                 changed = true
             }
             return
@@ -365,8 +350,6 @@ final class AlarmStore: ObservableObject {
             if alarm.lifecycleState != .awaitingWakeCheck {
                 alarm.lifecycleState = .awaitingWakeCheck
                 changed = true
-            } else {
-                changed = true
             }
             return
         }
@@ -374,12 +357,35 @@ final class AlarmStore: ObservableObject {
         if alarm.lifecycleState != .completed {
             alarm.lifecycleState = .completed
             changed = true
-        } else {
-            changed = true
         }
 
         if alarm.deleteAfterUse {
             idsToAutoDelete.insert(alarm.id)
+        }
+    }
+
+    private func scheduleRepeatRestore(for alarm: UserAlarm) {
+        guard !pendingRepeatRestores.contains(alarm.id) else {
+            return
+        }
+
+        pendingRepeatRestores.insert(alarm.id)
+        let restoredAlarm = alarm
+
+        Task { @MainActor [weak self] in
+            guard let self else {
+                return
+            }
+            defer { pendingRepeatRestores.remove(restoredAlarm.id) }
+
+            do {
+                let config = makeConfiguration(for: restoredAlarm, schedule: restoredAlarm.schedule, isShadowTrial: false)
+                let remote = try await alarmManager.schedule(id: restoredAlarm.id, configuration: config)
+                lastKnownAlarmState[restoredAlarm.id] = remote.state
+                remoteStates[restoredAlarm.id] = remote.state
+            } catch {
+                // Best effort; future refresh can recover.
+            }
         }
     }
 
@@ -399,7 +405,12 @@ final class AlarmStore: ObservableObject {
             }
 
             if previousState == .alerting, currentState != .alerting {
-                if currentState == .countdown || currentState == .paused {
+                if currentState == .scheduled, trials[index].snoozeEnabled, trials[index].snoozeCount > 0 {
+                    if trials[index].lifecycleState != .scheduled {
+                        trials[index].lifecycleState = .scheduled
+                        trials[index].updatedAt = .now
+                        changed = true
+                    }
                     continue
                 }
 
@@ -419,6 +430,25 @@ final class AlarmStore: ObservableObject {
                 continue
             }
 
+            if let currentState {
+                switch currentState {
+                case .alerting:
+                    if trials[index].lifecycleState != .alerting {
+                        trials[index].lifecycleState = .alerting
+                        trials[index].updatedAt = .now
+                        changed = true
+                    }
+                case .scheduled, .countdown, .paused:
+                    if trials[index].lifecycleState != .scheduled {
+                        trials[index].lifecycleState = .scheduled
+                        trials[index].updatedAt = .now
+                        changed = true
+                    }
+                @unknown default:
+                    break
+                }
+            }
+
             if currentState == nil, trials[index].lifecycleState != .awaitingWakeCheck {
                 trials.remove(at: index)
                 changed = true
@@ -430,7 +460,7 @@ final class AlarmStore: ObservableObject {
         }
     }
 
-    private func syncSnoozeCountsFromPersistence() {
+    private func mergeSnoozeCountsFromPersistence(into alarms: inout [UserAlarm]) -> Bool {
         let persisted = Dictionary(uniqueKeysWithValues: AlarmPersistence.loadUserAlarms(from: userDefaults).map { ($0.id, $0.snoozeCount) })
 
         var changed = false
@@ -443,10 +473,7 @@ final class AlarmStore: ObservableObject {
                 changed = true
             }
         }
-
-        if changed {
-            save()
-        }
+        return changed
     }
 
     private func sortAlarms(_ alarms: [UserAlarm]) -> [UserAlarm] {
@@ -478,14 +505,6 @@ enum AlarmStoreError: Error {
 extension AlarmButton {
     static var snoozeButton: Self {
         AlarmButton(text: "Snooze", textColor: .black, systemImageName: "zzz")
-    }
-
-    static var pauseButton: Self {
-        AlarmButton(text: "Pause", textColor: .black, systemImageName: "pause.fill")
-    }
-
-    static var resumeButton: Self {
-        AlarmButton(text: "Start", textColor: .black, systemImageName: "play.fill")
     }
 
     static var stopButton: Self {

@@ -67,7 +67,7 @@ private struct WelcomeStepView: View {
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(OAColor.actionCyan)
                     }
-                    .frame(maxWidth: .infinity, alignment: .center)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.top, 2)
                 }
             }

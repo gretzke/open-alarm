@@ -115,65 +115,12 @@ struct AlarmEditorView: View {
         }
         .preferredColorScheme(.dark)
         .sheet(item: $selectionSheet) { item in
-            switch item {
-            case .snoozeDuration:
-                SelectionSheetView(
-                    title: L10n.alarmEditorSnoozeDurationLabel,
-                    options: snoozeDurationOptions.map { .value($0) },
-                    selected: .value(draft.snoozeDurationMinutes),
-                    format: { option in
-                        switch option {
-                        case let .value(minutes):
-                            return "\(minutes) \(String(localized: "alarm_editor_snooze_minutes_unit"))"
-                        case .unlimited:
-                            return String(localized: "alarm_editor_snooze_unlimited")
-                        }
-                    },
-                    onSelect: { option in
-                        if case let .value(minutes) = option {
-                            draft.snoozeDurationMinutes = minutes
-                        }
-                        selectionSheet = nil
-                    }
-                )
+            sheetContent(for: item)
                 .preferredColorScheme(.dark)
-
-            case .maxSnoozes:
-                SelectionSheetView(
-                    title: L10n.alarmEditorSnoozeMaxLabel,
-                    options: maxSnoozeOptions.map { value in
-                        value.map(SelectionOption.value) ?? .unlimited
-                    },
-                    selected: draft.maxSnoozes.map(SelectionOption.value) ?? .unlimited,
-                    format: { option in
-                        switch option {
-                        case let .value(number):
-                            return "\(number)"
-                        case .unlimited:
-                            return String(localized: "alarm_editor_snooze_unlimited")
-                        }
-                    },
-                    onSelect: { option in
-                        switch option {
-                        case let .value(number):
-                            draft.maxSnoozes = number
-                        case .unlimited:
-                            draft.maxSnoozes = nil
-                        }
-                        selectionSheet = nil
-                    }
-                )
-                .preferredColorScheme(.dark)
-
-            case .tryOut:
-                TryOutPickerView(
-                    isBusy: isSaving,
-                    onSelect: { seconds in
-                        runTryOut(after: seconds)
-                    }
-                )
-                .preferredColorScheme(.dark)
-            }
+                .presentationDetents([.fraction(0.35), .medium])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(.ultraThinMaterial)
+                .presentationBackgroundInteraction(.enabled)
         }
     }
 
@@ -330,6 +277,66 @@ struct AlarmEditorView: View {
         .buttonStyle(.plain)
     }
 
+    @ViewBuilder
+    private func sheetContent(for item: AlarmEditorSelectionSheet) -> some View {
+        switch item {
+        case .snoozeDuration:
+            SelectionSheetView(
+                title: L10n.alarmEditorSnoozeDurationLabel,
+                options: snoozeDurationOptions.map { .value($0) },
+                selected: .value(draft.snoozeDurationMinutes),
+                format: { option in
+                    switch option {
+                    case let .value(minutes):
+                        return "\(minutes) \(String(localized: "alarm_editor_snooze_minutes_unit"))"
+                    case .unlimited:
+                        return String(localized: "alarm_editor_snooze_unlimited")
+                    }
+                },
+                onSelect: { option in
+                    if case let .value(minutes) = option {
+                        draft.snoozeDurationMinutes = minutes
+                    }
+                    selectionSheet = nil
+                }
+            )
+
+        case .maxSnoozes:
+            SelectionSheetView(
+                title: L10n.alarmEditorSnoozeMaxLabel,
+                options: maxSnoozeOptions.map { value in
+                    value.map(SelectionOption.value) ?? .unlimited
+                },
+                selected: draft.maxSnoozes.map(SelectionOption.value) ?? .unlimited,
+                format: { option in
+                    switch option {
+                    case let .value(number):
+                        return "\(number)"
+                    case .unlimited:
+                        return String(localized: "alarm_editor_snooze_unlimited")
+                    }
+                },
+                onSelect: { option in
+                    switch option {
+                    case let .value(number):
+                        draft.maxSnoozes = number
+                    case .unlimited:
+                        draft.maxSnoozes = nil
+                    }
+                    selectionSheet = nil
+                }
+            )
+
+        case .tryOut:
+            TryOutPickerView(
+                isBusy: isSaving,
+                onSelect: { seconds in
+                    runTryOut(after: seconds)
+                }
+            )
+        }
+    }
+
     private func saveAlarm() {
         guard !isSaving else {
             return
@@ -419,7 +426,6 @@ private struct SelectionSheetView: View {
                 }
                 .padding(20)
             }
-            .background(OAColor.background.ignoresSafeArea())
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
         }
@@ -476,7 +482,6 @@ private struct TryOutPickerView: View {
                 }
                 .padding(20)
             }
-            .background(OAColor.background.ignoresSafeArea())
             .navigationTitle(L10n.tryOutSheetTitle)
             .navigationBarTitleDisplayMode(.inline)
         }

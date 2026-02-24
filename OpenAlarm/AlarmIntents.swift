@@ -1,6 +1,7 @@
 import AlarmKit
 import AppIntents
 import Foundation
+import SwiftUI
 
 struct SnoozeIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Snooze"
@@ -17,7 +18,7 @@ struct SnoozeIntent: LiveActivityIntent {
         self.alarmID = ""
     }
 
-    func perform() throws -> some IntentResult {
+    func perform() async throws -> some IntentResult {
         guard let id = UUID(uuidString: alarmID) else {
             return .result()
         }
@@ -28,12 +29,7 @@ struct SnoozeIntent: LiveActivityIntent {
         if let index = alarms.firstIndex(where: { $0.id == id }) {
             var alarm = alarms[index]
 
-            guard alarm.snoozeEnabled else {
-                try AlarmManager.shared.stop(id: id)
-                return .result()
-            }
-
-            if let max = alarm.maxSnoozes, alarm.snoozeCount >= max {
+            guard alarm.canSnoozeAgain else {
                 try AlarmManager.shared.stop(id: id)
                 return .result()
             }
@@ -43,7 +39,11 @@ struct SnoozeIntent: LiveActivityIntent {
             alarms[index] = alarm
             AlarmPersistence.saveUserAlarms(alarms, to: defaults)
 
-            try AlarmManager.shared.countdown(id: id)
+            let snoozeDate = Date.now.addingTimeInterval(TimeInterval(alarm.snoozeDurationMinutes * 60))
+            try AlarmManager.shared.stop(id: id)
+
+            let config = makeConfiguration(for: alarm, schedule: .fixed(snoozeDate), isShadowTrial: false)
+            _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
             return .result()
         }
 
@@ -51,15 +51,7 @@ struct SnoozeIntent: LiveActivityIntent {
         if let index = trials.firstIndex(where: { $0.id == id }) {
             var trial = trials[index]
 
-            guard trial.snoozeEnabled else {
-                try AlarmManager.shared.stop(id: id)
-                try AlarmManager.shared.cancel(id: id)
-                trials.remove(at: index)
-                AlarmPersistence.saveShadowTrials(trials, to: defaults)
-                return .result()
-            }
-
-            if let max = trial.maxSnoozes, trial.snoozeCount >= max {
+            guard trial.canSnoozeAgain else {
                 try AlarmManager.shared.stop(id: id)
                 try AlarmManager.shared.cancel(id: id)
                 trials.remove(at: index)
@@ -72,11 +64,88 @@ struct SnoozeIntent: LiveActivityIntent {
             trials[index] = trial
             AlarmPersistence.saveShadowTrials(trials, to: defaults)
 
-            try AlarmManager.shared.countdown(id: id)
+            let snoozeDate = Date.now.addingTimeInterval(TimeInterval(trial.snoozeDurationMinutes * 60))
+            try AlarmManager.shared.stop(id: id)
+
+            let config = makeConfiguration(for: trial, schedule: .fixed(snoozeDate))
+            _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
             return .result()
         }
 
-        try AlarmManager.shared.countdown(id: id)
+        try AlarmManager.shared.stop(id: id)
         return .result()
+    }
+
+    private func makeConfiguration(
+        for alarm: UserAlarm,
+        schedule: Alarm.Schedule,
+        isShadowTrial: Bool
+    ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
+        let showSnoozeButton = alarm.canSnoozeAgain
+
+        let alertPresentation = AlarmPresentation.Alert(
+            title: LocalizedStringResource("app_title"),
+            stopButton: .stopButton,
+            secondaryButton: showSnoozeButton ? .snoozeButton : nil,
+            secondaryButtonBehavior: showSnoozeButton ? .custom : nil
+        )
+
+        let presentation = AlarmPresentation(alert: alertPresentation)
+        let attributes = AlarmAttributes(
+            presentation: presentation,
+            metadata: OpenAlarmMetadata(source: alarm.id.uuidString, isShadowTrial: isShadowTrial),
+            tintColor: Color(red: 100 / 255, green: 210 / 255, blue: 255 / 255)
+        )
+
+        let secondaryIntent: (any LiveActivityIntent)? = if showSnoozeButton {
+            SnoozeIntent(alarmID: alarm.id.uuidString)
+        } else {
+            nil
+        }
+
+        return .init(
+            countdownDuration: nil,
+            schedule: schedule,
+            attributes: attributes,
+            stopIntent: nil,
+            secondaryIntent: secondaryIntent,
+            sound: .default
+        )
+    }
+
+    private func makeConfiguration(
+        for trial: ShadowTrialAlarm,
+        schedule: Alarm.Schedule
+    ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
+        let showSnoozeButton = trial.canSnoozeAgain
+
+        let alertPresentation = AlarmPresentation.Alert(
+            title: LocalizedStringResource("app_title"),
+            stopButton: .stopButton,
+            secondaryButton: showSnoozeButton ? .snoozeButton : nil,
+            secondaryButtonBehavior: showSnoozeButton ? .custom : nil
+        )
+
+        let presentation = AlarmPresentation(alert: alertPresentation)
+        let attributes = AlarmAttributes(
+            presentation: presentation,
+            metadata: OpenAlarmMetadata(source: trial.id.uuidString, isShadowTrial: true),
+            tintColor: Color(red: 100 / 255, green: 210 / 255, blue: 255 / 255)
+        )
+
+        let secondaryIntent: (any LiveActivityIntent)? = if showSnoozeButton {
+            SnoozeIntent(alarmID: trial.id.uuidString)
+        } else {
+            nil
+        }
+
+        return .init(
+            countdownDuration: nil,
+            schedule: schedule,
+            attributes: attributes,
+            stopIntent: nil,
+            secondaryIntent: secondaryIntent,
+            sound: .default
+        )
     }
 }

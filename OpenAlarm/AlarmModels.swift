@@ -169,6 +169,16 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         return "\(duration), \(maxPart)"
     }
 
+    var canSnoozeAgain: Bool {
+        guard snoozeEnabled else {
+            return false
+        }
+        guard let maxSnoozes else {
+            return true
+        }
+        return snoozeCount < maxSnoozes
+    }
+
     // Backward-compatible decoding (older stored alarms may not have snooze fields).
     enum CodingKeys: String, CodingKey {
         case id
