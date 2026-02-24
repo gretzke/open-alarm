@@ -47,6 +47,9 @@ struct AlarmEditorView: View {
     @State private var isTryOutSheetPresented = false
     @State private var errorMessage: LocalizedStringKey?
 
+    private let snoozeDurationOptions = [1, 3, 5, 10, 15, 20, 30, 45, 60]
+    private let maxSnoozeOptions: [Int?] = [nil, 1, 2, 3, 5, 10]
+
     init(route: AlarmEditorRoute) {
         self.route = route
         _draft = State(initialValue: route.initialDraft)
@@ -55,10 +58,12 @@ struct AlarmEditorView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 16) {
-                    timeCard
-                    behaviorCard
-                    tryOutCard
+                VStack(alignment: .leading, spacing: 22) {
+                    timeSection
+                    deleteAfterUseSection
+                    repeatDaysSection
+                    snoozeSection
+                    tryOutSection
 
                     if let errorMessage {
                         Text(errorMessage)
@@ -68,7 +73,8 @@ struct AlarmEditorView: View {
                             .padding(.horizontal, 4)
                     }
                 }
-                .padding(20)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
             }
             .background(OAColor.background.ignoresSafeArea())
             .navigationTitle(route.existingAlarm == nil ? L10n.alarmEditorNewTitle : L10n.alarmEditorEditTitle)
@@ -113,11 +119,11 @@ struct AlarmEditorView: View {
         }
     }
 
-    private var timeCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
+    private var timeSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
             Text(L10n.alarmEditorTimeTitle)
                 .font(.headline)
-                .foregroundStyle(OAColor.textPrimary)
+                .foregroundStyle(OAColor.textSecondary)
 
             DatePicker(
                 "",
@@ -127,68 +133,151 @@ struct AlarmEditorView: View {
             .datePickerStyle(.wheel)
             .labelsHidden()
             .colorScheme(.dark)
+            .frame(maxWidth: .infinity)
         }
-        .padding(20)
-        .oaGlassCard()
     }
 
-    private var behaviorCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(L10n.alarmEditorBehaviorTitle)
+    private var deleteAfterUseSection: some View {
+        Toggle(isOn: Binding(
+            get: { draft.deleteAfterUse },
+            set: { draft.setDeleteAfterUse($0) }
+        )) {
+            Text(L10n.alarmEditorDeleteAfterUseToggle)
                 .font(.headline)
                 .foregroundStyle(OAColor.textPrimary)
+        }
+        .tint(OAColor.actionCyan)
+    }
 
-            Toggle(isOn: Binding(
-                get: { draft.deleteAfterUse },
-                set: { draft.setDeleteAfterUse($0) }
-            )) {
-                Text(L10n.alarmEditorDeleteAfterUseToggle)
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(OAColor.textPrimary)
-            }
-            .tint(OAColor.actionCyan)
+    private var repeatDaysSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(L10n.alarmEditorRepeatDaysTitle)
+                .font(.headline)
+                .foregroundStyle(OAColor.textSecondary)
 
-            VStack(alignment: .leading, spacing: 10) {
-                Text(L10n.alarmEditorRepeatDaysTitle)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(OAColor.textSecondary)
-
-                HStack(spacing: 8) {
-                    ForEach(AlarmWeekday.orderedForCurrentLocale()) { day in
-                        dayChip(for: day)
-                    }
+            HStack(spacing: 8) {
+                ForEach(AlarmWeekday.orderedForCurrentLocale()) { day in
+                    dayChip(for: day)
                 }
             }
         }
-        .padding(20)
-        .oaGlassCard()
     }
 
-    private var tryOutCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Button {
-                isTryOutSheetPresented = true
-            } label: {
-                Text(L10n.alarmEditorTryOut)
-                    .font(.headline.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .foregroundStyle(OAColor.background)
-                    .background(
-                        RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                            .fill(OAColor.actionCyan)
-                    )
-                    .shadow(color: OAColor.actionCyan.opacity(0.36), radius: 16, x: 0, y: 10)
-            }
-            .buttonStyle(.plain)
-            .disabled(isSaving)
-
-            Text(L10n.alarmEditorTryOutDescription)
-                .font(.footnote)
+    private var snoozeSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(L10n.alarmEditorSnoozeTitle)
+                .font(.headline)
                 .foregroundStyle(OAColor.textSecondary)
+
+            VStack(spacing: 0) {
+                snoozeDurationRow
+
+                Divider()
+                    .overlay(OAColor.glassStroke.opacity(0.8))
+
+                maxSnoozesRow
+            }
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                    .fill(OAColor.glassFill)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                    .stroke(OAColor.glassStroke, lineWidth: 1)
+            )
         }
-        .padding(20)
-        .oaGlassCard()
+    }
+
+    private var snoozeDurationRow: some View {
+        Menu {
+            ForEach(snoozeDurationOptions, id: \.self) { minutes in
+                Button {
+                    draft.snoozeDurationMinutes = minutes
+                } label: {
+                    if draft.snoozeDurationMinutes == minutes {
+                        Label(snoozeDurationDisplay(minutes: minutes), systemImage: "checkmark")
+                    } else {
+                        Text(snoozeDurationDisplay(minutes: minutes))
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Text(L10n.alarmEditorSnoozeDurationLabel)
+                    .font(.body)
+                    .foregroundStyle(OAColor.textPrimary)
+
+                Spacer(minLength: 0)
+
+                Text(snoozeDurationDisplay(minutes: draft.snoozeDurationMinutes))
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(OAColor.textSecondary)
+
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.footnote)
+                    .foregroundStyle(OAColor.textSecondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var maxSnoozesRow: some View {
+        Menu {
+            ForEach(maxSnoozeOptions, id: \.self) { value in
+                Button {
+                    draft.maxSnoozes = value
+                } label: {
+                    if draft.maxSnoozes == value {
+                        Label(maxSnoozeDisplay(value), systemImage: "checkmark")
+                    } else {
+                        Text(maxSnoozeDisplay(value))
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Text(L10n.alarmEditorSnoozeMaxLabel)
+                    .font(.body)
+                    .foregroundStyle(OAColor.textPrimary)
+
+                Spacer(minLength: 0)
+
+                Text(maxSnoozeDisplay(draft.maxSnoozes))
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(OAColor.textSecondary)
+
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.footnote)
+                    .foregroundStyle(OAColor.textSecondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var tryOutSection: some View {
+        Button {
+            isTryOutSheetPresented = true
+        } label: {
+            Text(L10n.alarmEditorTryOut)
+                .font(.headline.weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .foregroundStyle(OAColor.background)
+                .background(
+                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                        .fill(OAColor.actionCyan)
+                )
+                .shadow(color: OAColor.actionCyan.opacity(0.36), radius: 16, x: 0, y: 10)
+        }
+        .buttonStyle(.plain)
+        .disabled(isSaving)
     }
 
     private func dayChip(for day: AlarmWeekday) -> some View {
@@ -206,12 +295,19 @@ struct AlarmEditorView: View {
                     RoundedRectangle(cornerRadius: OARadius.chip, style: .continuous)
                         .fill(isSelected ? OAColor.actionCyan : OAColor.glassFill)
                 )
-                .overlay(
-                    RoundedRectangle(cornerRadius: OARadius.chip, style: .continuous)
-                        .stroke(OAColor.glassStroke, lineWidth: 1)
-                )
         }
         .buttonStyle(.plain)
+    }
+
+    private func snoozeDurationDisplay(minutes: Int) -> String {
+        "\(minutes) \(String(localized: "alarm_editor_snooze_minutes_unit"))"
+    }
+
+    private func maxSnoozeDisplay(_ value: Int?) -> String {
+        if let value {
+            return "\(value)"
+        }
+        return String(localized: "alarm_editor_snooze_unlimited")
     }
 
     private func saveAlarm() {

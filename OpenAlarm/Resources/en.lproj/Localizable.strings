@@ -20,11 +20,14 @@
 "alarm_editor_new_title" = "New Alarm";
 "alarm_editor_edit_title" = "Edit Alarm";
 "alarm_editor_time_title" = "Time";
-"alarm_editor_behavior_title" = "Behavior";
 "alarm_editor_delete_after_use_toggle" = "Delete alarm after use";
 "alarm_editor_repeat_days_title" = "Repeat on days";
+"alarm_editor_snooze_title" = "Snooze";
+"alarm_editor_snooze_duration_label" = "Duration";
+"alarm_editor_snooze_max_label" = "Max snoozes";
+"alarm_editor_snooze_unlimited" = "Unlimited";
+"alarm_editor_snooze_minutes_unit" = "min";
 "alarm_editor_try_out" = "Try it out";
-"alarm_editor_try_out_description" = "Creates a temporary test alarm based on this setup. It is hidden from your alarm list and auto-cleans after ringing.";
 
 "alarm_editor_error_permission_denied" = "Alarm permission is required. Enable Alarms & Timers in Settings.";
 "alarm_editor_error_generic" = "Something went wrong. Please try again.";

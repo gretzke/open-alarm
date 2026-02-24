@@ -17,11 +17,31 @@ final class AlarmStore: ObservableObject {
 
     private var alarmUpdatesTask: Task<Void, Never>?
     private var lastKnownAlarmState: [UUID: Alarm.State] = [:]
-    private var shadowTrials: [UUID: ShadowTrialPhase] = [:]
+    private var pendingSnoozeReschedules: Set<UUID> = []
+    private var pendingRepeatRestores: Set<UUID> = []
+
+    private var shadowTrials: [UUID: ShadowTrialRecord] = [:]
+    private var pendingShadowReschedules: Set<UUID> = []
 
     private enum ShadowTrialPhase {
         case armed
         case alertingSeen
+        case awaitingWakeCheck
+    }
+
+    private struct ShadowTrialRecord {
+        var snoozeDurationMinutes: Int
+        var maxSnoozes: Int?
+        var snoozeCount: Int
+        var wakeUpCheckEnabled: Bool
+        var phase: ShadowTrialPhase
+
+        var canSnoozeAgain: Bool {
+            guard let maxSnoozes else {
+                return true
+            }
+            return snoozeCount < maxSnoozes
+        }
     }
 
     init(
@@ -79,6 +99,8 @@ final class AlarmStore: ObservableObject {
         alarms.removeAll { $0.id == alarm.id }
         remoteStates.removeValue(forKey: alarm.id)
         lastKnownAlarmState.removeValue(forKey: alarm.id)
+        pendingSnoozeReschedules.remove(alarm.id)
+        pendingRepeatRestores.remove(alarm.id)
         save()
     }
 
@@ -86,12 +108,19 @@ final class AlarmStore: ObservableObject {
         try await ensureAuthorizedForScheduling()
 
         let shadowID = UUID()
-        let trialAlarm = draft.toUserAlarm(id: shadowID, existingCreatedAt: nil)
+        let baseAlarm = draft.toUserAlarm(id: shadowID, existingCreatedAt: nil)
         let trialDate = Date.now.addingTimeInterval(seconds)
-        let config = makeConfiguration(for: trialAlarm, schedule: .fixed(trialDate), isShadowTrial: true)
 
+        let config = makeConfiguration(for: baseAlarm, schedule: .fixed(trialDate), isShadowTrial: true)
         _ = try await alarmManager.schedule(id: shadowID, configuration: config)
-        shadowTrials[shadowID] = .armed
+
+        shadowTrials[shadowID] = ShadowTrialRecord(
+            snoozeDurationMinutes: baseAlarm.snoozeDurationMinutes,
+            maxSnoozes: baseAlarm.maxSnoozes,
+            snoozeCount: 0,
+            wakeUpCheckEnabled: baseAlarm.wakeUpCheckEnabled,
+            phase: .armed
+        )
     }
 
     func lifecycleLabel(for state: AlarmLifecycleState) -> LocalizedStringKey {
@@ -141,11 +170,8 @@ final class AlarmStore: ObservableObject {
 
         do {
             let remoteAlarm = try await alarmManager.schedule(id: id, configuration: config)
-            if remoteAlarm.state == .alerting {
-                nextAlarm.lifecycleState = .alerting
-            } else {
-                nextAlarm.lifecycleState = .scheduled
-            }
+            nextAlarm.lifecycleState = remoteAlarm.state == .alerting ? .alerting : .scheduled
+            nextAlarm.snoozeCount = 0
             lastKnownAlarmState[id] = remoteAlarm.state
             remoteStates[id] = remoteAlarm.state
         } catch {
@@ -277,6 +303,8 @@ final class AlarmStore: ObservableObject {
                 try? alarmManager.cancel(id: id)
                 remoteStates.removeValue(forKey: id)
                 lastKnownAlarmState.removeValue(forKey: id)
+                pendingSnoozeReschedules.remove(id)
+                pendingRepeatRestores.remove(id)
             }
             updated.removeAll { idsToAutoDelete.contains($0.id) }
             changed = true
@@ -293,7 +321,31 @@ final class AlarmStore: ObservableObject {
         idsToAutoDelete: inout Set<UUID>,
         changed: inout Bool
     ) {
+        if alarm.canSnoozeAgain {
+            guard !pendingSnoozeReschedules.contains(alarm.id) else {
+                return
+            }
+
+            alarm.markSnoozeUsed()
+            alarm.lifecycleState = .scheduled
+            changed = true
+            pendingSnoozeReschedules.insert(alarm.id)
+            scheduleSnoozeReschedule(for: alarm)
+            return
+        }
+
+        let hadSnoozes = alarm.snoozeCount > 0
+        alarm.resetSnoozeCycle()
+
         if alarm.isRepeating {
+            if hadSnoozes {
+                guard !pendingRepeatRestores.contains(alarm.id) else {
+                    return
+                }
+                pendingRepeatRestores.insert(alarm.id)
+                restoreRepeatingSchedule(for: alarm)
+            }
+
             if alarm.lifecycleState != .scheduled {
                 alarm.lifecycleState = .scheduled
                 changed = true
@@ -319,25 +371,130 @@ final class AlarmStore: ObservableObject {
         }
     }
 
+    private func scheduleSnoozeReschedule(for alarm: UserAlarm) {
+        let snoozeAt = Date.now.addingTimeInterval(TimeInterval(alarm.snoozeDurationMinutes * 60))
+
+        Task { [weak self] in
+            guard let self else {
+                return
+            }
+            defer { pendingSnoozeReschedules.remove(alarm.id) }
+
+            let config = makeConfiguration(for: alarm, schedule: .fixed(snoozeAt), isShadowTrial: false)
+            do {
+                let remoteAlarm = try await alarmManager.schedule(id: alarm.id, configuration: config)
+                lastKnownAlarmState[alarm.id] = remoteAlarm.state
+                remoteStates[alarm.id] = remoteAlarm.state
+            } catch {
+                // Keep local state; next app open/update pass can reconcile with system.
+            }
+        }
+    }
+
+    private func restoreRepeatingSchedule(for alarm: UserAlarm) {
+        Task { [weak self] in
+            guard let self else {
+                return
+            }
+            defer { pendingRepeatRestores.remove(alarm.id) }
+
+            let config = makeConfiguration(for: alarm, schedule: alarm.schedule, isShadowTrial: false)
+            do {
+                let remoteAlarm = try await alarmManager.schedule(id: alarm.id, configuration: config)
+                lastKnownAlarmState[alarm.id] = remoteAlarm.state
+                remoteStates[alarm.id] = remoteAlarm.state
+            } catch {
+                // Keep local state; next app open/update pass can reconcile with system.
+            }
+        }
+    }
+
     private func handleShadowTrials(remoteByID: [UUID: Alarm]) {
         for trialID in Array(shadowTrials.keys) {
-            guard let phase = shadowTrials[trialID] else {
+            guard var trial = shadowTrials[trialID] else {
                 continue
             }
 
             let currentState = remoteByID[trialID]?.state
 
-            switch (phase, currentState) {
-            case (_, nil):
-                shadowTrials.removeValue(forKey: trialID)
-            case (.armed, .some(.alerting)):
-                shadowTrials[trialID] = .alertingSeen
-            case (.alertingSeen, .some(let state)) where state != .alerting:
+            switch trial.phase {
+            case .armed:
+                if currentState == .alerting {
+                    trial.phase = .alertingSeen
+                    shadowTrials[trialID] = trial
+                } else if currentState == nil, !pendingShadowReschedules.contains(trialID) {
+                    shadowTrials.removeValue(forKey: trialID)
+                }
+
+            case .alertingSeen:
+                guard currentState != .alerting else {
+                    continue
+                }
+
+                if trial.canSnoozeAgain {
+                    guard !pendingShadowReschedules.contains(trialID) else {
+                        continue
+                    }
+
+                    trial.snoozeCount += 1
+                    trial.phase = .armed
+                    shadowTrials[trialID] = trial
+                    pendingShadowReschedules.insert(trialID)
+                    scheduleShadowSnooze(trialID: trialID, trial: trial)
+                    continue
+                }
+
+                if trial.wakeUpCheckEnabled {
+                    trial.phase = .awaitingWakeCheck
+                    shadowTrials[trialID] = trial
+                    continue
+                }
+
                 try? alarmManager.stop(id: trialID)
                 try? alarmManager.cancel(id: trialID)
                 shadowTrials.removeValue(forKey: trialID)
-            default:
+                pendingShadowReschedules.remove(trialID)
+
+            case .awaitingWakeCheck:
+                // Future integration point: keep shadow alarm state alive
+                // until wake-up-check finishes and marks completion.
                 break
+            }
+        }
+    }
+
+    private func scheduleShadowSnooze(trialID: UUID, trial: ShadowTrialRecord) {
+        let snoozeAt = Date.now.addingTimeInterval(TimeInterval(trial.snoozeDurationMinutes * 60))
+        let calendar = Calendar.autoupdatingCurrent
+        let parts = calendar.dateComponents([.hour, .minute], from: snoozeAt)
+
+        let trialAlarm = UserAlarm(
+            id: trialID,
+            hour: parts.hour ?? 7,
+            minute: parts.minute ?? 0,
+            repeatDays: [],
+            deleteAfterUse: true,
+            wakeUpCheckEnabled: trial.wakeUpCheckEnabled,
+            snoozeDurationMinutes: trial.snoozeDurationMinutes,
+            maxSnoozes: trial.maxSnoozes,
+            snoozeCount: trial.snoozeCount,
+            lifecycleState: .scheduled,
+            createdAt: .now,
+            updatedAt: .now
+        )
+
+        Task { [weak self] in
+            guard let self else {
+                return
+            }
+            defer { pendingShadowReschedules.remove(trialID) }
+
+            let config = makeConfiguration(for: trialAlarm, schedule: .fixed(snoozeAt), isShadowTrial: true)
+            do {
+                _ = try await alarmManager.schedule(id: trialID, configuration: config)
+            } catch {
+                shadowTrials.removeValue(forKey: trialID)
+                try? alarmManager.cancel(id: trialID)
             }
         }
     }

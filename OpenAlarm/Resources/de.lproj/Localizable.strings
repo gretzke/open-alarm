@@ -20,11 +20,14 @@
 "alarm_editor_new_title" = "Neuer Alarm";
 "alarm_editor_edit_title" = "Alarm bearbeiten";
 "alarm_editor_time_title" = "Uhrzeit";
-"alarm_editor_behavior_title" = "Verhalten";
 "alarm_editor_delete_after_use_toggle" = "Alarm nach Nutzung löschen";
 "alarm_editor_repeat_days_title" = "An Tagen wiederholen";
+"alarm_editor_snooze_title" = "Snooze";
+"alarm_editor_snooze_duration_label" = "Dauer";
+"alarm_editor_snooze_max_label" = "Max. Snoozes";
+"alarm_editor_snooze_unlimited" = "Unbegrenzt";
+"alarm_editor_snooze_minutes_unit" = "Min";
 "alarm_editor_try_out" = "Ausprobieren";
-"alarm_editor_try_out_description" = "Erstellt einen temporären Test-Alarm auf Basis dieser Einstellungen. Er bleibt in der Alarmliste unsichtbar und wird nach dem Klingeln automatisch entfernt.";
 
 "alarm_editor_error_permission_denied" = "Alarm-Berechtigung wird benötigt. Aktiviere „Alarme & Timer“ in den Einstellungen.";
 "alarm_editor_error_generic" = "Etwas ist schiefgelaufen. Bitte versuche es erneut.";

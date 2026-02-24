@@ -86,6 +86,9 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
     var repeatDays: [AlarmWeekday]
     var deleteAfterUse: Bool
     var wakeUpCheckEnabled: Bool
+    var snoozeDurationMinutes: Int
+    var maxSnoozes: Int?
+    var snoozeCount: Int
     var lifecycleState: AlarmLifecycleState
     var createdAt: Date
     var updatedAt: Date
@@ -97,6 +100,9 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         repeatDays: [AlarmWeekday],
         deleteAfterUse: Bool,
         wakeUpCheckEnabled: Bool,
+        snoozeDurationMinutes: Int,
+        maxSnoozes: Int?,
+        snoozeCount: Int,
         lifecycleState: AlarmLifecycleState,
         createdAt: Date,
         updatedAt: Date
@@ -107,6 +113,9 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         self.repeatDays = repeatDays.sorted { $0.rawValue < $1.rawValue }
         self.deleteAfterUse = deleteAfterUse
         self.wakeUpCheckEnabled = wakeUpCheckEnabled
+        self.snoozeDurationMinutes = snoozeDurationMinutes
+        self.maxSnoozes = maxSnoozes
+        self.snoozeCount = snoozeCount
         self.lifecycleState = lifecycleState
         self.createdAt = createdAt
         self.updatedAt = updatedAt
@@ -139,6 +148,82 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
             repeats: .weekly(sortedRepeatDays.map(\.localeWeekday))
         ))
     }
+
+    var snoozeSummary: String {
+        let duration = "\(snoozeDurationMinutes)m"
+        let maxPart: String
+        if let maxSnoozes {
+            maxPart = "max \(maxSnoozes)"
+        } else {
+            maxPart = "∞"
+        }
+        return "\(duration), \(maxPart)"
+    }
+
+    var canSnoozeAgain: Bool {
+        guard let maxSnoozes else {
+            return true
+        }
+        return snoozeCount < maxSnoozes
+    }
+
+    mutating func resetSnoozeCycle() {
+        snoozeCount = 0
+    }
+
+    mutating func markSnoozeUsed() {
+        snoozeCount += 1
+    }
+
+    // Backward-compatible decoding (older stored alarms may not have snooze fields).
+    enum CodingKeys: String, CodingKey {
+        case id
+        case hour
+        case minute
+        case repeatDays
+        case deleteAfterUse
+        case wakeUpCheckEnabled
+        case snoozeDurationMinutes
+        case maxSnoozes
+        case snoozeCount
+        case lifecycleState
+        case createdAt
+        case updatedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        id = try container.decode(UUID.self, forKey: .id)
+        hour = try container.decode(Int.self, forKey: .hour)
+        minute = try container.decode(Int.self, forKey: .minute)
+        repeatDays = (try container.decodeIfPresent([AlarmWeekday].self, forKey: .repeatDays) ?? [])
+            .sorted { $0.rawValue < $1.rawValue }
+        deleteAfterUse = try container.decodeIfPresent(Bool.self, forKey: .deleteAfterUse) ?? true
+        wakeUpCheckEnabled = try container.decodeIfPresent(Bool.self, forKey: .wakeUpCheckEnabled) ?? false
+        snoozeDurationMinutes = try container.decodeIfPresent(Int.self, forKey: .snoozeDurationMinutes) ?? 5
+        maxSnoozes = try container.decodeIfPresent(Int.self, forKey: .maxSnoozes) ?? 3
+        snoozeCount = try container.decodeIfPresent(Int.self, forKey: .snoozeCount) ?? 0
+        lifecycleState = try container.decodeIfPresent(AlarmLifecycleState.self, forKey: .lifecycleState) ?? .scheduled
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? .now
+        updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? .now
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(hour, forKey: .hour)
+        try container.encode(minute, forKey: .minute)
+        try container.encode(repeatDays, forKey: .repeatDays)
+        try container.encode(deleteAfterUse, forKey: .deleteAfterUse)
+        try container.encode(wakeUpCheckEnabled, forKey: .wakeUpCheckEnabled)
+        try container.encode(snoozeDurationMinutes, forKey: .snoozeDurationMinutes)
+        try container.encodeIfPresent(maxSnoozes, forKey: .maxSnoozes)
+        try container.encode(snoozeCount, forKey: .snoozeCount)
+        try container.encode(lifecycleState, forKey: .lifecycleState)
+        try container.encode(createdAt, forKey: .createdAt)
+        try container.encode(updatedAt, forKey: .updatedAt)
+    }
 }
 
 struct AlarmDraft: Equatable {
@@ -146,12 +231,23 @@ struct AlarmDraft: Equatable {
     var repeatDays: Set<AlarmWeekday>
     var deleteAfterUse: Bool
     var wakeUpCheckEnabled: Bool
+    var snoozeDurationMinutes: Int
+    var maxSnoozes: Int?
 
-    init(time: Date = .now, repeatDays: Set<AlarmWeekday> = [], deleteAfterUse: Bool = true, wakeUpCheckEnabled: Bool = false) {
+    init(
+        time: Date = .now,
+        repeatDays: Set<AlarmWeekday> = [],
+        deleteAfterUse: Bool = true,
+        wakeUpCheckEnabled: Bool = false,
+        snoozeDurationMinutes: Int = 5,
+        maxSnoozes: Int? = 3
+    ) {
         self.time = time
         self.repeatDays = repeatDays
         self.deleteAfterUse = deleteAfterUse
         self.wakeUpCheckEnabled = wakeUpCheckEnabled
+        self.snoozeDurationMinutes = snoozeDurationMinutes
+        self.maxSnoozes = maxSnoozes
     }
 
     init(alarm: UserAlarm) {
@@ -159,6 +255,8 @@ struct AlarmDraft: Equatable {
         self.repeatDays = Set(alarm.repeatDays)
         self.deleteAfterUse = alarm.deleteAfterUse
         self.wakeUpCheckEnabled = alarm.wakeUpCheckEnabled
+        self.snoozeDurationMinutes = alarm.snoozeDurationMinutes
+        self.maxSnoozes = alarm.maxSnoozes
     }
 
     mutating func toggleRepeatDay(_ day: AlarmWeekday) {
@@ -192,6 +290,9 @@ struct AlarmDraft: Equatable {
             repeatDays: Array(repeatDays),
             deleteAfterUse: deleteAfterUse,
             wakeUpCheckEnabled: wakeUpCheckEnabled,
+            snoozeDurationMinutes: snoozeDurationMinutes,
+            maxSnoozes: maxSnoozes,
+            snoozeCount: 0,
             lifecycleState: .scheduled,
             createdAt: existingCreatedAt ?? .now,
             updatedAt: .now
