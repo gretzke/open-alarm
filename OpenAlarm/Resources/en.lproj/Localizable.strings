@@ -48,7 +48,7 @@
 "onboarding_welcome_no_ads" = "No ads";
 "onboarding_welcome_no_tracking" = "No tracking";
 "onboarding_welcome_open_source" = "Open source";
-"onboarding_welcome_forever" = "Forever.";
+"onboarding_welcome_forever" = "Forever";
 
 "onboarding_permission_request_title" = "Allow alarm scheduling";
 "onboarding_permission_request_body" = "OpenAlarm needs permission to schedule alarms and timers. We will ask iOS for this on the next step.";

@@ -48,7 +48,7 @@
 "onboarding_welcome_no_ads" = "Keine Werbung";
 "onboarding_welcome_no_tracking" = "Kein Tracking";
 "onboarding_welcome_open_source" = "Open Source";
-"onboarding_welcome_forever" = "Für immer.";
+"onboarding_welcome_forever" = "Für immer";
 
 "onboarding_permission_request_title" = "Alarmplanung erlauben";
 "onboarding_permission_request_body" = "OpenAlarm braucht die Berechtigung, Alarme und Timer zu planen. Im nächsten Schritt fragen wir iOS danach.";

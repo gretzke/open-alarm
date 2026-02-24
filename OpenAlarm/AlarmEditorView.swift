@@ -85,7 +85,13 @@ struct AlarmEditorView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
             }
-            .background(.clear)
+            .background(Color.clear)
+            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 30, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .stroke(OAColor.glassStroke.opacity(0.55), lineWidth: 0.8)
+            )
+            .padding(8)
             .navigationTitle(route.existingAlarm == nil ? L10n.alarmEditorNewTitle : L10n.alarmEditorEditTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -114,6 +120,7 @@ struct AlarmEditorView: View {
                 }
             }
         }
+        .background(Color.clear)
         .preferredColorScheme(.dark)
         .toolbarBackground(.hidden, for: .navigationBar)
         .presentationBackground(.clear)
