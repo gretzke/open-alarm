@@ -25,6 +25,7 @@ struct ShadowTrialAlarm: Codable, Equatable, Sendable {
 enum AlarmPersistence {
     static let userAlarmsKey = "OPENALARM_USER_ALARMS_V1"
     static let shadowTrialsKey = "OPENALARM_SHADOW_TRIALS_V1"
+    static let pendingSnoozeIDsKey = "OPENALARM_PENDING_SNOOZE_IDS_V1"
 
     static func loadUserAlarms(from defaults: UserDefaults = .standard) -> [UserAlarm] {
         guard let data = defaults.data(forKey: userAlarmsKey) else {
@@ -66,5 +67,17 @@ enum AlarmPersistence {
         } catch {
             defaults.removeObject(forKey: shadowTrialsKey)
         }
+    }
+
+    static func loadPendingSnoozeIDs(from defaults: UserDefaults = .standard) -> Set<UUID> {
+        guard let raw = defaults.array(forKey: pendingSnoozeIDsKey) as? [String] else {
+            return []
+        }
+        return Set(raw.compactMap(UUID.init(uuidString:)))
+    }
+
+    static func savePendingSnoozeIDs(_ ids: Set<UUID>, to defaults: UserDefaults = .standard) {
+        let raw = ids.map(\.uuidString)
+        defaults.set(raw, forKey: pendingSnoozeIDsKey)
     }
 }

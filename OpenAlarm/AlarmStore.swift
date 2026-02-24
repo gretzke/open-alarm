@@ -73,6 +73,12 @@ final class AlarmStore: ObservableObject {
         alarms.removeAll { $0.id == alarm.id }
         remoteStates.removeValue(forKey: alarm.id)
         lastKnownAlarmState.removeValue(forKey: alarm.id)
+
+        var pending = AlarmPersistence.loadPendingSnoozeIDs(from: userDefaults)
+        if pending.remove(alarm.id) != nil {
+            AlarmPersistence.savePendingSnoozeIDs(pending, to: userDefaults)
+        }
+
         save()
     }
 
@@ -245,10 +251,13 @@ final class AlarmStore: ObservableObject {
     private func applyRemoteAlarms(_ incoming: [Alarm]) {
         let remoteByID = Dictionary(uniqueKeysWithValues: incoming.map { ($0.id, $0) })
 
+        var pendingSnoozeIDs = AlarmPersistence.loadPendingSnoozeIDs(from: userDefaults)
+        let originalPending = pendingSnoozeIDs
+
         var updated = alarms
         var changed = mergeSnoozeCountsFromPersistence(into: &updated)
 
-        handleShadowTrials(remoteByID: remoteByID)
+        handleShadowTrials(remoteByID: remoteByID, pendingSnoozeIDs: &pendingSnoozeIDs)
 
         remoteStates = Dictionary(
             uniqueKeysWithValues: updated.compactMap { alarm in
@@ -272,10 +281,15 @@ final class AlarmStore: ObservableObject {
                 lastKnownAlarmState.removeValue(forKey: alarmID)
             }
 
+            if isSnoozeTransitionState(currentState) {
+                pendingSnoozeIDs.remove(alarmID)
+            }
+
             if previousState == .alerting, currentState != .alerting {
                 applyPostAlertTransition(
                     alarm: &updated[index],
                     currentState: currentState,
+                    pendingSnoozeIDs: &pendingSnoozeIDs,
                     idsToAutoDelete: &idsToAutoDelete,
                     changed: &changed
                 )
@@ -307,6 +321,7 @@ final class AlarmStore: ObservableObject {
                 try? alarmManager.cancel(id: id)
                 remoteStates.removeValue(forKey: id)
                 lastKnownAlarmState.removeValue(forKey: id)
+                pendingSnoozeIDs.remove(id)
             }
             updated.removeAll { idsToAutoDelete.contains($0.id) }
             changed = true
@@ -316,20 +331,34 @@ final class AlarmStore: ObservableObject {
             alarms = sortAlarms(updated)
             save()
         }
+
+        if pendingSnoozeIDs != originalPending {
+            AlarmPersistence.savePendingSnoozeIDs(pendingSnoozeIDs, to: userDefaults)
+        }
     }
 
     private func applyPostAlertTransition(
         alarm: inout UserAlarm,
         currentState: Alarm.State?,
+        pendingSnoozeIDs: inout Set<UUID>,
         idsToAutoDelete: inout Set<UUID>,
         changed: inout Bool
     ) {
+        // If a snooze action just ran, keep alarm in scheduled state and skip completion.
+        if pendingSnoozeIDs.contains(alarm.id) {
+            if alarm.lifecycleState != .scheduled {
+                alarm.lifecycleState = .scheduled
+                changed = true
+            }
+            return
+        }
+
         let hadSnoozes = alarm.snoozeCount > 0
 
-        // Snooze was tapped and alarm transitioned into snooze flow.
+        // Snooze transition path should remain active and not mark completion.
         if alarm.snoozeEnabled,
            hadSnoozes,
-           currentState == .scheduled || currentState == .countdown || currentState == .paused {
+           isSnoozeTransitionState(currentState) {
             if alarm.lifecycleState != .scheduled {
                 alarm.lifecycleState = .scheduled
                 changed = true
@@ -397,7 +426,7 @@ final class AlarmStore: ObservableObject {
         }
     }
 
-    private func handleShadowTrials(remoteByID: [UUID: Alarm]) {
+    private func handleShadowTrials(remoteByID: [UUID: Alarm], pendingSnoozeIDs: inout Set<UUID>) {
         var trials = AlarmPersistence.loadShadowTrials(from: userDefaults)
         var changed = false
 
@@ -412,10 +441,23 @@ final class AlarmStore: ObservableObject {
                 lastKnownAlarmState.removeValue(forKey: trialID)
             }
 
+            if isSnoozeTransitionState(currentState) {
+                pendingSnoozeIDs.remove(trialID)
+            }
+
             if previousState == .alerting, currentState != .alerting {
+                if pendingSnoozeIDs.contains(trialID) {
+                    if trials[index].lifecycleState != .scheduled {
+                        trials[index].lifecycleState = .scheduled
+                        trials[index].updatedAt = .now
+                        changed = true
+                    }
+                    continue
+                }
+
                 if trials[index].snoozeEnabled,
                    trials[index].snoozeCount > 0,
-                   currentState == .scheduled || currentState == .countdown || currentState == .paused {
+                   isSnoozeTransitionState(currentState) {
                     if trials[index].lifecycleState != .scheduled {
                         trials[index].lifecycleState = .scheduled
                         trials[index].updatedAt = .now
@@ -436,6 +478,7 @@ final class AlarmStore: ObservableObject {
                 try? alarmManager.stop(id: trialID)
                 try? alarmManager.cancel(id: trialID)
                 trials.remove(at: index)
+                pendingSnoozeIDs.remove(trialID)
                 changed = true
                 continue
             }
@@ -461,6 +504,7 @@ final class AlarmStore: ObservableObject {
 
             if currentState == nil, trials[index].lifecycleState != .awaitingWakeCheck {
                 trials.remove(at: index)
+                pendingSnoozeIDs.remove(trialID)
                 changed = true
             }
         }
@@ -468,6 +512,10 @@ final class AlarmStore: ObservableObject {
         if changed {
             AlarmPersistence.saveShadowTrials(trials, to: userDefaults)
         }
+    }
+
+    private func isSnoozeTransitionState(_ state: Alarm.State?) -> Bool {
+        state == .scheduled || state == .countdown || state == .paused
     }
 
     private func mergeSnoozeCountsFromPersistence(into alarms: inout [UserAlarm]) -> Bool {

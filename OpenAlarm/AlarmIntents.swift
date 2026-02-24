@@ -26,11 +26,17 @@ struct SnoozeIntent: LiveActivityIntent {
 
         let defaults = UserDefaults.standard
 
+        var pending = AlarmPersistence.loadPendingSnoozeIDs(from: defaults)
+        pending.insert(id)
+        AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
+
         var alarms = AlarmPersistence.loadUserAlarms(from: defaults)
         if let index = alarms.firstIndex(where: { $0.id == id }) {
             var alarm = alarms[index]
 
             guard alarm.canSnoozeAgain else {
+                pending.remove(id)
+                AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
                 try AlarmManager.shared.stop(id: id)
                 return .result()
             }
@@ -41,13 +47,16 @@ struct SnoozeIntent: LiveActivityIntent {
             AlarmPersistence.saveUserAlarms(alarms, to: defaults)
 
             let snoozeDate = Date.now.addingTimeInterval(snoozeInterval(for: alarm.snoozeDurationMinutes))
-            try AlarmManager.shared.countdown(id: id)
 
             do {
                 let config = makeConfiguration(for: alarm, schedule: .fixed(snoozeDate), isShadowTrial: false)
                 _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
+                try AlarmManager.shared.stop(id: id)
             } catch {
-                // Keep countdown behavior even if override schedule update fails.
+                pending.remove(id)
+                AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
+                // Fallback to built-in countdown if reschedule update fails.
+                try? AlarmManager.shared.countdown(id: id)
             }
             return .result()
         }
@@ -57,6 +66,8 @@ struct SnoozeIntent: LiveActivityIntent {
             var trial = trials[index]
 
             guard trial.canSnoozeAgain else {
+                pending.remove(id)
+                AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
                 try AlarmManager.shared.stop(id: id)
                 try AlarmManager.shared.cancel(id: id)
                 trials.remove(at: index)
@@ -70,17 +81,21 @@ struct SnoozeIntent: LiveActivityIntent {
             AlarmPersistence.saveShadowTrials(trials, to: defaults)
 
             let snoozeDate = Date.now.addingTimeInterval(snoozeInterval(for: trial.snoozeDurationMinutes))
-            try AlarmManager.shared.countdown(id: id)
 
             do {
                 let config = makeConfiguration(for: trial, schedule: .fixed(snoozeDate))
                 _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
+                try AlarmManager.shared.stop(id: id)
             } catch {
-                // Keep countdown behavior even if override schedule update fails.
+                pending.remove(id)
+                AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
+                try? AlarmManager.shared.countdown(id: id)
             }
             return .result()
         }
 
+        pending.remove(id)
+        AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
         try AlarmManager.shared.stop(id: id)
         return .result()
     }
