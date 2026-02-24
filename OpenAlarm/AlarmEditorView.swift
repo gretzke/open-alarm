@@ -95,6 +95,7 @@ struct AlarmEditorView: View {
                     } label: {
                         Text(L10n.actionCancel)
                     }
+                    .buttonStyle(.glass)
                     .tint(OAColor.actionCyan)
                 }
 
@@ -109,6 +110,7 @@ struct AlarmEditorView: View {
                             Text(route.existingAlarm == nil ? L10n.actionAdd : L10n.actionSave)
                         }
                     }
+                    .buttonStyle(.glass)
                     .tint(OAColor.actionCyan)
                     .disabled(isSaving)
                 }
@@ -117,6 +119,13 @@ struct AlarmEditorView: View {
         .background(Color.clear)
         .preferredColorScheme(.dark)
         .presentationBackground(.clear)
+        .onAppear {
+#if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("uitestOpenSnoozeDuration") {
+                selectionSheet = .snoozeDuration
+            }
+#endif
+        }
         .sheet(item: $selectionSheet) { item in
             sheetContent(for: item)
                 .preferredColorScheme(.dark)
@@ -464,13 +473,15 @@ private struct SelectionSheetView: View {
                             .padding(.vertical, 14)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .contentShape(Rectangle())
-                            .background(
-                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                    .fill(Color.clear)
+                            .glassEffect(
+                                option == selected
+                                    ? .regular.tint(OAColor.actionCyan.opacity(0.16))
+                                    : .regular,
+                                in: RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                    .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
+                                    .stroke(OAColor.glassStroke.opacity(option == selected ? 0.95 : 0.7), lineWidth: option == selected ? 1.0 : 0.8)
                             )
                         }
                         .frame(maxWidth: .infinity)

@@ -38,6 +38,14 @@ struct MainTabView: View {
 private struct AlarmHomeView: View {
     @EnvironmentObject private var alarmStore: AlarmStore
     @State private var editorRoute: AlarmEditorRoute?
+    @State private var editorDetent: PresentationDetent = .fraction(0.82)
+
+    private let editorPartialDetent: PresentationDetent = .fraction(0.82)
+
+    private func presentEditor(_ route: AlarmEditorRoute) {
+        editorDetent = editorPartialDetent
+        editorRoute = route
+    }
 
     var body: some View {
         NavigationStack {
@@ -60,7 +68,7 @@ private struct AlarmHomeView: View {
                             )
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                editorRoute = .edit(alarm)
+                                presentEditor(.edit(alarm))
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button(role: .destructive) {
@@ -83,7 +91,7 @@ private struct AlarmHomeView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        editorRoute = .create
+                        presentEditor(.create)
                     } label: {
                         Image(systemName: "plus")
                     }
@@ -91,12 +99,19 @@ private struct AlarmHomeView: View {
                     .accessibilityIdentifier("alarm_add_button")
                 }
             }
+            .onAppear {
+#if DEBUG
+                if ProcessInfo.processInfo.arguments.contains("uitestOpenCreateAlarm") {
+                    presentEditor(.create)
+                }
+#endif
+            }
         }
         .sheet(item: $editorRoute) { route in
             AlarmEditorView(route: route)
                 .environmentObject(alarmStore)
-                .presentationBackground(.clear)
-                .presentationBackgroundInteraction(.enabled)
+                .presentationDetents([editorPartialDetent, .large], selection: $editorDetent)
+                .presentationDragIndicator(.visible)
         }
     }
 }

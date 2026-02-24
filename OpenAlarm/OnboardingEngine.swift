@@ -95,6 +95,12 @@ final class OnboardingEngine: ObservableObject {
     }
 
     private func refreshWorkflow() {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("uitestSkipOnboarding") {
+            activeStep = nil
+            return
+        }
+#endif
         let context = OnboardingEvaluationContext(
             alarmPermissionStatus: alarmPermissionService.currentStatus()
         )

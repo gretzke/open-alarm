@@ -1,0 +1,13 @@
+appId: com.gretzke.openalarm
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    permissions:
+      all: allow
+    arguments:
+      uitestSkipOnboarding: true
+      uitestOpenCreateAlarm: true
+- waitForAnimationToEnd
+- takeScreenshot:
+    path: new-alarm-sheet-partial
