@@ -30,6 +30,8 @@ enum L10n {
     static let alarmEditorSnoozeTitle: LocalizedStringKey = "alarm_editor_snooze_title"
     static let alarmEditorSnoozeDurationLabel: LocalizedStringKey = "alarm_editor_snooze_duration_label"
     static let alarmEditorSnoozeMaxLabel: LocalizedStringKey = "alarm_editor_snooze_max_label"
+    static let alarmEditorUseDefaultSettingsToggle: LocalizedStringKey = "alarm_editor_use_default_settings_toggle"
+    static let alarmEditorUseDefaultSettingsHint: LocalizedStringKey = "alarm_editor_use_default_settings_hint"
     static let alarmEditorTryOut: LocalizedStringKey = "alarm_editor_try_out"
     static let alarmEditorTryOutStartsIn5Seconds: LocalizedStringKey = "alarm_editor_try_out_starts_in_5_seconds"
 
@@ -37,6 +39,8 @@ enum L10n {
     static let alarmEditorErrorGeneric: LocalizedStringKey = "alarm_editor_error_generic"
 
     static let settingsTitle: LocalizedStringKey = "settings_title"
+    static let settingsDefaultConfigTitle: LocalizedStringKey = "settings_default_config_title"
+    static let settingsDefaultConfigBody: LocalizedStringKey = "settings_default_config_body"
     static let settingsPermissionTitle: LocalizedStringKey = "settings_permission_title"
     static let settingsPermissionStatusLabel: LocalizedStringKey = "settings_permission_status_label"
     static let settingsPermissionAuthorized: LocalizedStringKey = "settings_permission_authorized"
@@ -50,6 +54,10 @@ enum L10n {
     static let onboardingWelcomeOpenSource: LocalizedStringKey = "onboarding_welcome_open_source"
     static let onboardingWelcomeForever: LocalizedStringKey = "onboarding_welcome_forever"
 
+    static let onboardingDefaultConfigTitle: LocalizedStringKey = "onboarding_default_config_title"
+    static let onboardingDefaultConfigBody: LocalizedStringKey = "onboarding_default_config_body"
+    static let onboardingDefaultConfigHint: LocalizedStringKey = "onboarding_default_config_hint"
+
     static let onboardingPermissionRequestTitle: LocalizedStringKey = "onboarding_permission_request_title"
     static let onboardingPermissionRequestBody: LocalizedStringKey = "onboarding_permission_request_body"
 
@@ -58,6 +66,7 @@ enum L10n {
 
     static let actionNext: LocalizedStringKey = "action_next"
     static let actionOpenSettings: LocalizedStringKey = "action_open_settings"
+    static let actionSkip: LocalizedStringKey = "action_skip"
     static let actionRequesting: LocalizedStringKey = "action_requesting"
     static let actionCancel: LocalizedStringKey = "action_cancel"
     static let actionAdd: LocalizedStringKey = "action_add"

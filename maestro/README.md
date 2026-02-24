@@ -11,6 +11,7 @@ This project now has Maestro flows for fast screenshot capture.
 
 - `maestro/open-create-sheet.yaml` — opens the New Alarm sheet (partial detent)
 - `maestro/open-snooze-sheet.yaml` — opens the snooze half-sheet
+- `maestro/onboarding-default-config.yaml` — opens onboarding default-config step
 
 Both flows use debug launch arguments:
 
@@ -25,6 +26,7 @@ Both flows use debug launch arguments:
 ```bash
 ./scripts/maestro-shot.sh maestro/open-create-sheet.yaml
 ./scripts/maestro-shot.sh maestro/open-snooze-sheet.yaml
+./scripts/maestro-shot.sh maestro/onboarding-default-config.yaml
 ```
 
 Screenshots are written to `tmp/maestro/`.

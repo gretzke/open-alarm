@@ -1,0 +1,13 @@
+appId: com.gretzke.openalarm
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    permissions:
+      all: allow
+- waitForAnimationToEnd
+- tapOn:
+    id: onboarding_welcome_next
+- waitForAnimationToEnd
+- takeScreenshot:
+    path: onboarding-default-config

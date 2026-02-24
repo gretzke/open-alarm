@@ -79,6 +79,30 @@ enum AlarmWeekday: Int, CaseIterable, Codable, Hashable, Sendable, Identifiable 
     }
 }
 
+struct SharedAlarmSettings: Codable, Equatable, Sendable {
+    var snoozeEnabled: Bool
+    var snoozeDurationMinutes: Int
+    var maxSnoozes: Int?
+
+    static let featureDefaults = SharedAlarmSettings(
+        snoozeEnabled: false,
+        snoozeDurationMinutes: 5,
+        maxSnoozes: 3
+    )
+
+    func canSnoozeAgain(currentCount: Int) -> Bool {
+        guard snoozeEnabled else {
+            return false
+        }
+
+        guard let maxSnoozes else {
+            return true
+        }
+
+        return currentCount < maxSnoozes
+    }
+}
+
 struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
     var id: UUID
     var name: String
@@ -88,9 +112,8 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
     var deleteAfterUse: Bool
     var wakeUpCheckEnabled: Bool
 
-    var snoozeEnabled: Bool
-    var snoozeDurationMinutes: Int
-    var maxSnoozes: Int?
+    var useDefaultSharedSettings: Bool
+    var customSharedSettings: SharedAlarmSettings
     var snoozeCount: Int
 
     var lifecycleState: AlarmLifecycleState
@@ -105,9 +128,8 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         repeatDays: [AlarmWeekday],
         deleteAfterUse: Bool,
         wakeUpCheckEnabled: Bool,
-        snoozeEnabled: Bool,
-        snoozeDurationMinutes: Int,
-        maxSnoozes: Int?,
+        useDefaultSharedSettings: Bool,
+        customSharedSettings: SharedAlarmSettings,
         snoozeCount: Int,
         lifecycleState: AlarmLifecycleState,
         createdAt: Date,
@@ -120,9 +142,8 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         self.repeatDays = repeatDays.sorted { $0.rawValue < $1.rawValue }
         self.deleteAfterUse = deleteAfterUse
         self.wakeUpCheckEnabled = wakeUpCheckEnabled
-        self.snoozeEnabled = snoozeEnabled
-        self.snoozeDurationMinutes = snoozeDurationMinutes
-        self.maxSnoozes = maxSnoozes
+        self.useDefaultSharedSettings = useDefaultSharedSettings
+        self.customSharedSettings = customSharedSettings
         self.snoozeCount = snoozeCount
         self.lifecycleState = lifecycleState
         self.createdAt = createdAt
@@ -157,14 +178,12 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         ))
     }
 
-    var canSnoozeAgain: Bool {
-        guard snoozeEnabled else {
-            return false
-        }
-        guard let maxSnoozes else {
-            return true
-        }
-        return snoozeCount < maxSnoozes
+    func resolvedSharedSettings(defaults: SharedAlarmSettings) -> SharedAlarmSettings {
+        useDefaultSharedSettings ? defaults : customSharedSettings
+    }
+
+    func canSnoozeAgain(defaults: SharedAlarmSettings) -> Bool {
+        resolvedSharedSettings(defaults: defaults).canSnoozeAgain(currentCount: snoozeCount)
     }
 
     enum CodingKeys: String, CodingKey {
@@ -175,13 +194,17 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         case repeatDays
         case deleteAfterUse
         case wakeUpCheckEnabled
-        case snoozeEnabled
-        case snoozeDurationMinutes
-        case maxSnoozes
+        case useDefaultSharedSettings
+        case customSharedSettings
         case snoozeCount
         case lifecycleState
         case createdAt
         case updatedAt
+
+        // Legacy keys (pre shared-settings split)
+        case snoozeEnabled
+        case snoozeDurationMinutes
+        case maxSnoozes
     }
 
     init(from decoder: Decoder) throws {
@@ -196,9 +219,20 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         deleteAfterUse = try container.decodeIfPresent(Bool.self, forKey: .deleteAfterUse) ?? true
         wakeUpCheckEnabled = try container.decodeIfPresent(Bool.self, forKey: .wakeUpCheckEnabled) ?? false
 
-        snoozeEnabled = try container.decodeIfPresent(Bool.self, forKey: .snoozeEnabled) ?? true
-        snoozeDurationMinutes = try container.decodeIfPresent(Int.self, forKey: .snoozeDurationMinutes) ?? 5
-        maxSnoozes = try container.decodeIfPresent(Int.self, forKey: .maxSnoozes) ?? 3
+        if let decodedShared = try container.decodeIfPresent(SharedAlarmSettings.self, forKey: .customSharedSettings) {
+            customSharedSettings = decodedShared
+            useDefaultSharedSettings = try container.decodeIfPresent(Bool.self, forKey: .useDefaultSharedSettings) ?? true
+        } else {
+            // Legacy fallback for older persisted alarms.
+            let legacyShared = SharedAlarmSettings(
+                snoozeEnabled: try container.decodeIfPresent(Bool.self, forKey: .snoozeEnabled) ?? true,
+                snoozeDurationMinutes: try container.decodeIfPresent(Int.self, forKey: .snoozeDurationMinutes) ?? 5,
+                maxSnoozes: try container.decodeIfPresent(Int.self, forKey: .maxSnoozes) ?? 3
+            )
+            customSharedSettings = legacyShared
+            useDefaultSharedSettings = false
+        }
+
         snoozeCount = try container.decodeIfPresent(Int.self, forKey: .snoozeCount) ?? 0
 
         lifecycleState = try container.decodeIfPresent(AlarmLifecycleState.self, forKey: .lifecycleState) ?? .scheduled
@@ -215,9 +249,8 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         try container.encode(repeatDays, forKey: .repeatDays)
         try container.encode(deleteAfterUse, forKey: .deleteAfterUse)
         try container.encode(wakeUpCheckEnabled, forKey: .wakeUpCheckEnabled)
-        try container.encode(snoozeEnabled, forKey: .snoozeEnabled)
-        try container.encode(snoozeDurationMinutes, forKey: .snoozeDurationMinutes)
-        try container.encodeIfPresent(maxSnoozes, forKey: .maxSnoozes)
+        try container.encode(useDefaultSharedSettings, forKey: .useDefaultSharedSettings)
+        try container.encode(customSharedSettings, forKey: .customSharedSettings)
         try container.encode(snoozeCount, forKey: .snoozeCount)
         try container.encode(lifecycleState, forKey: .lifecycleState)
         try container.encode(createdAt, forKey: .createdAt)
@@ -232,9 +265,8 @@ struct AlarmDraft: Equatable {
     var deleteAfterUse: Bool
     var wakeUpCheckEnabled: Bool
 
-    var snoozeEnabled: Bool
-    var snoozeDurationMinutes: Int
-    var maxSnoozes: Int?
+    var useDefaultSharedSettings: Bool
+    var customSharedSettings: SharedAlarmSettings
 
     init(
         name: String = "",
@@ -242,18 +274,16 @@ struct AlarmDraft: Equatable {
         repeatDays: Set<AlarmWeekday> = [],
         deleteAfterUse: Bool = true,
         wakeUpCheckEnabled: Bool = false,
-        snoozeEnabled: Bool = true,
-        snoozeDurationMinutes: Int = 5,
-        maxSnoozes: Int? = 3
+        useDefaultSharedSettings: Bool = true,
+        customSharedSettings: SharedAlarmSettings = .featureDefaults
     ) {
         self.name = name
         self.time = time
         self.repeatDays = repeatDays
         self.deleteAfterUse = deleteAfterUse
         self.wakeUpCheckEnabled = wakeUpCheckEnabled
-        self.snoozeEnabled = snoozeEnabled
-        self.snoozeDurationMinutes = snoozeDurationMinutes
-        self.maxSnoozes = maxSnoozes
+        self.useDefaultSharedSettings = useDefaultSharedSettings
+        self.customSharedSettings = customSharedSettings
     }
 
     init(alarm: UserAlarm) {
@@ -262,9 +292,8 @@ struct AlarmDraft: Equatable {
         self.repeatDays = Set(alarm.repeatDays)
         self.deleteAfterUse = alarm.deleteAfterUse
         self.wakeUpCheckEnabled = alarm.wakeUpCheckEnabled
-        self.snoozeEnabled = alarm.snoozeEnabled
-        self.snoozeDurationMinutes = alarm.snoozeDurationMinutes
-        self.maxSnoozes = alarm.maxSnoozes
+        self.useDefaultSharedSettings = alarm.useDefaultSharedSettings
+        self.customSharedSettings = alarm.customSharedSettings
     }
 
     mutating func toggleRepeatDay(_ day: AlarmWeekday) {
@@ -286,10 +315,24 @@ struct AlarmDraft: Equatable {
         }
     }
 
-    func toUserAlarm(id: UUID, existingCreatedAt: Date?) -> UserAlarm {
+    mutating func applyDefaultSharedSettings(_ defaults: SharedAlarmSettings) {
+        customSharedSettings = defaults
+    }
+
+    func resolvedSharedSettings(defaults: SharedAlarmSettings) -> SharedAlarmSettings {
+        useDefaultSharedSettings ? defaults : customSharedSettings
+    }
+
+    func toUserAlarm(
+        id: UUID,
+        existingCreatedAt: Date?,
+        defaultSharedSettings: SharedAlarmSettings,
+        existingSnoozeCount: Int?
+    ) -> UserAlarm {
         let timeComponents = Calendar.autoupdatingCurrent.dateComponents([.hour, .minute], from: time)
         let hour = timeComponents.hour ?? 7
         let minute = timeComponents.minute ?? 0
+        let persistedCustomSharedSettings = useDefaultSharedSettings ? defaultSharedSettings : customSharedSettings
 
         return UserAlarm(
             id: id,
@@ -299,10 +342,9 @@ struct AlarmDraft: Equatable {
             repeatDays: Array(repeatDays),
             deleteAfterUse: deleteAfterUse,
             wakeUpCheckEnabled: wakeUpCheckEnabled,
-            snoozeEnabled: snoozeEnabled,
-            snoozeDurationMinutes: snoozeDurationMinutes,
-            maxSnoozes: maxSnoozes,
-            snoozeCount: 0,
+            useDefaultSharedSettings: useDefaultSharedSettings,
+            customSharedSettings: persistedCustomSharedSettings,
+            snoozeCount: existingSnoozeCount ?? 0,
             lifecycleState: .scheduled,
             createdAt: existingCreatedAt ?? .now,
             updatedAt: .now

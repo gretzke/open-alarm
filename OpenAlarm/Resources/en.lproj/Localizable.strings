@@ -27,6 +27,8 @@
 "alarm_editor_snooze_title" = "Snooze";
 "alarm_editor_snooze_duration_label" = "Duration";
 "alarm_editor_snooze_max_label" = "Max snoozes";
+"alarm_editor_use_default_settings_toggle" = "Use default settings";
+"alarm_editor_use_default_settings_hint" = "Shared settings are managed in Settings.";
 "alarm_editor_snooze_unlimited" = "Unlimited";
 "alarm_editor_snooze_minutes_unit" = "min";
 "alarm_editor_snooze_debug_5_seconds" = "5 sec";
@@ -37,6 +39,8 @@
 "alarm_editor_error_generic" = "Something went wrong. Please try again.";
 
 "settings_title" = "Settings";
+"settings_default_config_title" = "Default configuration";
+"settings_default_config_body" = "Shared alarm behavior for all alarms that use defaults.";
 "settings_permission_title" = "Alarm permission";
 "settings_permission_status_label" = "Status";
 "settings_permission_authorized" = "Authorized";
@@ -50,6 +54,10 @@
 "onboarding_welcome_open_source" = "Open source";
 "onboarding_welcome_forever" = "Forever";
 
+"onboarding_default_config_title" = "Set default alarm configuration";
+"onboarding_default_config_body" = "Choose shared settings for new alarms. You can still override them per alarm.";
+"onboarding_default_config_hint" = "You can skip this and configure it later in Settings.";
+
 "onboarding_permission_request_title" = "Allow alarm scheduling";
 "onboarding_permission_request_body" = "OpenAlarm needs permission to schedule alarms and timers. We will ask iOS for this on the next step.";
 
@@ -58,6 +66,7 @@
 
 "action_next" = "Next";
 "action_open_settings" = "Open Settings";
+"action_skip" = "Skip";
 "action_requesting" = "Requesting…";
 "action_cancel" = "Cancel";
 "action_add" = "Add";

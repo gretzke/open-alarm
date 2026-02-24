@@ -9,6 +9,7 @@ struct AppRootView: View {
         Group {
             if onboardingEngine.isPresentingOnboarding {
                 OnboardingFlowView(engine: onboardingEngine)
+                    .environmentObject(alarmStore)
             } else {
                 MainTabView()
                     .environmentObject(alarmStore)

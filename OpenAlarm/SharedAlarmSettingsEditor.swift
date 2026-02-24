@@ -1,0 +1,210 @@
+import SwiftUI
+
+private enum SharedSettingsSelectionSheet: String, Identifiable {
+    case snoozeDuration
+    case maxSnoozes
+
+    var id: String { rawValue }
+}
+
+private enum SharedSettingsSelectionOption: Hashable {
+    case value(Int)
+    case unlimited
+}
+
+struct SharedAlarmSettingsEditor: View {
+    @Binding var settings: SharedAlarmSettings
+
+    var openSnoozeDurationOnAppearFromLaunchArg: Bool = false
+
+    @State private var selectionSheet: SharedSettingsSelectionSheet?
+
+    private let snoozeDurationOptions = [0, 1, 3, 5, 10, 15, 20, 30, 45, 60]
+    private let maxSnoozeOptions: [Int?] = [nil, 1, 2, 3, 5, 10]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(L10n.alarmEditorSnoozeTitle)
+                    .font(.headline)
+                    .foregroundStyle(OAColor.textSecondary)
+
+                Spacer(minLength: 0)
+
+                Toggle(isOn: $settings.snoozeEnabled) {
+                    EmptyView()
+                }
+                .labelsHidden()
+                .tint(OAColor.actionCyan)
+            }
+
+            if settings.snoozeEnabled {
+                VStack(spacing: 0) {
+                    selectionRow(
+                        title: L10n.alarmEditorSnoozeDurationLabel,
+                        value: snoozeDurationLabel(for: settings.snoozeDurationMinutes),
+                        action: { selectionSheet = .snoozeDuration }
+                    )
+
+                    Divider()
+                        .overlay(OAColor.glassStroke.opacity(0.8))
+
+                    selectionRow(
+                        title: L10n.alarmEditorSnoozeMaxLabel,
+                        value: settings.maxSnoozes.map(String.init) ?? String(localized: "alarm_editor_snooze_unlimited"),
+                        action: { selectionSheet = .maxSnoozes }
+                    )
+                }
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                        .fill(OAColor.glassFill)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                        .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
+                )
+            }
+        }
+        .onAppear {
+#if DEBUG
+            if openSnoozeDurationOnAppearFromLaunchArg,
+               ProcessInfo.processInfo.arguments.contains("uitestOpenSnoozeDuration") {
+                settings.snoozeEnabled = true
+                selectionSheet = .snoozeDuration
+            }
+#endif
+        }
+        .sheet(item: $selectionSheet) { item in
+            SharedSettingsSelectionSheetView(
+                title: item == .snoozeDuration ? L10n.alarmEditorSnoozeDurationLabel : L10n.alarmEditorSnoozeMaxLabel,
+                options: item == .snoozeDuration
+                    ? snoozeDurationOptions.map(SharedSettingsSelectionOption.value)
+                    : maxSnoozeOptions.map { $0.map(SharedSettingsSelectionOption.value) ?? .unlimited },
+                selected: selectedOption(for: item),
+                format: { option in
+                    switch option {
+                    case let .value(number):
+                        if item == .snoozeDuration {
+                            return snoozeDurationLabel(for: number)
+                        }
+                        return "\(number)"
+                    case .unlimited:
+                        return String(localized: "alarm_editor_snooze_unlimited")
+                    }
+                },
+                onSelect: { option in
+                    switch item {
+                    case .snoozeDuration:
+                        if case let .value(minutes) = option {
+                            settings.snoozeDurationMinutes = minutes
+                        }
+                    case .maxSnoozes:
+                        switch option {
+                        case let .value(number):
+                            settings.maxSnoozes = number
+                        case .unlimited:
+                            settings.maxSnoozes = nil
+                        }
+                    }
+                    selectionSheet = nil
+                }
+            )
+            .preferredColorScheme(.dark)
+            .presentationDetents([.fraction(0.35), .medium])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(.clear)
+            .presentationBackgroundInteraction(.enabled)
+        }
+    }
+
+    private func selectedOption(for item: SharedSettingsSelectionSheet) -> SharedSettingsSelectionOption {
+        switch item {
+        case .snoozeDuration:
+            return .value(settings.snoozeDurationMinutes)
+        case .maxSnoozes:
+            return settings.maxSnoozes.map(SharedSettingsSelectionOption.value) ?? .unlimited
+        }
+    }
+
+    private func selectionRow(title: LocalizedStringKey, value: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Text(title)
+                    .font(.body)
+                    .foregroundStyle(OAColor.textPrimary)
+
+                Spacer(minLength: 0)
+
+                Text(value)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(OAColor.textSecondary)
+
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(OAColor.textSecondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func snoozeDurationLabel(for minutes: Int) -> String {
+        if minutes == 0 {
+            return String(localized: "alarm_editor_snooze_debug_5_seconds")
+        }
+        return "\(minutes) \(String(localized: "alarm_editor_snooze_minutes_unit"))"
+    }
+}
+
+private struct SharedSettingsSelectionSheetView: View {
+    let title: LocalizedStringKey
+    let options: [SharedSettingsSelectionOption]
+    let selected: SharedSettingsSelectionOption
+    let format: (SharedSettingsSelectionOption) -> String
+    let onSelect: (SharedSettingsSelectionOption) -> Void
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 10) {
+                    ForEach(options, id: \.self) { option in
+                        Button {
+                            onSelect(option)
+                        } label: {
+                            HStack {
+                                Text(format(option))
+                                    .foregroundStyle(OAColor.textPrimary)
+                                Spacer(minLength: 0)
+                                if option == selected {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(OAColor.actionCyan)
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                            .background(
+                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                    .fill(Color.clear)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                    .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
+                            )
+                        }
+                        .frame(maxWidth: .infinity)
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(20)
+            }
+            .background(Color.clear)
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}

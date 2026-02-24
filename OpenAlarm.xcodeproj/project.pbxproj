@@ -11,6 +11,7 @@
 		05162562A0170BE9098361EE /* AlarmIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85010326D24CEF7C1A38D50D /* AlarmIntents.swift */; };
 		0B5A2C2BC6692B00E79A988E /* AlarmPermissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83400772796DC9406DADEF9F /* AlarmPermissionService.swift */; };
 		1068E5E14AAA376BDD6E846B /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0511AEB1608CC1DFD19C495 /* L10n.swift */; };
+		36C1824E2D70AF0163976EDA /* SharedAlarmSettingsEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C5DC43674A1A23D8D98A25C /* SharedAlarmSettingsEditor.swift */; };
 		42DA53AB032443282ACAC432 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E55D19BAE63F4BCAD183A095 /* MainTabView.swift */; };
 		4349AE16DB928CA08CA1900B /* AlarmEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C5513FF1DE8CF198A077C38 /* AlarmEditorView.swift */; };
 		43A37EA685F224896032D009 /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D65E8CA1DA583D987D1FDE53 /* AppRootView.swift */; };
@@ -32,6 +33,7 @@
 		22E4F6FF18C9BE1617CD7543 /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowView.swift; sourceTree = "<group>"; };
 		3C5513FF1DE8CF198A077C38 /* AlarmEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmEditorView.swift; sourceTree = "<group>"; };
 		59535AE7D6830B97391FD0E5 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Localizable.strings; sourceTree = "<group>"; };
+		5C5DC43674A1A23D8D98A25C /* SharedAlarmSettingsEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedAlarmSettingsEditor.swift; sourceTree = "<group>"; };
 		6093C9086BF89A5DE696608D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		764BB1926C868CDA8BB0801A /* OpenAlarmApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAlarmApp.swift; sourceTree = "<group>"; };
 		83400772796DC9406DADEF9F /* AlarmPermissionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmPermissionService.swift; sourceTree = "<group>"; };
@@ -86,6 +88,7 @@
 				22E4F6FF18C9BE1617CD7543 /* OnboardingFlowView.swift */,
 				764BB1926C868CDA8BB0801A /* OpenAlarmApp.swift */,
 				91529C2531FED87446559016 /* OpenAlarmTheme.swift */,
+				5C5DC43674A1A23D8D98A25C /* SharedAlarmSettingsEditor.swift */,
 				FD7B31457CC502B622019E4F /* Resources */,
 			);
 			path = OpenAlarm;
@@ -188,6 +191,7 @@
 				0137578A7C3DB65015FC02BE /* OnboardingFlowView.swift in Sources */,
 				7A6C9625D2A75EB1C003316B /* OpenAlarmApp.swift in Sources */,
 				58BDACC5F57BBA0A5953274E /* OpenAlarmTheme.swift in Sources */,
+				36C1824E2D70AF0163976EDA /* SharedAlarmSettingsEditor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

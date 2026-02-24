@@ -2,6 +2,7 @@ import SwiftUI
 
 struct OnboardingFlowView: View {
     @ObservedObject var engine: OnboardingEngine
+    @EnvironmentObject private var alarmStore: AlarmStore
 
     var body: some View {
         Group {
@@ -10,6 +11,18 @@ struct OnboardingFlowView: View {
                 WelcomeStepView {
                     engine.completeOneTimeWelcome()
                 }
+
+            case .oneTime(.defaultSharedSettings):
+                DefaultSharedSettingsStepView(
+                    initialSettings: alarmStore.defaultSharedSettings,
+                    onSave: { settings in
+                        alarmStore.updateDefaultSharedSettings(settings)
+                        engine.completeOneTimeDefaultSharedSettings()
+                    },
+                    onSkip: {
+                        engine.skipOneTimeDefaultSharedSettings()
+                    }
+                )
 
             case .reusable(.alarmPermissionPrePrompt):
                 AlarmPermissionPrePromptStepView {
@@ -92,6 +105,80 @@ private struct WelcomeStepView: View {
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(OAColor.background.ignoresSafeArea())
+    }
+}
+
+private struct DefaultSharedSettingsStepView: View {
+    let initialSettings: SharedAlarmSettings
+    let onSave: (SharedAlarmSettings) -> Void
+    let onSkip: () -> Void
+
+    @State private var settings: SharedAlarmSettings = .featureDefaults
+
+    var body: some View {
+        VStack(spacing: 24) {
+            VStack(alignment: .leading, spacing: 16) {
+                Text(L10n.onboardingDefaultConfigTitle)
+                    .font(.title.bold())
+                    .foregroundStyle(OAColor.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Text(L10n.onboardingDefaultConfigBody)
+                    .font(.body)
+                    .foregroundStyle(OAColor.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                SharedAlarmSettingsEditor(settings: $settings)
+
+                Text(L10n.onboardingDefaultConfigHint)
+                    .font(.footnote)
+                    .foregroundStyle(OAColor.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(24)
+            .oaGlassCard()
+
+            HStack(spacing: 12) {
+                Button(action: onSkip) {
+                    Text(L10n.actionSkip)
+                        .font(.headline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .foregroundStyle(OAColor.textPrimary)
+                        .background(
+                            RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                .fill(OAColor.glassFill)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
+                        )
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    onSave(settings)
+                } label: {
+                    Text(L10n.actionNext)
+                        .font(.headline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .foregroundStyle(OAColor.background)
+                        .background(
+                            RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                .fill(OAColor.actionCyan)
+                        )
+                        .shadow(color: OAColor.actionCyan.opacity(0.36), radius: 16, x: 0, y: 10)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(OAColor.background.ignoresSafeArea())
+        .onAppear {
+            settings = initialSettings
+        }
     }
 }
 
@@ -222,4 +309,5 @@ private struct BenefitRow: View {
 
 #Preview {
     OnboardingFlowView(engine: OnboardingEngine())
+        .environmentObject(AlarmStore())
 }

@@ -25,6 +25,7 @@ struct SnoozeIntent: LiveActivityIntent {
         }
 
         let defaults = UserDefaults.standard
+        let defaultSharedSettings = AlarmPersistence.loadDefaultSharedSettings(from: defaults)
 
         var pending = AlarmPersistence.loadPendingSnoozeIDs(from: defaults)
         pending.insert(id)
@@ -33,8 +34,9 @@ struct SnoozeIntent: LiveActivityIntent {
         var alarms = AlarmPersistence.loadUserAlarms(from: defaults)
         if let index = alarms.firstIndex(where: { $0.id == id }) {
             var alarm = alarms[index]
+            let effectiveSharedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
 
-            guard alarm.canSnoozeAgain else {
+            guard effectiveSharedSettings.canSnoozeAgain(currentCount: alarm.snoozeCount) else {
                 pending.remove(id)
                 AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
                 try AlarmManager.shared.stop(id: id)
@@ -46,18 +48,28 @@ struct SnoozeIntent: LiveActivityIntent {
             alarms[index] = alarm
             AlarmPersistence.saveUserAlarms(alarms, to: defaults)
 
-            let snoozeDate = Date.now.addingTimeInterval(snoozeInterval(for: alarm.snoozeDurationMinutes))
+            let snoozeDate = Date.now.addingTimeInterval(snoozeInterval(for: effectiveSharedSettings.snoozeDurationMinutes))
 
             do {
                 // Preferred path: replace configuration first, then dismiss current alert.
-                let config = makeConfiguration(for: alarm, schedule: .fixed(snoozeDate), isShadowTrial: false)
+                let config = makeConfiguration(
+                    for: alarm,
+                    schedule: .fixed(snoozeDate),
+                    isShadowTrial: false,
+                    defaultSharedSettings: defaultSharedSettings
+                )
                 _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
                 try AlarmManager.shared.stop(id: id)
             } catch {
                 do {
                     // Recovery path: stop current alert first, then reschedule with updated config.
                     try AlarmManager.shared.stop(id: id)
-                    let config = makeConfiguration(for: alarm, schedule: .fixed(snoozeDate), isShadowTrial: false)
+                    let config = makeConfiguration(
+                        for: alarm,
+                        schedule: .fixed(snoozeDate),
+                        isShadowTrial: false,
+                        defaultSharedSettings: defaultSharedSettings
+                    )
                     _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
                 } catch {
                     pending.remove(id)
@@ -119,9 +131,11 @@ struct SnoozeIntent: LiveActivityIntent {
     private func makeConfiguration(
         for alarm: UserAlarm,
         schedule: Alarm.Schedule,
-        isShadowTrial: Bool
+        isShadowTrial: Bool,
+        defaultSharedSettings: SharedAlarmSettings
     ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
-        let showSnoozeButton = alarm.canSnoozeAgain
+        let sharedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
+        let showSnoozeButton = sharedSettings.canSnoozeAgain(currentCount: alarm.snoozeCount)
 
         let alertPresentation = AlarmPresentation.Alert(
             title: localizedResource(from: resolvedAlarmTitle(from: alarm.name)),
@@ -144,7 +158,7 @@ struct SnoozeIntent: LiveActivityIntent {
         }
 
         let countdownDuration: Alarm.CountdownDuration? = if showSnoozeButton {
-            .init(preAlert: nil, postAlert: snoozeInterval(for: alarm.snoozeDurationMinutes))
+            .init(preAlert: nil, postAlert: snoozeInterval(for: sharedSettings.snoozeDurationMinutes))
         } else {
             nil
         }

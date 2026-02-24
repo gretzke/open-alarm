@@ -3,6 +3,7 @@ import UIKit
 
 enum OneTimeOnboardingStep: String, CaseIterable {
     case welcome
+    case defaultSharedSettings
 }
 
 enum ReusableOnboardingStep: Hashable {
@@ -40,9 +41,10 @@ final class OnboardingEngine: ObservableObject {
 
     private let userDefaults: UserDefaults
     private let alarmPermissionService: AlarmPermissionService
-    private let onboardingCompleteKey = "ONBOARDING_COMPLETE"
+    private let oneTimeCompletedStepsKey = "ONBOARDING_ONE_TIME_COMPLETED_STEPS_V2"
+    private let legacyOnboardingCompleteKey = "ONBOARDING_COMPLETE"
 
-    private let oneTimeSteps: [OneTimeOnboardingStep] = [.welcome]
+    private let oneTimeSteps: [OneTimeOnboardingStep] = [.welcome, .defaultSharedSettings]
     private lazy var reusableRules: [ReusableOnboardingRule] = [
         ReusableOnboardingRule(id: "alarm_permission", priority: 0) { context in
             switch context.alarmPermissionStatus {
@@ -74,8 +76,15 @@ final class OnboardingEngine: ObservableObject {
     }
 
     func completeOneTimeWelcome() {
-        userDefaults.set(true, forKey: onboardingCompleteKey)
-        refreshWorkflow()
+        markOneTimeStepComplete(.welcome)
+    }
+
+    func completeOneTimeDefaultSharedSettings() {
+        markOneTimeStepComplete(.defaultSharedSettings)
+    }
+
+    func skipOneTimeDefaultSharedSettings() {
+        markOneTimeStepComplete(.defaultSharedSettings)
     }
 
     func requestAlarmPermission() async {
@@ -94,6 +103,34 @@ final class OnboardingEngine: ObservableObject {
         refreshWorkflow()
     }
 
+    private func markOneTimeStepComplete(_ step: OneTimeOnboardingStep) {
+        var completed = loadCompletedOneTimeSteps()
+        completed.insert(step)
+        saveCompletedOneTimeSteps(completed)
+        refreshWorkflow()
+    }
+
+    private func loadCompletedOneTimeSteps() -> Set<OneTimeOnboardingStep> {
+        // Legacy compatibility: old binary used one bool for the entire one-time flow.
+        if userDefaults.bool(forKey: legacyOnboardingCompleteKey) {
+            return Set(oneTimeSteps)
+        }
+
+        guard let raw = userDefaults.array(forKey: oneTimeCompletedStepsKey) as? [String] else {
+            return []
+        }
+
+        return Set(raw.compactMap(OneTimeOnboardingStep.init(rawValue:)))
+    }
+
+    private func saveCompletedOneTimeSteps(_ completed: Set<OneTimeOnboardingStep>) {
+        userDefaults.set(completed.map(\.rawValue), forKey: oneTimeCompletedStepsKey)
+
+        if completed.count == oneTimeSteps.count {
+            userDefaults.set(true, forKey: legacyOnboardingCompleteKey)
+        }
+    }
+
     private func refreshWorkflow() {
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("uitestSkipOnboarding") {
@@ -107,9 +144,9 @@ final class OnboardingEngine: ObservableObject {
 
         var workflow: [OnboardingStep] = []
 
-        if !userDefaults.bool(forKey: onboardingCompleteKey) {
-            workflow.append(contentsOf: oneTimeSteps.map(OnboardingStep.oneTime))
-        }
+        let completedOneTimeSteps = loadCompletedOneTimeSteps()
+        let pendingOneTimeSteps = oneTimeSteps.filter { !completedOneTimeSteps.contains($0) }
+        workflow.append(contentsOf: pendingOneTimeSteps.map(OnboardingStep.oneTime))
 
         let reusableWorkflow = reusableRules
             .sorted { lhs, rhs in

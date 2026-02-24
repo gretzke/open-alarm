@@ -36,13 +36,6 @@ enum AlarmEditorRoute: Identifiable, Equatable {
     }
 }
 
-private enum AlarmEditorSelectionSheet: String, Identifiable {
-    case snoozeDuration
-    case maxSnoozes
-
-    var id: String { rawValue }
-}
-
 struct AlarmEditorView: View {
     @EnvironmentObject private var alarmStore: AlarmStore
     @Environment(\.dismiss) private var dismiss
@@ -51,12 +44,9 @@ struct AlarmEditorView: View {
 
     @State private var draft: AlarmDraft
     @State private var isSaving = false
-    @State private var selectionSheet: AlarmEditorSelectionSheet?
     @State private var errorMessage: LocalizedStringKey?
     @State private var showTryOutToast = false
-
-    private let snoozeDurationOptions = [0, 1, 3, 5, 10, 15, 20, 30, 45, 60]
-    private let maxSnoozeOptions: [Int?] = [nil, 1, 2, 3, 5, 10]
+    @State private var hasInitializedDraft = false
 
     init(route: AlarmEditorRoute) {
         self.route = route
@@ -71,7 +61,15 @@ struct AlarmEditorView: View {
                     labelSection
                     deleteAfterUseSection
                     repeatDaysSection
-                    snoozeSection
+                    useDefaultSharedSettingsSection
+
+                    if !draft.useDefaultSharedSettings {
+                        SharedAlarmSettingsEditor(
+                            settings: $draft.customSharedSettings,
+                            openSnoozeDurationOnAppearFromLaunchArg: true
+                        )
+                    }
+
                     tryOutSection
 
                     if let errorMessage {
@@ -118,19 +116,24 @@ struct AlarmEditorView: View {
         .preferredColorScheme(.dark)
         .presentationBackground(.clear)
         .onAppear {
+            guard !hasInitializedDraft else {
+                return
+            }
+
+            hasInitializedDraft = true
+
+            if route.existingAlarm == nil {
+                draft.useDefaultSharedSettings = true
+                draft.applyDefaultSharedSettings(alarmStore.defaultSharedSettings)
+            } else if draft.useDefaultSharedSettings {
+                draft.applyDefaultSharedSettings(alarmStore.defaultSharedSettings)
+            }
+
 #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("uitestOpenSnoozeDuration") {
-                selectionSheet = .snoozeDuration
+                draft.useDefaultSharedSettings = false
             }
 #endif
-        }
-        .sheet(item: $selectionSheet) { item in
-            sheetContent(for: item)
-                .preferredColorScheme(.dark)
-                .presentationDetents([.fraction(0.35), .medium])
-                .presentationDragIndicator(.visible)
-                .presentationBackground(.clear)
-                .presentationBackgroundInteraction(.enabled)
         }
         .overlay(alignment: .bottom) {
             if showTryOutToast {
@@ -223,49 +226,24 @@ struct AlarmEditorView: View {
         }
     }
 
-    private var snoozeSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text(L10n.alarmEditorSnoozeTitle)
+    private var useDefaultSharedSettingsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle(isOn: Binding(
+                get: { draft.useDefaultSharedSettings },
+                set: { useDefault in
+                    draft.useDefaultSharedSettings = useDefault
+                    draft.applyDefaultSharedSettings(alarmStore.defaultSharedSettings)
+                }
+            )) {
+                Text(L10n.alarmEditorUseDefaultSettingsToggle)
                     .font(.headline)
-                    .foregroundStyle(OAColor.textSecondary)
-
-                Spacer(minLength: 0)
-
-                Toggle(isOn: $draft.snoozeEnabled) {
-                    EmptyView()
-                }
-                .labelsHidden()
-                .tint(OAColor.actionCyan)
+                    .foregroundStyle(OAColor.textPrimary)
             }
+            .tint(OAColor.actionCyan)
 
-            if draft.snoozeEnabled {
-                VStack(spacing: 0) {
-                    selectionRow(
-                        title: L10n.alarmEditorSnoozeDurationLabel,
-                        value: snoozeDurationLabel(for: draft.snoozeDurationMinutes),
-                        action: { selectionSheet = .snoozeDuration }
-                    )
-
-                    Divider()
-                        .overlay(OAColor.glassStroke.opacity(0.8))
-
-                    selectionRow(
-                        title: L10n.alarmEditorSnoozeMaxLabel,
-                        value: draft.maxSnoozes.map(String.init) ?? String(localized: "alarm_editor_snooze_unlimited"),
-                        action: { selectionSheet = .maxSnoozes }
-                    )
-                }
-                .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                        .fill(OAColor.glassFill)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                        .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
-                )
-            }
+            Text(L10n.alarmEditorUseDefaultSettingsHint)
+                .font(.footnote)
+                .foregroundStyle(OAColor.textSecondary)
         }
     }
 
@@ -288,30 +266,6 @@ struct AlarmEditorView: View {
         .disabled(isSaving)
     }
 
-    private func selectionRow(title: LocalizedStringKey, value: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                Text(title)
-                    .font(.body)
-                    .foregroundStyle(OAColor.textPrimary)
-
-                Spacer(minLength: 0)
-
-                Text(value)
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(OAColor.textSecondary)
-
-                Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(OAColor.textSecondary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-        }
-        .buttonStyle(.plain)
-    }
-
     private func dayChip(for day: AlarmWeekday) -> some View {
         let isSelected = draft.repeatDays.contains(day)
 
@@ -329,65 +283,6 @@ struct AlarmEditorView: View {
                 )
         }
         .buttonStyle(.plain)
-    }
-
-    private func snoozeDurationLabel(for minutes: Int) -> String {
-        if minutes == 0 {
-            return String(localized: "alarm_editor_snooze_debug_5_seconds")
-        }
-        return "\(minutes) \(String(localized: "alarm_editor_snooze_minutes_unit"))"
-    }
-
-    @ViewBuilder
-    private func sheetContent(for item: AlarmEditorSelectionSheet) -> some View {
-        switch item {
-        case .snoozeDuration:
-            SelectionSheetView(
-                title: L10n.alarmEditorSnoozeDurationLabel,
-                options: snoozeDurationOptions.map { .value($0) },
-                selected: .value(draft.snoozeDurationMinutes),
-                format: { option in
-                    switch option {
-                    case let .value(minutes):
-                        return snoozeDurationLabel(for: minutes)
-                    case .unlimited:
-                        return String(localized: "alarm_editor_snooze_unlimited")
-                    }
-                },
-                onSelect: { option in
-                    if case let .value(minutes) = option {
-                        draft.snoozeDurationMinutes = minutes
-                    }
-                    selectionSheet = nil
-                }
-            )
-
-        case .maxSnoozes:
-            SelectionSheetView(
-                title: L10n.alarmEditorSnoozeMaxLabel,
-                options: maxSnoozeOptions.map { value in
-                    value.map(SelectionOption.value) ?? .unlimited
-                },
-                selected: draft.maxSnoozes.map(SelectionOption.value) ?? .unlimited,
-                format: { option in
-                    switch option {
-                    case let .value(number):
-                        return "\(number)"
-                    case .unlimited:
-                        return String(localized: "alarm_editor_snooze_unlimited")
-                    }
-                },
-                onSelect: { option in
-                    switch option {
-                    case let .value(number):
-                        draft.maxSnoozes = number
-                    case .unlimited:
-                        draft.maxSnoozes = nil
-                    }
-                    selectionSheet = nil
-                }
-            )
-        }
     }
 
     private func saveAlarm() {
@@ -424,7 +319,6 @@ struct AlarmEditorView: View {
         Task {
             do {
                 try await alarmStore.scheduleTryOut(from: draft, after: seconds)
-                selectionSheet = nil
                 showTryOutToast = true
                 Task {
                     try? await Task.sleep(for: .seconds(1.8))
@@ -438,57 +332,4 @@ struct AlarmEditorView: View {
     }
 }
 
-private enum SelectionOption: Hashable {
-    case value(Int)
-    case unlimited
-}
-
-private struct SelectionSheetView: View {
-    let title: LocalizedStringKey
-    let options: [SelectionOption]
-    let selected: SelectionOption
-    let format: (SelectionOption) -> String
-    let onSelect: (SelectionOption) -> Void
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 10) {
-                    ForEach(options, id: \.self) { option in
-                        Button {
-                            onSelect(option)
-                        } label: {
-                            HStack {
-                                Text(format(option))
-                                    .foregroundStyle(OAColor.textPrimary)
-                                Spacer(minLength: 0)
-                                if option == selected {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(OAColor.actionCyan)
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
-                            .background(
-                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                    .fill(Color.clear)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                    .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
-                            )
-                        }
-                        .frame(maxWidth: .infinity)
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(20)
-            }
-            .background(Color.clear)
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
-        }
-    }
-}
+// moved to SharedAlarmSettingsEditor.swift

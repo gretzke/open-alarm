@@ -184,6 +184,23 @@ private struct SettingsHomeView: View {
             ScrollView {
                 VStack(spacing: 16) {
                     VStack(alignment: .leading, spacing: 12) {
+                        Text(L10n.settingsDefaultConfigTitle)
+                            .font(.headline)
+                            .foregroundStyle(OAColor.textPrimary)
+
+                        Text(L10n.settingsDefaultConfigBody)
+                            .font(.subheadline)
+                            .foregroundStyle(OAColor.textSecondary)
+
+                        SharedAlarmSettingsEditor(settings: Binding(
+                            get: { alarmStore.defaultSharedSettings },
+                            set: { alarmStore.updateDefaultSharedSettings($0) }
+                        ))
+                    }
+                    .padding(20)
+                    .oaGlassCard()
+
+                    VStack(alignment: .leading, spacing: 12) {
                         Text(L10n.settingsPermissionTitle)
                             .font(.headline)
                             .foregroundStyle(OAColor.textPrimary)

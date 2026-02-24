@@ -7,6 +7,7 @@ import UIKit
 @MainActor
 final class AlarmStore: ObservableObject {
     @Published private(set) var alarms: [UserAlarm] = []
+    @Published var defaultSharedSettings: SharedAlarmSettings
     @Published private(set) var permissionStatus: AlarmPermissionStatus
     @Published private(set) var remoteStates: [UUID: Alarm.State] = [:]
 
@@ -26,6 +27,7 @@ final class AlarmStore: ObservableObject {
         self.alarmManager = alarmManager
         self.permissionService = permissionService ?? AlarmPermissionService(manager: alarmManager)
         self.userDefaults = userDefaults
+        self.defaultSharedSettings = AlarmPersistence.loadDefaultSharedSettings(from: userDefaults)
         self.permissionStatus = self.permissionService.currentStatus()
 
         load()
@@ -58,6 +60,31 @@ final class AlarmStore: ObservableObject {
             return
         }
         UIApplication.shared.open(settingsURL)
+    }
+
+    func updateDefaultSharedSettings(_ settings: SharedAlarmSettings) {
+        guard defaultSharedSettings != settings else {
+            return
+        }
+
+        defaultSharedSettings = settings
+        AlarmPersistence.saveDefaultSharedSettings(settings, to: userDefaults)
+
+        var changed = false
+        for index in alarms.indices where alarms[index].useDefaultSharedSettings {
+            alarms[index].customSharedSettings = settings
+            alarms[index].updatedAt = .now
+            changed = true
+        }
+
+        if changed {
+            alarms = sortAlarms(alarms)
+            save()
+
+            Task { @MainActor [weak self] in
+                await self?.rescheduleAlarmsUsingDefaultSharedSettings()
+            }
+        }
     }
 
     func createAlarm(from draft: AlarmDraft) async throws {
@@ -106,7 +133,18 @@ final class AlarmStore: ObservableObject {
         }
 
         let shadowID = UUID()
-        let baseAlarm = draft.toUserAlarm(id: shadowID, existingCreatedAt: nil)
+
+        var trialDraft = draft
+        let trialSharedSettings = draft.resolvedSharedSettings(defaults: defaultSharedSettings)
+        trialDraft.useDefaultSharedSettings = false
+        trialDraft.customSharedSettings = trialSharedSettings
+
+        let baseAlarm = trialDraft.toUserAlarm(
+            id: shadowID,
+            existingCreatedAt: nil,
+            defaultSharedSettings: defaultSharedSettings,
+            existingSnoozeCount: 0
+        )
         let trialDate = Date.now.addingTimeInterval(seconds)
 
         let config = makeConfiguration(for: baseAlarm, schedule: .fixed(trialDate), isShadowTrial: true)
@@ -116,9 +154,9 @@ final class AlarmStore: ObservableObject {
         trials.append(ShadowTrialAlarm(
             id: shadowID,
             name: baseAlarm.name,
-            snoozeEnabled: baseAlarm.snoozeEnabled,
-            snoozeDurationMinutes: baseAlarm.snoozeDurationMinutes,
-            maxSnoozes: baseAlarm.maxSnoozes,
+            snoozeEnabled: trialSharedSettings.snoozeEnabled,
+            snoozeDurationMinutes: trialSharedSettings.snoozeDurationMinutes,
+            maxSnoozes: trialSharedSettings.maxSnoozes,
             snoozeCount: 0,
             wakeUpCheckEnabled: baseAlarm.wakeUpCheckEnabled,
             lifecycleState: .scheduled,
@@ -169,7 +207,12 @@ final class AlarmStore: ObservableObject {
         try await ensureAuthorizedForScheduling()
 
         let id = existingAlarm?.id ?? UUID()
-        var nextAlarm = draft.toUserAlarm(id: id, existingCreatedAt: existingAlarm?.createdAt)
+        var nextAlarm = draft.toUserAlarm(
+            id: id,
+            existingCreatedAt: existingAlarm?.createdAt,
+            defaultSharedSettings: defaultSharedSettings,
+            existingSnoozeCount: existingAlarm?.snoozeCount
+        )
 
         do {
             let config = makeConfiguration(for: nextAlarm, schedule: nextAlarm.schedule, isShadowTrial: false)
@@ -199,12 +242,26 @@ final class AlarmStore: ObservableObject {
         }
     }
 
+    private func rescheduleAlarmsUsingDefaultSharedSettings() async {
+        for alarm in alarms where alarm.useDefaultSharedSettings {
+            do {
+                let config = makeConfiguration(for: alarm, schedule: alarm.schedule, isShadowTrial: false)
+                let remote = try await alarmManager.schedule(id: alarm.id, configuration: config)
+                lastKnownAlarmState[alarm.id] = remote.state
+                remoteStates[alarm.id] = remote.state
+            } catch {
+                // Best effort only; next refresh can reconcile state.
+            }
+        }
+    }
+
     private func makeConfiguration(
         for alarm: UserAlarm,
         schedule: Alarm.Schedule,
         isShadowTrial: Bool
     ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
-        let showSnoozeButton = alarm.canSnoozeAgain
+        let sharedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
+        let showSnoozeButton = sharedSettings.canSnoozeAgain(currentCount: alarm.snoozeCount)
 
         let alertPresentation = AlarmPresentation.Alert(
             title: localizedResource(from: resolvedAlarmTitle(from: alarm.name)),
@@ -228,7 +285,7 @@ final class AlarmStore: ObservableObject {
         }
 
         let countdownDuration: Alarm.CountdownDuration? = if showSnoozeButton {
-            .init(preAlert: nil, postAlert: snoozeInterval(for: alarm.snoozeDurationMinutes))
+            .init(preAlert: nil, postAlert: snoozeInterval(for: sharedSettings.snoozeDurationMinutes))
         } else {
             nil
         }
@@ -376,7 +433,9 @@ final class AlarmStore: ObservableObject {
         let hadSnoozes = alarm.snoozeCount > 0
 
         // Snooze transition path should remain active and not mark completion.
-        if alarm.snoozeEnabled,
+        let effectiveSharedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
+
+        if effectiveSharedSettings.snoozeEnabled,
            hadSnoozes,
            isSnoozeTransitionState(currentState) {
             if alarm.lifecycleState != .scheduled {

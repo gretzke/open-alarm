@@ -27,6 +27,8 @@
 "alarm_editor_snooze_title" = "Snooze";
 "alarm_editor_snooze_duration_label" = "Dauer";
 "alarm_editor_snooze_max_label" = "Max. Snoozes";
+"alarm_editor_use_default_settings_toggle" = "Standard-Einstellungen verwenden";
+"alarm_editor_use_default_settings_hint" = "Geteilte Einstellungen werden in den Einstellungen verwaltet.";
 "alarm_editor_snooze_unlimited" = "Unbegrenzt";
 "alarm_editor_snooze_minutes_unit" = "Min";
 "alarm_editor_snooze_debug_5_seconds" = "5 Sek";
@@ -37,6 +39,8 @@
 "alarm_editor_error_generic" = "Etwas ist schiefgelaufen. Bitte versuche es erneut.";
 
 "settings_title" = "Einstellungen";
+"settings_default_config_title" = "Standard-Konfiguration";
+"settings_default_config_body" = "Geteiltes Alarmverhalten für alle Alarme mit Standard-Einstellungen.";
 "settings_permission_title" = "Alarm-Berechtigung";
 "settings_permission_status_label" = "Status";
 "settings_permission_authorized" = "Erlaubt";
@@ -50,6 +54,10 @@
 "onboarding_welcome_open_source" = "Open Source";
 "onboarding_welcome_forever" = "Für immer";
 
+"onboarding_default_config_title" = "Standard-Alarmkonfiguration festlegen";
+"onboarding_default_config_body" = "Wähle geteilte Einstellungen für neue Alarme. Du kannst sie pro Alarm weiterhin überschreiben.";
+"onboarding_default_config_hint" = "Du kannst das überspringen und später in den Einstellungen konfigurieren.";
+
 "onboarding_permission_request_title" = "Alarmplanung erlauben";
 "onboarding_permission_request_body" = "OpenAlarm braucht die Berechtigung, Alarme und Timer zu planen. Im nächsten Schritt fragen wir iOS danach.";
 
@@ -58,6 +66,7 @@
 
 "action_next" = "Weiter";
 "action_open_settings" = "Einstellungen öffnen";
+"action_skip" = "Überspringen";
 "action_requesting" = "Wird angefragt…";
 "action_cancel" = "Abbrechen";
 "action_add" = "Hinzufügen";
