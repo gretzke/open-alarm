@@ -6,6 +6,7 @@ import SwiftUI
 struct SnoozeIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Snooze"
     static var description = IntentDescription("Snooze an alarm")
+    static var openAppWhenRun: Bool = false
 
     @Parameter(title: "alarmID")
     var alarmID: String
@@ -40,10 +41,14 @@ struct SnoozeIntent: LiveActivityIntent {
             AlarmPersistence.saveUserAlarms(alarms, to: defaults)
 
             let snoozeDate = Date.now.addingTimeInterval(TimeInterval(alarm.snoozeDurationMinutes * 60))
-            try AlarmManager.shared.stop(id: id)
+            try AlarmManager.shared.countdown(id: id)
 
-            let config = makeConfiguration(for: alarm, schedule: .fixed(snoozeDate), isShadowTrial: false)
-            _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
+            do {
+                let config = makeConfiguration(for: alarm, schedule: .fixed(snoozeDate), isShadowTrial: false)
+                _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
+            } catch {
+                // Keep countdown behavior even if override schedule fails.
+            }
             return .result()
         }
 
@@ -65,10 +70,14 @@ struct SnoozeIntent: LiveActivityIntent {
             AlarmPersistence.saveShadowTrials(trials, to: defaults)
 
             let snoozeDate = Date.now.addingTimeInterval(TimeInterval(trial.snoozeDurationMinutes * 60))
-            try AlarmManager.shared.stop(id: id)
+            try AlarmManager.shared.countdown(id: id)
 
-            let config = makeConfiguration(for: trial, schedule: .fixed(snoozeDate))
-            _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
+            do {
+                let config = makeConfiguration(for: trial, schedule: .fixed(snoozeDate))
+                _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
+            } catch {
+                // Keep countdown behavior even if override schedule fails.
+            }
             return .result()
         }
 
@@ -103,8 +112,14 @@ struct SnoozeIntent: LiveActivityIntent {
             nil
         }
 
+        let countdownDuration: Alarm.CountdownDuration? = if showSnoozeButton {
+            .init(preAlert: nil, postAlert: TimeInterval(alarm.snoozeDurationMinutes * 60))
+        } else {
+            nil
+        }
+
         return .init(
-            countdownDuration: nil,
+            countdownDuration: countdownDuration,
             schedule: schedule,
             attributes: attributes,
             stopIntent: nil,
@@ -139,8 +154,14 @@ struct SnoozeIntent: LiveActivityIntent {
             nil
         }
 
+        let countdownDuration: Alarm.CountdownDuration? = if showSnoozeButton {
+            .init(preAlert: nil, postAlert: TimeInterval(trial.snoozeDurationMinutes * 60))
+        } else {
+            nil
+        }
+
         return .init(
-            countdownDuration: nil,
+            countdownDuration: countdownDuration,
             schedule: schedule,
             attributes: attributes,
             stopIntent: nil,

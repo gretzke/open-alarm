@@ -201,8 +201,14 @@ final class AlarmStore: ObservableObject {
             nil
         }
 
+        let countdownDuration: Alarm.CountdownDuration? = if showSnoozeButton {
+            .init(preAlert: nil, postAlert: TimeInterval(alarm.snoozeDurationMinutes * 60))
+        } else {
+            nil
+        }
+
         return .init(
-            countdownDuration: nil,
+            countdownDuration: countdownDuration,
             schedule: schedule,
             attributes: attributes,
             stopIntent: nil,
@@ -320,8 +326,10 @@ final class AlarmStore: ObservableObject {
     ) {
         let hadSnoozes = alarm.snoozeCount > 0
 
-        // Snooze was tapped and alarm got rescheduled by SnoozeIntent.
-        if currentState == .scheduled, alarm.snoozeEnabled, hadSnoozes {
+        // Snooze was tapped and alarm transitioned into snooze flow.
+        if alarm.snoozeEnabled,
+           hadSnoozes,
+           currentState == .scheduled || currentState == .countdown || currentState == .paused {
             if alarm.lifecycleState != .scheduled {
                 alarm.lifecycleState = .scheduled
                 changed = true
@@ -405,7 +413,9 @@ final class AlarmStore: ObservableObject {
             }
 
             if previousState == .alerting, currentState != .alerting {
-                if currentState == .scheduled, trials[index].snoozeEnabled, trials[index].snoozeCount > 0 {
+                if trials[index].snoozeEnabled,
+                   trials[index].snoozeCount > 0,
+                   currentState == .scheduled || currentState == .countdown || currentState == .paused {
                     if trials[index].lifecycleState != .scheduled {
                         trials[index].lifecycleState = .scheduled
                         trials[index].updatedAt = .now

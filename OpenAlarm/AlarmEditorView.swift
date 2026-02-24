@@ -119,7 +119,7 @@ struct AlarmEditorView: View {
                 .preferredColorScheme(.dark)
                 .presentationDetents([.fraction(0.35), .medium])
                 .presentationDragIndicator(.visible)
-                .presentationBackground(.ultraThinMaterial)
+                .presentationBackground(.clear)
                 .presentationBackgroundInteraction(.enabled)
         }
     }
@@ -394,37 +394,43 @@ private struct SelectionSheetView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 10) {
-                    ForEach(options, id: \.self) { option in
-                        Button {
-                            onSelect(option)
-                        } label: {
-                            HStack {
-                                Text(format(option))
-                                    .foregroundStyle(OAColor.textPrimary)
-                                Spacer(minLength: 0)
-                                if option == selected {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(OAColor.actionCyan)
+            ZStack {
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                    .ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 10) {
+                        ForEach(options, id: \.self) { option in
+                            Button {
+                                onSelect(option)
+                            } label: {
+                                HStack {
+                                    Text(format(option))
+                                        .foregroundStyle(OAColor.textPrimary)
+                                    Spacer(minLength: 0)
+                                    if option == selected {
+                                        Image(systemName: "checkmark")
+                                            .foregroundStyle(OAColor.actionCyan)
+                                    }
                                 }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
+                                .frame(maxWidth: .infinity)
+                                .background(
+                                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                        .fill(OAColor.glassFill)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                        .stroke(OAColor.glassStroke, lineWidth: 1)
+                                )
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
-                            .frame(maxWidth: .infinity)
-                            .background(
-                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                    .fill(OAColor.glassFill)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                    .stroke(OAColor.glassStroke, lineWidth: 1)
-                            )
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
+                    .padding(20)
                 }
-                .padding(20)
             }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
@@ -453,34 +459,40 @@ private struct TryOutPickerView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 10) {
-                    ForEach(options) { option in
-                        Button {
-                            onSelect(option.seconds)
-                        } label: {
-                            HStack {
-                                Text(option.label)
-                                    .foregroundStyle(OAColor.textPrimary)
-                                Spacer(minLength: 0)
+            ZStack {
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                    .ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 10) {
+                        ForEach(options) { option in
+                            Button {
+                                onSelect(option.seconds)
+                            } label: {
+                                HStack {
+                                    Text(option.label)
+                                        .foregroundStyle(OAColor.textPrimary)
+                                    Spacer(minLength: 0)
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
+                                .frame(maxWidth: .infinity)
+                                .background(
+                                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                        .fill(OAColor.glassFill)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                        .stroke(OAColor.glassStroke, lineWidth: 1)
+                                )
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
-                            .frame(maxWidth: .infinity)
-                            .background(
-                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                    .fill(OAColor.glassFill)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                    .stroke(OAColor.glassStroke, lineWidth: 1)
-                            )
+                            .buttonStyle(.plain)
+                            .disabled(isBusy)
                         }
-                        .buttonStyle(.plain)
-                        .disabled(isBusy)
                     }
+                    .padding(20)
                 }
-                .padding(20)
             }
             .navigationTitle(L10n.tryOutSheetTitle)
             .navigationBarTitleDisplayMode(.inline)
