@@ -116,15 +116,11 @@ struct AlarmEditorView: View {
         }
         .background(Color.clear)
         .preferredColorScheme(.dark)
-        .toolbarBackground(.hidden, for: .navigationBar)
-        .presentationBackground(.clear)
         .sheet(item: $selectionSheet) { item in
             sheetContent(for: item)
                 .preferredColorScheme(.dark)
                 .presentationDetents([.fraction(0.35), .medium])
                 .presentationDragIndicator(.visible)
-                .presentationBackground(.clear)
-                .presentationBackgroundInteraction(.enabled)
         }
         .overlay(alignment: .bottom) {
             if showTryOutToast {
