@@ -49,14 +49,22 @@ struct SnoozeIntent: LiveActivityIntent {
             let snoozeDate = Date.now.addingTimeInterval(snoozeInterval(for: alarm.snoozeDurationMinutes))
 
             do {
+                // Preferred path: replace configuration first, then dismiss current alert.
                 let config = makeConfiguration(for: alarm, schedule: .fixed(snoozeDate), isShadowTrial: false)
                 _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
                 try AlarmManager.shared.stop(id: id)
             } catch {
-                pending.remove(id)
-                AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
-                // Fallback to built-in countdown if reschedule update fails.
-                try? AlarmManager.shared.countdown(id: id)
+                do {
+                    // Recovery path: stop current alert first, then reschedule with updated config.
+                    try AlarmManager.shared.stop(id: id)
+                    let config = makeConfiguration(for: alarm, schedule: .fixed(snoozeDate), isShadowTrial: false)
+                    _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
+                } catch {
+                    pending.remove(id)
+                    AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
+                    // Last fallback: keep snooze behavior even if config replacement failed.
+                    try? AlarmManager.shared.countdown(id: id)
+                }
             }
             return .result()
         }
@@ -83,13 +91,21 @@ struct SnoozeIntent: LiveActivityIntent {
             let snoozeDate = Date.now.addingTimeInterval(snoozeInterval(for: trial.snoozeDurationMinutes))
 
             do {
+                // Preferred path: replace configuration first, then dismiss current alert.
                 let config = makeConfiguration(for: trial, schedule: .fixed(snoozeDate))
                 _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
                 try AlarmManager.shared.stop(id: id)
             } catch {
-                pending.remove(id)
-                AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
-                try? AlarmManager.shared.countdown(id: id)
+                do {
+                    // Recovery path: stop current alert first, then reschedule with updated config.
+                    try AlarmManager.shared.stop(id: id)
+                    let config = makeConfiguration(for: trial, schedule: .fixed(snoozeDate))
+                    _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
+                } catch {
+                    pending.remove(id)
+                    AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
+                    try? AlarmManager.shared.countdown(id: id)
+                }
             }
             return .result()
         }
