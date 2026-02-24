@@ -19,7 +19,7 @@ struct SnoozeIntent: LiveActivityIntent {
         self.alarmID = ""
     }
 
-    func perform() async throws -> some IntentResult {
+    func perform() throws -> some IntentResult {
         guard let id = UUID(uuidString: alarmID) else {
             return .result()
         }
@@ -43,11 +43,14 @@ struct SnoozeIntent: LiveActivityIntent {
             let snoozeDate = Date.now.addingTimeInterval(TimeInterval(alarm.snoozeDurationMinutes * 60))
             try AlarmManager.shared.countdown(id: id)
 
-            do {
-                let config = makeConfiguration(for: alarm, schedule: .fixed(snoozeDate), isShadowTrial: false)
-                _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
-            } catch {
-                // Keep countdown behavior even if override schedule fails.
+            let snapshot = alarm
+            Task {
+                do {
+                    let config = makeConfiguration(for: snapshot, schedule: .fixed(snoozeDate), isShadowTrial: false)
+                    _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
+                } catch {
+                    // Keep countdown behavior even if override schedule fails.
+                }
             }
             return .result()
         }
@@ -72,11 +75,14 @@ struct SnoozeIntent: LiveActivityIntent {
             let snoozeDate = Date.now.addingTimeInterval(TimeInterval(trial.snoozeDurationMinutes * 60))
             try AlarmManager.shared.countdown(id: id)
 
-            do {
-                let config = makeConfiguration(for: trial, schedule: .fixed(snoozeDate))
-                _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
-            } catch {
-                // Keep countdown behavior even if override schedule fails.
+            let snapshot = trial
+            Task {
+                do {
+                    let config = makeConfiguration(for: snapshot, schedule: .fixed(snoozeDate))
+                    _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
+                } catch {
+                    // Keep countdown behavior even if override schedule fails.
+                }
             }
             return .result()
         }

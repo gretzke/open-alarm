@@ -394,43 +394,34 @@ private struct SelectionSheetView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                Rectangle()
-                    .fill(.ultraThinMaterial)
-                    .ignoresSafeArea()
-
-                ScrollView {
-                    VStack(spacing: 10) {
-                        ForEach(options, id: \.self) { option in
-                            Button {
-                                onSelect(option)
-                            } label: {
-                                HStack {
-                                    Text(format(option))
-                                        .foregroundStyle(OAColor.textPrimary)
-                                    Spacer(minLength: 0)
-                                    if option == selected {
-                                        Image(systemName: "checkmark")
-                                            .foregroundStyle(OAColor.actionCyan)
-                                    }
+            ScrollView {
+                VStack(spacing: 10) {
+                    ForEach(options, id: \.self) { option in
+                        Button {
+                            onSelect(option)
+                        } label: {
+                            HStack {
+                                Text(format(option))
+                                    .foregroundStyle(OAColor.textPrimary)
+                                Spacer(minLength: 0)
+                                if option == selected {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(OAColor.actionCyan)
                                 }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 14)
-                                .frame(maxWidth: .infinity)
-                                .background(
-                                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                        .fill(OAColor.glassFill)
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                        .stroke(OAColor.glassStroke, lineWidth: 1)
-                                )
                             }
-                            .buttonStyle(.plain)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .frame(maxWidth: .infinity)
+                            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: OARadius.button, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                    .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.7)
+                            )
                         }
+                        .buttonStyle(.plain)
                     }
-                    .padding(20)
                 }
+                .padding(20)
             }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
@@ -459,40 +450,31 @@ private struct TryOutPickerView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                Rectangle()
-                    .fill(.ultraThinMaterial)
-                    .ignoresSafeArea()
-
-                ScrollView {
-                    VStack(spacing: 10) {
-                        ForEach(options) { option in
-                            Button {
-                                onSelect(option.seconds)
-                            } label: {
-                                HStack {
-                                    Text(option.label)
-                                        .foregroundStyle(OAColor.textPrimary)
-                                    Spacer(minLength: 0)
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 14)
-                                .frame(maxWidth: .infinity)
-                                .background(
-                                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                        .fill(OAColor.glassFill)
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                        .stroke(OAColor.glassStroke, lineWidth: 1)
-                                )
+            ScrollView {
+                VStack(spacing: 10) {
+                    ForEach(options) { option in
+                        Button {
+                            onSelect(option.seconds)
+                        } label: {
+                            HStack {
+                                Text(option.label)
+                                    .foregroundStyle(OAColor.textPrimary)
+                                Spacer(minLength: 0)
                             }
-                            .buttonStyle(.plain)
-                            .disabled(isBusy)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .frame(maxWidth: .infinity)
+                            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: OARadius.button, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                    .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.7)
+                            )
                         }
+                        .buttonStyle(.plain)
+                        .disabled(isBusy)
                     }
-                    .padding(20)
                 }
+                .padding(20)
             }
             .navigationTitle(L10n.tryOutSheetTitle)
             .navigationBarTitleDisplayMode(.inline)
