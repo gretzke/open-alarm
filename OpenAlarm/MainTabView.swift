@@ -54,12 +54,6 @@ private struct AlarmHomeView: View {
         NavigationStack {
             List {
                 Section {
-                    NapBannerView {
-                        isPresentingNapEditor = true
-                    }
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-
                     if let nap = alarmStore.activeNap {
                         ActiveNapRowView(
                             nap: nap,
@@ -76,6 +70,12 @@ private struct AlarmHomeView: View {
                                 alarmStore.deleteNap()
                             }
                         )
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                    } else {
+                        NapBannerView {
+                            isPresentingNapEditor = true
+                        }
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
                     }
@@ -181,15 +181,9 @@ private struct NapBannerView: View {
                         .foregroundStyle(OAColor.actionCyan)
                 }
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(L10n.napBannerTitle)
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(OAColor.textPrimary)
-
-                    Text(L10n.napBannerSubtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(OAColor.textSecondary)
-                }
+                Text(L10n.napBannerTitle)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(OAColor.textPrimary)
 
                 Spacer(minLength: 0)
 
@@ -378,10 +372,6 @@ private struct SettingsHomeView: View {
                             .font(.headline)
                             .foregroundStyle(OAColor.textPrimary)
 
-                        Text(L10n.settingsDefaultConfigBody)
-                            .font(.subheadline)
-                            .foregroundStyle(OAColor.textSecondary)
-
                         NavigationLink {
                             DefaultSharedSettingsView()
                         } label: {
@@ -417,10 +407,6 @@ private struct SettingsHomeView: View {
                         Text(L10n.settingsNapDefaultsTitle)
                             .font(.headline)
                             .foregroundStyle(OAColor.textPrimary)
-
-                        Text(L10n.settingsNapDefaultsBody)
-                            .font(.subheadline)
-                            .foregroundStyle(OAColor.textSecondary)
 
                         NavigationLink {
                             NapDefaultDurationView()
@@ -461,10 +447,6 @@ private struct SettingsHomeView: View {
                         Text(L10n.settingsTestingModeTitle)
                             .font(.headline)
                             .foregroundStyle(OAColor.textPrimary)
-
-                        Text(L10n.settingsTestingModeBody)
-                            .font(.subheadline)
-                            .foregroundStyle(OAColor.textSecondary)
 
                         Toggle(isOn: Binding(
                             get: { alarmStore.testingModeEnabled },
@@ -522,10 +504,6 @@ private struct DefaultSharedSettingsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                Text(L10n.settingsDefaultConfigPageBody)
-                    .font(.subheadline)
-                    .foregroundStyle(OAColor.textSecondary)
-
                 SharedAlarmSettingsEditor(
                     settings: Binding(
                         get: { alarmStore.defaultSharedSettings },
@@ -554,10 +532,6 @@ private struct NapDefaultDurationView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                Text(L10n.settingsNapDefaultsPageBody)
-                    .font(.subheadline)
-                    .foregroundStyle(OAColor.textSecondary)
-
                 NapDurationPicker(hours: $hours, minutes: $minutes)
             }
             .padding(20)

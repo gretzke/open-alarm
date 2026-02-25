@@ -162,16 +162,17 @@ final class AlarmStore: ObservableObject {
         let remaining = max(1, nap.targetDate.timeIntervalSinceNow)
 
         do {
-            try alarmManager.pause(id: nap.id)
-            nap.pausedRemainingSeconds = remaining
-            nap.updatedAt = .now
-            activeNap = nap
-            AlarmPersistence.saveActiveNapSession(nap, to: userDefaults)
-            remoteStates[nap.id] = .paused
-            lastKnownAlarmState[nap.id] = .paused
+            try alarmManager.cancel(id: nap.id)
         } catch {
-            // No-op; keep existing running nap if pause fails.
+            return
         }
+
+        nap.pausedRemainingSeconds = remaining
+        nap.updatedAt = .now
+        activeNap = nap
+        AlarmPersistence.saveActiveNapSession(nap, to: userDefaults)
+        remoteStates.removeValue(forKey: nap.id)
+        lastKnownAlarmState[nap.id] = .paused
     }
 
     func resumeNap() async {
@@ -182,28 +183,17 @@ final class AlarmStore: ObservableObject {
         let nextTarget = Date.now.addingTimeInterval(max(1, pausedRemaining))
 
         do {
-            try alarmManager.resume(id: nap.id)
+            let config = makeConfiguration(for: nap, schedule: .fixed(nextTarget))
+            let remoteAlarm = try await alarmManager.schedule(id: nap.id, configuration: config)
             nap.targetDate = nextTarget
             nap.pausedRemainingSeconds = nil
             nap.updatedAt = .now
             activeNap = nap
             AlarmPersistence.saveActiveNapSession(nap, to: userDefaults)
-            remoteStates[nap.id] = .scheduled
-            lastKnownAlarmState[nap.id] = .scheduled
+            remoteStates[nap.id] = remoteAlarm.state
+            lastKnownAlarmState[nap.id] = remoteAlarm.state
         } catch {
-            do {
-                let config = makeConfiguration(for: nap, schedule: .fixed(nextTarget))
-                let remoteAlarm = try await alarmManager.schedule(id: nap.id, configuration: config)
-                nap.targetDate = nextTarget
-                nap.pausedRemainingSeconds = nil
-                nap.updatedAt = .now
-                activeNap = nap
-                AlarmPersistence.saveActiveNapSession(nap, to: userDefaults)
-                remoteStates[nap.id] = remoteAlarm.state
-                lastKnownAlarmState[nap.id] = remoteAlarm.state
-            } catch {
-                // Keep paused state when resume fails.
-            }
+            // Keep paused state when resume fails.
         }
     }
 
