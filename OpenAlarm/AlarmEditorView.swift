@@ -118,10 +118,7 @@ struct AlarmEditorView: View {
                                 .font(.headline.weight(.bold))
                                 .foregroundStyle(OAColor.background)
                                 .frame(width: 32, height: 32)
-                                .background(
-                                    Circle()
-                                        .fill(OAColor.actionCyan)
-                                )
+                                .glassEffect(.regular.tint(OAColor.actionCyan).interactive(), in: Circle())
                         }
                         .buttonStyle(.plain)
                         .popover(
@@ -130,28 +127,18 @@ struct AlarmEditorView: View {
                             arrowEdge: .top
                         ) {
                             VStack(alignment: .leading, spacing: 10) {
-                                Text(L10n.alarmEditorApplyChangePrompt)
-                                    .font(.footnote.weight(.semibold))
-                                    .foregroundStyle(OAColor.textSecondary)
-
-                                saveScopeActionButton(
-                                    title: L10n.alarmEditorApplyNextOnlyOption,
-                                    tint: OAColor.textPrimary
-                                ) {
+                                saveScopeActionButton(title: L10n.alarmEditorApplyNextOnlyOption) {
                                     saveAlarm(scope: .nextOnly)
                                     showSaveScopePopover = false
                                 }
 
-                                saveScopeActionButton(
-                                    title: L10n.alarmEditorApplyScheduleOption,
-                                    tint: OAColor.actionCyan
-                                ) {
+                                saveScopeActionButton(title: L10n.alarmEditorApplyScheduleOption) {
                                     saveAlarm(scope: .schedule)
                                     showSaveScopePopover = false
                                 }
                             }
                             .padding(14)
-                            .frame(width: 300, alignment: .leading)
+                            .frame(width: 252, alignment: .leading)
                             .presentationCompactAdaptation(.popover)
                         }
                         .accessibilityLabel(route.existingAlarm == nil ? L10n.actionAdd : L10n.actionSave)
@@ -300,15 +287,18 @@ struct AlarmEditorView: View {
         .buttonStyle(.plain)
     }
 
-    private func saveScopeActionButton(title: LocalizedStringKey, tint: Color, action: @escaping () -> Void) -> some View {
+    private func saveScopeActionButton(title: LocalizedStringKey, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(tint)
+                .foregroundStyle(OAColor.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
-                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: OARadius.button, style: .continuous))
+                .glassEffect(
+                    .regular.tint(OAColor.actionCyan.opacity(0.22)).interactive(),
+                    in: RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                )
                 .overlay(
                     RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
                         .stroke(OAColor.glassStroke.opacity(0.75), lineWidth: 0.8)

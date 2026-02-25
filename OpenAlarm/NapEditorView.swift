@@ -64,10 +64,7 @@ struct NapEditorView: View {
                                 .font(.headline.weight(.bold))
                                 .foregroundStyle(OAColor.background)
                                 .frame(width: 32, height: 32)
-                                .background(
-                                    Circle()
-                                        .fill(OAColor.actionCyan)
-                                )
+                                .glassEffect(.regular.tint(OAColor.actionCyan).interactive(), in: Circle())
                         }
                     }
                     .buttonStyle(.plain)

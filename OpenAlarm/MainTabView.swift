@@ -97,7 +97,7 @@ private struct AlarmHomeView: View {
                                 .font(.title2.weight(.bold))
                                 .foregroundStyle(OAColor.actionCyan)
                                 .frame(width: 40, height: 40)
-                                .glassEffect(.regular, in: Circle())
+                                .glassEffect(.regular.tint(OAColor.actionCyan.opacity(0.28)).interactive(), in: Circle())
                                 .overlay(
                                     Circle()
                                         .stroke(OAColor.glassStroke.opacity(0.85), lineWidth: 0.9)
@@ -452,15 +452,18 @@ private struct AlarmRowView: View {
         )
     }
 
-    private func popoverActionButton(title: LocalizedStringKey, tint: Color, action: @escaping () -> Void) -> some View {
+    private func popoverActionButton(title: LocalizedStringKey, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(tint)
+                .foregroundStyle(OAColor.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
-                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: OARadius.button, style: .continuous))
+                .glassEffect(
+                    .regular.tint(OAColor.actionCyan.opacity(0.22)).interactive(),
+                    in: RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                )
                 .overlay(
                     RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
                         .stroke(OAColor.glassStroke.opacity(0.75), lineWidth: 0.8)
@@ -509,7 +512,7 @@ private struct AlarmRowView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(resolvedName)
@@ -556,37 +559,29 @@ private struct AlarmRowView: View {
                     arrowEdge: .top
                 ) {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text(L10n.alarmRowSkipNextPrompt)
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(OAColor.textSecondary)
-
                         popoverActionButton(
                             title: L10n.alarmRowSkipNextYes,
-                            tint: OAColor.textPrimary,
                             action: onSkipNextSelected
                         )
 
                         popoverActionButton(
                             title: L10n.alarmRowSkipNextNo,
-                            tint: OAColor.danger,
                             action: onDisableCompletelySelected
                         )
                     }
                     .padding(14)
-                    .frame(width: 280, alignment: .leading)
+                    .frame(width: 252, alignment: .leading)
                     .presentationCompactAdaptation(.popover)
                 }
             }
 
-            if alarm.isSkippingNext {
-                Text(L10n.alarmRowSkippingNextStatus)
-                    .font(.caption)
-                    .foregroundStyle(OAColor.textSecondary)
-            }
-
-            if nextRunText != nil || hasRepeatingDays {
-                HStack(alignment: .bottom, spacing: 12) {
-                    if let nextRunText {
+            if alarm.isSkippingNext || nextRunText != nil || hasRepeatingDays {
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    if alarm.isSkippingNext {
+                        Text(L10n.alarmRowSkippingNextStatus)
+                            .font(.caption)
+                            .foregroundStyle(OAColor.textSecondary)
+                    } else if let nextRunText {
                         HStack(spacing: 6) {
                             Text(L10n.alarmRowNextRunPrefix)
                                 .font(.caption.weight(.semibold))
