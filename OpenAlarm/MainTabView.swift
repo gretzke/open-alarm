@@ -227,18 +227,6 @@ private struct ActiveNapRowView: View {
                     .foregroundStyle(OAColor.textPrimary)
 
                 Spacer(minLength: 0)
-
-                if nap.isPaused {
-                    Text(L10n.napActivePaused)
-                        .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .foregroundStyle(OAColor.textPrimary)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(OAColor.glassFill)
-                        )
-                }
             }
 
             Text(remainingTimeString)
