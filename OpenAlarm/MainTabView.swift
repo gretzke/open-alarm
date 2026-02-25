@@ -83,13 +83,27 @@ private struct AlarmHomeView: View {
                 }
 
                 Section {
-                    Text(L10n.alarmListTitle)
-                        .font(.system(size: 34, weight: .bold, design: .rounded))
-                        .foregroundStyle(OAColor.textPrimary)
-                        .padding(.horizontal, 4)
-                        .padding(.top, 6)
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
+                    HStack(alignment: .center) {
+                        Text(L10n.alarmListTitle)
+                            .font(.system(size: 34, weight: .bold, design: .rounded))
+                            .foregroundStyle(OAColor.textPrimary)
+
+                        Spacer(minLength: 0)
+
+                        Button {
+                            presentEditor(.create)
+                        } label: {
+                            Image(systemName: "plus")
+                                .font(.title3.weight(.semibold))
+                                .foregroundStyle(OAColor.actionCyan)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("alarm_add_button")
+                    }
+                    .padding(.horizontal, 4)
+                    .padding(.top, 6)
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
                 }
 
                 if alarmStore.alarms.isEmpty {
@@ -136,17 +150,6 @@ private struct AlarmHomeView: View {
             .scrollContentBackground(.hidden)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(OAColor.background.ignoresSafeArea())
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        presentEditor(.create)
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    .tint(OAColor.actionCyan)
-                    .accessibilityIdentifier("alarm_add_button")
-                }
-            }
             .onAppear {
 #if DEBUG
                 if ProcessInfo.processInfo.arguments.contains("uitestOpenCreateAlarm") {
@@ -337,14 +340,17 @@ private struct ActiveNapRowView: View {
 
 private struct AlarmRowView: View {
     let alarm: UserAlarm
-    let lifecycleText: LocalizedStringKey
+    let now: Date
+    let onToggle: (Bool) -> Void
 
-    private var repeatDescription: String {
-        if alarm.repeatDays.isEmpty {
-            return String(localized: "alarm_row_repeat_one_time")
-        }
+    private static let relativeFormatter: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return formatter
+    }()
 
-        return "\(String(localized: "alarm_row_repeat_prefix")): \(alarm.sortedRepeatDays.repeatSummary())"
+    private var calendar: Calendar {
+        .autoupdatingCurrent
     }
 
     private var resolvedName: String {
@@ -355,38 +361,173 @@ private struct AlarmRowView: View {
         return trimmed
     }
 
+    private var baseScheduledDate: Date {
+        var components = calendar.dateComponents([.year, .month, .day], from: now)
+        components.hour = alarm.hour
+        components.minute = alarm.minute
+        components.second = 0
+        return calendar.date(from: components) ?? now
+    }
+
+    private var repeatSummaryText: String? {
+        guard alarm.isRepeating else {
+            return nil
+        }
+
+        return "\(String(localized: "alarm_row_repeat_prefix")): \(alarm.sortedRepeatDays.repeatSummary())"
+    }
+
+    private var showsOverrideTime: Bool {
+        alarm.isRepeating && alarm.isEnabled && alarm.nextTriggerOverrideDate != nil
+    }
+
+    private var nextRunText: String? {
+        guard let nextRunDate else {
+            return nil
+        }
+
+        let delta = nextRunDate.timeIntervalSince(now)
+        if delta > 0, delta < 12 * 60 * 60 {
+            return Self.relativeFormatter.localizedString(for: nextRunDate, relativeTo: now)
+        }
+
+        if calendar.isDateInToday(nextRunDate) {
+            return String(localized: "alarm_row_next_run_today")
+        }
+
+        if calendar.isDateInTomorrow(nextRunDate) {
+            return String(localized: "alarm_row_next_run_tomorrow")
+        }
+
+        return nextRunDate.formatted(.dateTime.weekday(.wide))
+    }
+
+    private var nextRunDate: Date? {
+        guard !alarm.isFullyDisabled else {
+            return nil
+        }
+
+        if alarm.isRepeating {
+            if alarm.isSkippingNext, let skipUntil = alarm.skipNextUntilDate {
+                return nextRepeatingDate(after: skipUntil)
+            }
+
+            if let overrideDate = alarm.nextTriggerOverrideDate, overrideDate > now {
+                return overrideDate
+            }
+
+            return nextRepeatingDate(after: now)
+        }
+
+        if let overrideDate = alarm.nextTriggerOverrideDate, overrideDate > now {
+            return overrideDate
+        }
+
+        return nextOneTimeDate(after: now)
+    }
+
+    private func nextRepeatingDate(after referenceDate: Date) -> Date? {
+        let searchStart = referenceDate.addingTimeInterval(1)
+
+        let candidates = alarm.sortedRepeatDays.compactMap { weekday -> Date? in
+            var components = DateComponents()
+            components.weekday = weekday.rawValue
+            components.hour = alarm.hour
+            components.minute = alarm.minute
+            components.second = 0
+
+            return calendar.nextDate(
+                after: searchStart,
+                matching: components,
+                matchingPolicy: .nextTime,
+                repeatedTimePolicy: .first,
+                direction: .forward
+            )
+        }
+
+        return candidates.min()
+    }
+
+    private func nextOneTimeDate(after referenceDate: Date) -> Date? {
+        var components = calendar.dateComponents([.year, .month, .day], from: referenceDate)
+        components.hour = alarm.hour
+        components.minute = alarm.minute
+        components.second = 0
+
+        guard let candidate = calendar.date(from: components) else {
+            return nil
+        }
+
+        if candidate > referenceDate {
+            return candidate
+        }
+
+        return calendar.date(byAdding: .day, value: 1, to: candidate)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text(alarm.triggerDateForDisplay, style: .time)
-                    .font(.system(size: 40, weight: .bold, design: .rounded))
-                    .foregroundStyle(OAColor.textPrimary)
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(resolvedName)
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(OAColor.textPrimary)
+
+                    if showsOverrideTime, let overrideDate = alarm.nextTriggerOverrideDate {
+                        Text(overrideDate, style: .time)
+                            .font(.system(size: 40, weight: .bold, design: .rounded))
+                            .foregroundStyle(OAColor.textPrimary)
+
+                        HStack(spacing: 4) {
+                            Text(L10n.alarmRowUsualTimePrefix)
+                                .font(.caption)
+                                .foregroundStyle(OAColor.textSecondary)
+
+                            Text(baseScheduledDate, style: .time)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(OAColor.textSecondary)
+                        }
+                    } else {
+                        Text(baseScheduledDate, style: .time)
+                            .font(.system(size: 40, weight: .bold, design: .rounded))
+                            .foregroundStyle(OAColor.textPrimary)
+                    }
+                }
 
                 Spacer(minLength: 0)
 
-                Text(lifecycleText)
-                    .font(.caption.weight(.semibold))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .foregroundStyle(OAColor.background)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(OAColor.actionCyan)
-                    )
+                Toggle(isOn: Binding(
+                    get: { alarm.isEnabled },
+                    set: { onToggle($0) }
+                )) {
+                    EmptyView()
+                }
+                .labelsHidden()
+                .tint(OAColor.actionCyan)
             }
 
-            Text(resolvedName)
-                .font(.headline.weight(.semibold))
-                .foregroundStyle(OAColor.textPrimary)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text(repeatDescription)
+            if let repeatSummaryText {
+                Text(repeatSummaryText)
                     .font(.subheadline)
                     .foregroundStyle(OAColor.textSecondary)
+            }
 
-                Text(alarm.deleteAfterUse ? L10n.alarmRowDeleteAfterUse : L10n.alarmRowKeepAfterUse)
-                    .font(.caption)
+            if alarm.isSkippingNext {
+                Text(L10n.alarmRowSkippingNextStatus)
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(OAColor.textSecondary)
+            }
+
+            if let nextRunText {
+                HStack(spacing: 6) {
+                    Text(L10n.alarmRowNextRunPrefix)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(OAColor.textSecondary)
+
+                    Text(nextRunText)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(OAColor.textPrimary)
+                }
             }
         }
         .padding(18)

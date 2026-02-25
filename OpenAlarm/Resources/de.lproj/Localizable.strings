@@ -17,6 +17,14 @@
 "alarm_row_repeat_prefix" = "Wiederholt";
 "alarm_row_delete_after_use" = "Nach Nutzung löschen";
 "alarm_row_keep_after_use" = "Nach Nutzung behalten";
+"alarm_row_skip_next_prompt" = "Wiederholenden Alarm deaktivieren";
+"alarm_row_skip_next_yes" = "Nächsten Alarm überspringen";
+"alarm_row_skip_next_no" = "Vollständig deaktivieren";
+"alarm_row_usual_time_prefix" = "Normalerweise";
+"alarm_row_skipping_next_status" = "Nächster Alarm wird übersprungen";
+"alarm_row_next_run_prefix" = "Nächster Alarm:";
+"alarm_row_next_run_today" = "Heute";
+"alarm_row_next_run_tomorrow" = "Morgen";
 
 "alarm_state_scheduled" = "Geplant";
 "alarm_state_alerting" = "Klingelt";

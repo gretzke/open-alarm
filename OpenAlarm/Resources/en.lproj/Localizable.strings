@@ -17,6 +17,14 @@
 "alarm_row_repeat_prefix" = "Repeats";
 "alarm_row_delete_after_use" = "Delete after use";
 "alarm_row_keep_after_use" = "Keeps after use";
+"alarm_row_skip_next_prompt" = "Disable recurring alarm";
+"alarm_row_skip_next_yes" = "Skip next alarm";
+"alarm_row_skip_next_no" = "Disable completely";
+"alarm_row_usual_time_prefix" = "Usually";
+"alarm_row_skipping_next_status" = "Skipping next alarm";
+"alarm_row_next_run_prefix" = "Next run:";
+"alarm_row_next_run_today" = "Today";
+"alarm_row_next_run_tomorrow" = "Tomorrow";
 
 "alarm_state_scheduled" = "Scheduled";
 "alarm_state_alerting" = "Ringing";

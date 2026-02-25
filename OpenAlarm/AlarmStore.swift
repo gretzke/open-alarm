@@ -275,6 +275,64 @@ final class AlarmStore: ObservableObject {
         save()
     }
 
+    func setAlarmEnabled(_ alarm: UserAlarm, enabled: Bool, skipNext: Bool?) async throws {
+        if enabled {
+            try await ensureAuthorizedForScheduling()
+        }
+
+        guard let index = alarms.firstIndex(where: { $0.id == alarm.id }) else {
+            return
+        }
+
+        var updatedAlarm = alarms[index]
+
+        if enabled {
+            updatedAlarm.isEnabled = true
+            updatedAlarm.skipNextUntilDate = nil
+            updatedAlarm.updatedAt = .now
+
+            do {
+                let config = makeConfiguration(for: updatedAlarm, schedule: updatedAlarm.schedule, isShadowTrial: false)
+                let remoteAlarm = try await scheduleAlarmWithUpdateFallback(
+                    id: updatedAlarm.id,
+                    configuration: config,
+                    isUpdate: true
+                )
+                updatedAlarm.lifecycleState = remoteAlarm.state == .alerting ? .alerting : .scheduled
+                lastKnownAlarmState[updatedAlarm.id] = remoteAlarm.state
+                remoteStates[updatedAlarm.id] = remoteAlarm.state
+            } catch {
+                throw AlarmStoreError.scheduleFailed
+            }
+        } else {
+            updatedAlarm.isEnabled = false
+            updatedAlarm.updatedAt = .now
+
+            if updatedAlarm.isRepeating, skipNext == true,
+               let skipUntil = nextPlannedTriggerDate(for: updatedAlarm, after: .now) {
+                updatedAlarm.skipNextUntilDate = skipUntil
+            } else {
+                updatedAlarm.skipNextUntilDate = nil
+            }
+
+            try? alarmManager.stop(id: updatedAlarm.id)
+            try? alarmManager.cancel(id: updatedAlarm.id)
+
+            updatedAlarm.lifecycleState = .scheduled
+            lastKnownAlarmState.removeValue(forKey: updatedAlarm.id)
+            remoteStates.removeValue(forKey: updatedAlarm.id)
+
+            var pending = AlarmPersistence.loadPendingSnoozeIDs(from: userDefaults)
+            if pending.remove(updatedAlarm.id) != nil {
+                AlarmPersistence.savePendingSnoozeIDs(pending, to: userDefaults)
+            }
+        }
+
+        alarms[index] = updatedAlarm
+        alarms = sortAlarms(alarms)
+        save()
+    }
+
     func deleteAlarm(_ alarm: UserAlarm) {
         try? alarmManager.cancel(id: alarm.id)
         alarms.removeAll { $0.id == alarm.id }
@@ -442,18 +500,54 @@ final class AlarmStore: ObservableObject {
         return candidates.min()
     }
 
+    private func nextPlannedTriggerDate(for alarm: UserAlarm, after referenceDate: Date) -> Date? {
+        if let overrideDate = alarm.nextTriggerOverrideDate, overrideDate > referenceDate {
+            return overrideDate
+        }
+
+        if alarm.isRepeating {
+            return nextOccurrenceDate(
+                in: alarm.sortedRepeatDays,
+                hour: alarm.hour,
+                minute: alarm.minute,
+                after: referenceDate
+            )
+        }
+
+        let calendar = Calendar.autoupdatingCurrent
+        var components = calendar.dateComponents([.year, .month, .day], from: referenceDate)
+        components.hour = alarm.hour
+        components.minute = alarm.minute
+        components.second = 0
+
+        guard let todayCandidate = calendar.date(from: components) else {
+            return nil
+        }
+
+        if todayCandidate > referenceDate {
+            return todayCandidate
+        }
+
+        return calendar.date(byAdding: .day, value: 1, to: todayCandidate)
+    }
+
     private func upsertAlarm(existingAlarm: UserAlarm?, draft: AlarmDraft, clearNextOverride: Bool = false) async throws {
         try await ensureAuthorizedForScheduling()
 
         let id = existingAlarm?.id ?? UUID()
+        let preservedOverride = clearNextOverride ? nil : existingAlarm?.nextTriggerOverrideDate
+
         var nextAlarm = draft.toUserAlarm(
             id: id,
             existingCreatedAt: existingAlarm?.createdAt,
             defaultSharedSettings: defaultSharedSettings,
+            existingNextTriggerOverrideDate: preservedOverride,
+            existingIsEnabled: existingAlarm?.isEnabled ?? true,
+            existingSkipNextUntilDate: existingAlarm?.skipNextUntilDate,
             existingSnoozeCount: existingAlarm?.snoozeCount
         )
 
-        if nextAlarm.isEnabled || nextAlarm.isSkippingNext {
+        if nextAlarm.isEnabled {
             do {
                 let config = makeConfiguration(for: nextAlarm, schedule: nextAlarm.schedule, isShadowTrial: false)
                 let remoteAlarm = try await scheduleAlarmWithUpdateFallback(
@@ -496,7 +590,7 @@ final class AlarmStore: ObservableObject {
 
     private func rescheduleAlarmsUsingDefaultSharedSettings() async {
         for alarm in alarms where alarm.useDefaultSharedSettings {
-            guard alarm.isEnabled || alarm.isSkippingNext else {
+            guard alarm.isEnabled else {
                 continue
             }
 
@@ -669,6 +763,20 @@ final class AlarmStore: ObservableObject {
             }
 
             if updated[index].isRepeating,
+               let skipUntil = updated[index].skipNextUntilDate,
+               currentState == nil,
+               skipUntil <= .now {
+                updated[index].isEnabled = true
+                updated[index].skipNextUntilDate = nil
+                if let overrideDate = updated[index].nextTriggerOverrideDate, overrideDate <= skipUntil {
+                    updated[index].nextTriggerOverrideDate = nil
+                }
+                updated[index].updatedAt = .now
+                scheduleRepeatRestore(for: updated[index])
+                changed = true
+            }
+
+            if updated[index].isRepeating,
                let overrideDate = updated[index].nextTriggerOverrideDate,
                currentState == nil,
                overrideDate <= .now {
@@ -681,6 +789,7 @@ final class AlarmStore: ObservableObject {
             if previousState == .alerting, currentState != .alerting {
                 applyPostAlertTransition(
                     alarm: &updated[index],
+                    previousState: previousState,
                     currentState: currentState,
                     pendingSnoozeIDs: &pendingSnoozeIDs,
                     idsToAutoDelete: &idsToAutoDelete,
@@ -734,6 +843,7 @@ final class AlarmStore: ObservableObject {
 
     private func applyPostAlertTransition(
         alarm: inout UserAlarm,
+        previousState: Alarm.State?,
         currentState: Alarm.State?,
         pendingSnoozeIDs: inout Set<UUID>,
         idsToAutoDelete: inout Set<UUID>,
@@ -788,7 +898,7 @@ final class AlarmStore: ObservableObject {
                     alarm.nextTriggerOverrideDate = nil
                     alarm.updatedAt = .now
                     changed = true
-                    if alarm.isEnabled || alarm.isSkippingNext {
+                    if alarm.isEnabled {
                         scheduleRepeatRestore(for: alarm)
                     }
                 }
@@ -818,6 +928,11 @@ final class AlarmStore: ObservableObject {
 
         if alarm.deleteAfterUse {
             idsToAutoDelete.insert(alarm.id)
+        } else if alarm.isEnabled {
+            alarm.isEnabled = false
+            alarm.skipNextUntilDate = nil
+            alarm.updatedAt = .now
+            changed = true
         }
     }
 
@@ -886,7 +1001,7 @@ final class AlarmStore: ObservableObject {
             return false
         }
 
-        if nap.isPaused, currentState == .countdown || currentState == .scheduled {
+        if nap.isPaused, (currentState == .countdown || currentState == .scheduled) {
             nap.pausedRemainingSeconds = nil
             nap.targetDate = max(Date.now, nap.targetDate)
             nap.updatedAt = .now
