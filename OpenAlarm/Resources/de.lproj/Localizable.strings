@@ -20,11 +20,16 @@
 "alarm_row_skip_next_prompt" = "Wiederholenden Alarm deaktivieren";
 "alarm_row_skip_next_yes" = "Nächsten Alarm überspringen";
 "alarm_row_skip_next_no" = "Vollständig deaktivieren";
-"alarm_row_usual_time_prefix" = "Normalerweise";
+"alarm_row_usual_time_prefix" = "Normalerweise:";
 "alarm_row_skipping_next_status" = "Nächster Alarm wird übersprungen";
-"alarm_row_next_run_prefix" = "Nächster Alarm:";
+"alarm_row_next_run_prefix" = "Klingelt";
 "alarm_row_next_run_today" = "Heute";
 "alarm_row_next_run_tomorrow" = "Morgen";
+"alarm_row_countdown_hours_minutes" = "in %d Std %d Min";
+"alarm_row_countdown_minutes" = "in %d Min";
+"alarm_row_today_at_format" = "Heute um %@";
+"alarm_row_tomorrow_at_format" = "Morgen um %@";
+"alarm_row_weekday_at_format" = "%@ um %@";
 
 "alarm_state_scheduled" = "Geplant";
 "alarm_state_alerting" = "Klingelt";

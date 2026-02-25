@@ -94,8 +94,18 @@ private struct AlarmHomeView: View {
                             presentEditor(.create)
                         } label: {
                             Image(systemName: "plus")
-                                .font(.title3.weight(.semibold))
-                                .foregroundStyle(OAColor.actionCyan)
+                                .font(.headline.weight(.bold))
+                                .foregroundStyle(OAColor.textPrimary)
+                                .frame(width: 34, height: 34)
+                                .background(
+                                    Circle()
+                                        .fill(OAColor.glassFill)
+                                )
+                                .overlay(
+                                    Circle()
+                                        .stroke(OAColor.glassStroke.opacity(0.85), lineWidth: 0.9)
+                                )
+                                .shadow(color: OAColor.glassGlow.opacity(0.7), radius: 10, x: 0, y: 4)
                         }
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("alarm_add_button")
@@ -124,6 +134,20 @@ private struct AlarmHomeView: View {
                             AlarmRowView(
                                 alarm: alarm,
                                 now: now,
+                                disableChoicePopoverPresented: pendingDisableConfirmationAlarm?.id == alarm.id,
+                                onDisableChoicePopoverPresentedChange: { isPresented in
+                                    if !isPresented, pendingDisableConfirmationAlarm?.id == alarm.id {
+                                        pendingDisableConfirmationAlarm = nil
+                                    }
+                                },
+                                onSkipNextSelected: {
+                                    setAlarmEnabled(alarm, isOn: false, skipNext: true)
+                                    pendingDisableConfirmationAlarm = nil
+                                },
+                                onDisableCompletelySelected: {
+                                    setAlarmEnabled(alarm, isOn: false, skipNext: false)
+                                    pendingDisableConfirmationAlarm = nil
+                                },
                                 onToggle: { isOn in
                                     handleAlarmToggle(alarm, isOn: isOn)
                                 }
@@ -177,36 +201,6 @@ private struct AlarmHomeView: View {
             .environmentObject(alarmStore)
             .presentationDetents([.fraction(0.4), .large])
             .presentationDragIndicator(.visible)
-        }
-        .confirmationDialog(
-            L10n.alarmRowSkipNextPrompt,
-            isPresented: Binding(
-                get: { pendingDisableConfirmationAlarm != nil },
-                set: { isPresented in
-                    if !isPresented {
-                        pendingDisableConfirmationAlarm = nil
-                    }
-                }
-            ),
-            titleVisibility: .visible
-        ) {
-            Button(L10n.alarmRowSkipNextYes) {
-                if let alarm = pendingDisableConfirmationAlarm {
-                    setAlarmEnabled(alarm, isOn: false, skipNext: true)
-                }
-                pendingDisableConfirmationAlarm = nil
-            }
-
-            Button(L10n.alarmRowSkipNextNo) {
-                if let alarm = pendingDisableConfirmationAlarm {
-                    setAlarmEnabled(alarm, isOn: false, skipNext: false)
-                }
-                pendingDisableConfirmationAlarm = nil
-            }
-
-            Button(L10n.actionCancel, role: .cancel) {
-                pendingDisableConfirmationAlarm = nil
-            }
         }
     }
 
@@ -341,13 +335,21 @@ private struct ActiveNapRowView: View {
 private struct AlarmRowView: View {
     let alarm: UserAlarm
     let now: Date
+    let disableChoicePopoverPresented: Bool
+    let onDisableChoicePopoverPresentedChange: (Bool) -> Void
+    let onSkipNextSelected: () -> Void
+    let onDisableCompletelySelected: () -> Void
     let onToggle: (Bool) -> Void
 
-    private static let relativeFormatter: RelativeDateTimeFormatter = {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .full
-        return formatter
-    }()
+    private let mondayFirstWeekdays: [(AlarmWeekday, String)] = [
+        (.monday, "M"),
+        (.tuesday, "T"),
+        (.wednesday, "W"),
+        (.thursday, "T"),
+        (.friday, "F"),
+        (.saturday, "S"),
+        (.sunday, "S")
+    ]
 
     private var calendar: Calendar {
         .autoupdatingCurrent
@@ -369,16 +371,15 @@ private struct AlarmRowView: View {
         return calendar.date(from: components) ?? now
     }
 
-    private var repeatSummaryText: String? {
-        guard alarm.isRepeating else {
-            return nil
+    private var showsOverrideTime: Bool {
+        guard alarm.isRepeating,
+              alarm.isEnabled,
+              let overrideDate = alarm.nextTriggerOverrideDate else {
+            return false
         }
 
-        return "\(String(localized: "alarm_row_repeat_prefix")): \(alarm.sortedRepeatDays.repeatSummary())"
-    }
-
-    private var showsOverrideTime: Bool {
-        alarm.isRepeating && alarm.isEnabled && alarm.nextTriggerOverrideDate != nil
+        let overrideComponents = calendar.dateComponents([.hour, .minute], from: overrideDate)
+        return overrideComponents.hour != alarm.hour || overrideComponents.minute != alarm.minute
     }
 
     private var nextRunText: String? {
@@ -388,18 +389,21 @@ private struct AlarmRowView: View {
 
         let delta = nextRunDate.timeIntervalSince(now)
         if delta > 0, delta < 12 * 60 * 60 {
-            return Self.relativeFormatter.localizedString(for: nextRunDate, relativeTo: now)
+            return countdownText(until: nextRunDate)
         }
 
+        let timeText = nextRunDate.formatted(.dateTime.hour().minute())
+
         if calendar.isDateInToday(nextRunDate) {
-            return String(localized: "alarm_row_next_run_today")
+            return String(format: String(localized: "alarm_row_today_at_format"), timeText)
         }
 
         if calendar.isDateInTomorrow(nextRunDate) {
-            return String(localized: "alarm_row_next_run_tomorrow")
+            return String(format: String(localized: "alarm_row_tomorrow_at_format"), timeText)
         }
 
-        return nextRunDate.formatted(.dateTime.weekday(.wide))
+        let weekdayText = nextRunDate.formatted(.dateTime.weekday(.wide))
+        return String(format: String(localized: "alarm_row_weekday_at_format"), weekdayText, timeText)
     }
 
     private var nextRunDate: Date? {
@@ -424,6 +428,42 @@ private struct AlarmRowView: View {
         }
 
         return nextOneTimeDate(after: now)
+    }
+
+    private var hasRepeatingDays: Bool {
+        alarm.isRepeating && !alarm.repeatDays.isEmpty
+    }
+
+    private var repeatDayStrip: some View {
+        let activeDays = Set(alarm.repeatDays)
+
+        return HStack(spacing: 6) {
+            ForEach(mondayFirstWeekdays, id: \.0) { day, symbol in
+                Text(symbol)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(activeDays.contains(day) ? OAColor.textPrimary : OAColor.textSecondary.opacity(0.65))
+                    .frame(minWidth: 12)
+            }
+        }
+    }
+
+    private func countdownText(until nextRunDate: Date) -> String {
+        let totalMinutes = max(1, Int(ceil(nextRunDate.timeIntervalSince(now) / 60)))
+
+        if totalMinutes >= 60 {
+            let hours = totalMinutes / 60
+            let minutes = totalMinutes % 60
+            return String(
+                format: String(localized: "alarm_row_countdown_hours_minutes"),
+                hours,
+                minutes
+            )
+        }
+
+        return String(
+            format: String(localized: "alarm_row_countdown_minutes"),
+            totalMinutes
+        )
     }
 
     private func nextRepeatingDate(after referenceDate: Date) -> Date? {
@@ -504,12 +544,43 @@ private struct AlarmRowView: View {
                 }
                 .labelsHidden()
                 .tint(OAColor.actionCyan)
-            }
+                .popover(
+                    isPresented: Binding(
+                        get: { disableChoicePopoverPresented },
+                        set: { onDisableChoicePopoverPresentedChange($0) }
+                    ),
+                    attachmentAnchor: .rect(.bounds),
+                    arrowEdge: .top
+                ) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(L10n.alarmRowSkipNextPrompt)
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(OAColor.textSecondary)
 
-            if let repeatSummaryText {
-                Text(repeatSummaryText)
-                    .font(.subheadline)
-                    .foregroundStyle(OAColor.textSecondary)
+                        Button {
+                            onSkipNextSelected()
+                        } label: {
+                            Text(L10n.alarmRowSkipNextYes)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(OAColor.textPrimary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 6)
+                        }
+
+                        Button {
+                            onDisableCompletelySelected()
+                        } label: {
+                            Text(L10n.alarmRowSkipNextNo)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(OAColor.danger)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 6)
+                        }
+                    }
+                    .padding(14)
+                    .frame(width: 250)
+                    .presentationCompactAdaptation(.popover)
+                }
             }
 
             if alarm.isSkippingNext {
@@ -518,15 +589,25 @@ private struct AlarmRowView: View {
                     .foregroundStyle(OAColor.textSecondary)
             }
 
-            if let nextRunText {
-                HStack(spacing: 6) {
-                    Text(L10n.alarmRowNextRunPrefix)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(OAColor.textSecondary)
+            if nextRunText != nil || hasRepeatingDays {
+                HStack(alignment: .bottom, spacing: 12) {
+                    if let nextRunText {
+                        HStack(spacing: 6) {
+                            Text(L10n.alarmRowNextRunPrefix)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(OAColor.textSecondary)
 
-                    Text(nextRunText)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(OAColor.textPrimary)
+                            Text(nextRunText)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(OAColor.textPrimary)
+                        }
+                    }
+
+                    Spacer(minLength: 0)
+
+                    if hasRepeatingDays {
+                        repeatDayStrip
+                    }
                 }
             }
         }

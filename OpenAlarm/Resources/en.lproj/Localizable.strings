@@ -20,11 +20,16 @@
 "alarm_row_skip_next_prompt" = "Disable recurring alarm";
 "alarm_row_skip_next_yes" = "Skip next alarm";
 "alarm_row_skip_next_no" = "Disable completely";
-"alarm_row_usual_time_prefix" = "Usually";
+"alarm_row_usual_time_prefix" = "Usually:";
 "alarm_row_skipping_next_status" = "Skipping next alarm";
-"alarm_row_next_run_prefix" = "Next run:";
+"alarm_row_next_run_prefix" = "Goes off";
 "alarm_row_next_run_today" = "Today";
 "alarm_row_next_run_tomorrow" = "Tomorrow";
+"alarm_row_countdown_hours_minutes" = "in %dh %dm";
+"alarm_row_countdown_minutes" = "in %d min";
+"alarm_row_today_at_format" = "Today at %@";
+"alarm_row_tomorrow_at_format" = "Tomorrow at %@";
+"alarm_row_weekday_at_format" = "%@ at %@";
 
 "alarm_state_scheduled" = "Scheduled";
 "alarm_state_alerting" = "Ringing";

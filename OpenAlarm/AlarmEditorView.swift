@@ -51,7 +51,6 @@ struct AlarmEditorView: View {
     @State private var isSaving = false
     @State private var errorMessage: LocalizedStringKey?
     @State private var hasInitializedDraft = false
-    @State private var showSaveScopePrompt = false
 
     init(route: AlarmEditorRoute) {
         self.route = route
@@ -103,20 +102,35 @@ struct AlarmEditorView: View {
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        primarySaveTapped()
-                    } label: {
-                        if isSaving {
-                            ProgressView()
-                                .tint(OAColor.actionCyan)
-                        } else {
+                    if isSaving {
+                        ProgressView()
+                            .tint(OAColor.actionCyan)
+                    } else if shouldShowSaveScopePrompt {
+                        Menu {
+                            Button(L10n.alarmEditorApplyNextOnlyOption) {
+                                saveAlarm(scope: .nextOnly)
+                            }
+
+                            Button(L10n.alarmEditorApplyScheduleOption) {
+                                saveAlarm(scope: .schedule)
+                            }
+                        } label: {
                             Image(systemName: "checkmark")
                                 .font(.headline.weight(.semibold))
                         }
+                        .menuIndicator(.hidden)
+                        .tint(OAColor.actionCyan)
+                        .accessibilityLabel(route.existingAlarm == nil ? L10n.actionAdd : L10n.actionSave)
+                    } else {
+                        Button {
+                            saveAlarm(scope: .schedule)
+                        } label: {
+                            Image(systemName: "checkmark")
+                                .font(.headline.weight(.semibold))
+                        }
+                        .tint(OAColor.actionCyan)
+                        .accessibilityLabel(route.existingAlarm == nil ? L10n.actionAdd : L10n.actionSave)
                     }
-                    .tint(OAColor.actionCyan)
-                    .disabled(isSaving)
-                    .accessibilityLabel(route.existingAlarm == nil ? L10n.actionAdd : L10n.actionSave)
                 }
             }
         }
@@ -142,23 +156,6 @@ struct AlarmEditorView: View {
                 draft.useDefaultSharedSettings = false
             }
 #endif
-        }
-        .confirmationDialog(
-            L10n.alarmEditorApplyChangePrompt,
-            isPresented: $showSaveScopePrompt,
-            titleVisibility: .visible
-        ) {
-            Button(L10n.alarmEditorApplyNextOnlyOption) {
-                saveAlarm(scope: .nextOnly)
-            }
-
-            Button(L10n.alarmEditorApplyScheduleOption) {
-                saveAlarm(scope: .schedule)
-            }
-
-            Button(L10n.actionCancel, role: .cancel) {
-                showSaveScopePrompt = false
-            }
         }
     }
 
@@ -273,18 +270,7 @@ struct AlarmEditorView: View {
         .buttonStyle(.plain)
     }
 
-    private func primarySaveTapped() {
-        guard !isSaving else {
-            return
-        }
-
-        if shouldShowSaveScopePrompt {
-            showSaveScopePrompt = true
-            return
-        }
-
-        saveAlarm(scope: .schedule)
-    }
+    // Save actions are handled directly in the toolbar button/menu.
 
     private var shouldShowSaveScopePrompt: Bool {
         guard let existing = route.existingAlarm, existing.isRepeating else {
