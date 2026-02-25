@@ -38,11 +38,11 @@ struct MainTabView: View {
 private struct AlarmHomeView: View {
     @EnvironmentObject private var alarmStore: AlarmStore
     @State private var editorRoute: AlarmEditorRoute?
-    @State private var editorDetent: PresentationDetent = .fraction(0.25)
+    @State private var editorDetent: PresentationDetent = .fraction(0.82)
     @State private var isPresentingNapEditor = false
     @State private var now = Date.now
 
-    private let editorPartialDetent: PresentationDetent = .fraction(0.25)
+    private let editorPartialDetent: PresentationDetent = .fraction(0.82)
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private func presentEditor(_ route: AlarmEditorRoute) {
@@ -168,7 +168,7 @@ private struct AlarmHomeView: View {
                 )
             )
             .environmentObject(alarmStore)
-            .presentationDetents([.fraction(0.7), .large])
+            .presentationDetents([.fraction(0.25), .large])
             .presentationDragIndicator(.visible)
         }
     }
