@@ -332,6 +332,24 @@ final class AlarmStore: ObservableObject {
         }
     }
 
+    private func scheduleAlarmWithUpdateFallback(
+        id: UUID,
+        configuration: AlarmManager.AlarmConfiguration<OpenAlarmMetadata>,
+        isUpdate: Bool
+    ) async throws -> Alarm {
+        do {
+            return try await alarmManager.schedule(id: id, configuration: configuration)
+        } catch {
+            guard isUpdate else {
+                throw error
+            }
+
+            try? alarmManager.stop(id: id)
+            try? alarmManager.cancel(id: id)
+            return try await alarmManager.schedule(id: id, configuration: configuration)
+        }
+    }
+
     private func upsertAlarm(existingAlarm: UserAlarm?, draft: AlarmDraft) async throws {
         try await ensureAuthorizedForScheduling()
 
@@ -345,7 +363,11 @@ final class AlarmStore: ObservableObject {
 
         do {
             let config = makeConfiguration(for: nextAlarm, schedule: nextAlarm.schedule, isShadowTrial: false)
-            let remoteAlarm = try await alarmManager.schedule(id: id, configuration: config)
+            let remoteAlarm = try await scheduleAlarmWithUpdateFallback(
+                id: id,
+                configuration: config,
+                isUpdate: existingAlarm != nil
+            )
             nextAlarm.lifecycleState = remoteAlarm.state == .alerting ? .alerting : .scheduled
             nextAlarm.snoozeCount = 0
             lastKnownAlarmState[id] = remoteAlarm.state
