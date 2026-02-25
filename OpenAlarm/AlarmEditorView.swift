@@ -99,18 +99,8 @@ struct AlarmEditorView: View {
                     } label: {
                         Image(systemName: "xmark")
                             .font(.headline.weight(.semibold))
-                            .foregroundStyle(OAColor.textPrimary)
-                            .frame(width: 44, height: 44)
-                            .background(
-                                Circle()
-                                    .fill(OAColor.glassFill)
-                            )
-                            .overlay(
-                                Circle()
-                                    .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
-                            )
                     }
-                    .buttonStyle(.plain)
+                    .tint(OAColor.textPrimary)
                     .accessibilityLabel(L10n.actionCancel)
                 }
 
@@ -121,36 +111,13 @@ struct AlarmEditorView: View {
                         if isSaving {
                             ProgressView()
                                 .tint(OAColor.actionCyan)
-                                .frame(width: 44, height: 44)
-                                .background(
-                                    Circle()
-                                        .fill(OAColor.glassFill)
-                                )
-                                .overlay(
-                                    Circle()
-                                        .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
-                                )
-                        } else if showSaveScopePrompt {
-                            Circle()
-                                .fill(Color.clear)
-                                .frame(width: 44, height: 44)
                         } else {
                             Image(systemName: "checkmark")
                                 .font(.headline.weight(.semibold))
-                                .foregroundStyle(OAColor.actionCyan)
-                                .frame(width: 44, height: 44)
-                                .background(
-                                    Circle()
-                                        .fill(OAColor.glassFill)
-                                        .matchedGeometryEffect(id: "save_scope_morph", in: saveScopeAnimation)
-                                )
-                                .overlay(
-                                    Circle()
-                                        .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
-                                )
+                                .opacity(showSaveScopePrompt ? 0 : 1)
                         }
                     }
-                    .buttonStyle(.plain)
+                    .tint(OAColor.actionCyan)
                     .disabled(isSaving)
                     .accessibilityLabel(route.existingAlarm == nil ? L10n.actionAdd : L10n.actionSave)
                 }
