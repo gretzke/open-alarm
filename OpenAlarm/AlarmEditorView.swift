@@ -50,7 +50,6 @@ struct AlarmEditorView: View {
     @State private var draft: AlarmDraft
     @State private var isSaving = false
     @State private var errorMessage: LocalizedStringKey?
-    @State private var showTryOutToast = false
     @State private var hasInitializedDraft = false
     @State private var showSaveScopePrompt = false
 
@@ -78,8 +77,6 @@ struct AlarmEditorView: View {
                             openSnoozeDurationOnAppearFromLaunchArg: true
                         )
                     }
-
-                    tryOutSection
 
                     if let errorMessage {
                         Text(errorMessage)
@@ -210,26 +207,6 @@ struct AlarmEditorView: View {
                 .transition(.scale(scale: 0.84, anchor: .topTrailing).combined(with: .opacity))
             }
         }
-        .overlay(alignment: .bottom) {
-            if showTryOutToast {
-                Text(L10n.alarmEditorTryOutStartsIn5Seconds)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(OAColor.textPrimary)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(OAColor.glassFill)
-                    )
-                    .overlay(
-                        Capsule(style: .continuous)
-                            .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
-                    )
-                    .padding(.bottom, 24)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-        }
-        .animation(.easeInOut(duration: 0.2), value: showTryOutToast)
         .animation(.spring(response: 0.32, dampingFraction: 0.86), value: showSaveScopePrompt)
     }
 
@@ -323,24 +300,7 @@ struct AlarmEditorView: View {
         }
     }
 
-    private var tryOutSection: some View {
-        Button {
-            runTryOut(after: 5)
-        } label: {
-            Text(L10n.alarmEditorTryOut)
-                .font(.headline.weight(.semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .foregroundStyle(OAColor.background)
-                .background(
-                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                        .fill(OAColor.actionCyan)
-                )
-                .shadow(color: OAColor.actionCyan.opacity(0.36), radius: 16, x: 0, y: 10)
-        }
-        .buttonStyle(.plain)
-        .disabled(isSaving)
-    }
+    // Try-out action lives in SharedAlarmSettingsEditor.
 
     private func dayChip(for day: AlarmWeekday) -> some View {
         let isSelected = draft.repeatDays.contains(day)
@@ -445,28 +405,6 @@ struct AlarmEditorView: View {
         }
     }
 
-    private func runTryOut(after seconds: TimeInterval) {
-        guard !isSaving else {
-            return
-        }
-
-        errorMessage = nil
-        isSaving = true
-
-        Task {
-            do {
-                try await alarmStore.scheduleTryOut(from: draft, after: seconds)
-                showTryOutToast = true
-                Task {
-                    try? await Task.sleep(for: .seconds(1.8))
-                    showTryOutToast = false
-                }
-            } catch {
-                errorMessage = alarmStore.userFacingErrorMessage(for: error)
-            }
-            isSaving = false
-        }
-    }
 }
 
 private struct SaveScopePromptView: View {

@@ -287,6 +287,19 @@ final class AlarmStore: ObservableObject {
         save()
     }
 
+    func scheduleTryOut(sharedSettings: SharedAlarmSettings, after seconds: TimeInterval) async throws {
+        let draft = AlarmDraft(
+            name: "",
+            time: .now,
+            repeatDays: [],
+            deleteAfterUse: true,
+            wakeUpCheckEnabled: false,
+            useDefaultSharedSettings: false,
+            customSharedSettings: sharedSettings
+        )
+        try await scheduleTryOut(from: draft, after: seconds)
+    }
+
     func scheduleTryOut(from draft: AlarmDraft, after seconds: TimeInterval) async throws {
         try await ensureAuthorizedForScheduling()
 

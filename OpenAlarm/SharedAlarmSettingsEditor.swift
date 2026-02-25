@@ -13,12 +13,17 @@ private enum SharedSettingsSelectionOption: Hashable {
 }
 
 struct SharedAlarmSettingsEditor: View {
+    @EnvironmentObject private var alarmStore: AlarmStore
+
     @Binding var settings: SharedAlarmSettings
 
     var allowFiveSecondSnoozeOption: Bool = false
     var openSnoozeDurationOnAppearFromLaunchArg: Bool = false
 
     @State private var selectionSheet: SharedSettingsSelectionSheet?
+    @State private var isSchedulingTryOut = false
+    @State private var showTryOutToast = false
+    @State private var tryOutError: LocalizedStringKey?
 
     private var snoozeDurationOptions: [Int] {
         if allowFiveSecondSnoozeOption {
@@ -72,6 +77,31 @@ struct SharedAlarmSettingsEditor: View {
                         .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
                 )
             }
+
+            Button {
+                runTryOut(after: 5)
+            } label: {
+                Text(L10n.alarmEditorTryOut)
+                    .font(.headline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .foregroundStyle(OAColor.background)
+                    .background(
+                        RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                            .fill(OAColor.actionCyan)
+                    )
+                    .shadow(color: OAColor.actionCyan.opacity(0.36), radius: 16, x: 0, y: 10)
+            }
+            .buttonStyle(.plain)
+            .disabled(isSchedulingTryOut)
+
+            if let tryOutError {
+                Text(tryOutError)
+                    .font(.footnote)
+                    .foregroundStyle(OAColor.danger)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 4)
+            }
         }
         .onAppear {
 #if DEBUG
@@ -123,6 +153,26 @@ struct SharedAlarmSettingsEditor: View {
             .presentationBackground(.clear)
             .presentationBackgroundInteraction(.enabled)
         }
+        .overlay(alignment: .bottom) {
+            if showTryOutToast {
+                Text(L10n.alarmEditorTryOutStartsIn5Seconds)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(OAColor.textPrimary)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(OAColor.glassFill)
+                    )
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
+                    )
+                    .padding(.bottom, 4)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: showTryOutToast)
     }
 
     private func selectedOption(for item: SharedSettingsSelectionSheet) -> SharedSettingsSelectionOption {
@@ -163,6 +213,29 @@ struct SharedAlarmSettingsEditor: View {
             return String(localized: "alarm_editor_snooze_debug_5_seconds")
         }
         return "\(minutes) \(String(localized: "alarm_editor_snooze_minutes_unit"))"
+    }
+
+    private func runTryOut(after seconds: TimeInterval) {
+        guard !isSchedulingTryOut else {
+            return
+        }
+
+        tryOutError = nil
+        isSchedulingTryOut = true
+
+        Task {
+            do {
+                try await alarmStore.scheduleTryOut(sharedSettings: settings, after: seconds)
+                showTryOutToast = true
+                Task {
+                    try? await Task.sleep(for: .seconds(1.8))
+                    showTryOutToast = false
+                }
+            } catch {
+                tryOutError = alarmStore.userFacingErrorMessage(for: error)
+            }
+            isSchedulingTryOut = false
+        }
     }
 }
 
