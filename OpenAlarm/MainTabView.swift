@@ -574,6 +574,14 @@ private struct NapDurationPicker: View {
     @Binding var hours: Int
     @Binding var minutes: Int
 
+    private var minuteOptions: [Int] {
+        if hours == 0 {
+            return Array(1 ... 59)
+        }
+
+        return Array(0 ... 59)
+    }
+
     var body: some View {
         HStack(spacing: 0) {
             VStack(spacing: 6) {
@@ -598,7 +606,7 @@ private struct NapDurationPicker: View {
                     .foregroundStyle(OAColor.textSecondary)
 
                 Picker("", selection: $minutes) {
-                    ForEach(0 ... 59, id: \.self) { value in
+                    ForEach(minuteOptions, id: \.self) { value in
                         Text(String(format: "%02d", value))
                             .tag(value)
                     }
@@ -609,6 +617,16 @@ private struct NapDurationPicker: View {
             .frame(maxWidth: .infinity)
         }
         .frame(maxWidth: .infinity)
+        .onAppear {
+            if hours == 0, minutes == 0 {
+                minutes = 1
+            }
+        }
+        .onChange(of: hours) { _, newHours in
+            if newHours == 0, minutes == 0 {
+                minutes = 1
+            }
+        }
     }
 }
 
