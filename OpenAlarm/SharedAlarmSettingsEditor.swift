@@ -74,8 +74,6 @@ struct SharedAlarmSettingsEditor: View {
             }
         }
         .onAppear {
-            normalizeSnoozeDurationIfNeeded()
-
 #if DEBUG
             if openSnoozeDurationOnAppearFromLaunchArg,
                ProcessInfo.processInfo.arguments.contains("uitestOpenSnoozeDuration") {
@@ -83,9 +81,6 @@ struct SharedAlarmSettingsEditor: View {
                 selectionSheet = .snoozeDuration
             }
 #endif
-        }
-        .onChange(of: allowFiveSecondSnoozeOption) { _, _ in
-            normalizeSnoozeDurationIfNeeded()
         }
         .sheet(item: $selectionSheet) { item in
             SharedSettingsSelectionSheetView(
@@ -130,17 +125,10 @@ struct SharedAlarmSettingsEditor: View {
         }
     }
 
-    private func normalizeSnoozeDurationIfNeeded() {
-        if !allowFiveSecondSnoozeOption, settings.snoozeDurationMinutes == 0 {
-            settings.snoozeDurationMinutes = 5
-        }
-    }
-
     private func selectedOption(for item: SharedSettingsSelectionSheet) -> SharedSettingsSelectionOption {
         switch item {
         case .snoozeDuration:
-            let duration = allowFiveSecondSnoozeOption ? settings.snoozeDurationMinutes : max(settings.snoozeDurationMinutes, 1)
-            return .value(duration)
+            return .value(settings.snoozeDurationMinutes)
         case .maxSnoozes:
             return settings.maxSnoozes.map(SharedSettingsSelectionOption.value) ?? .unlimited
         }

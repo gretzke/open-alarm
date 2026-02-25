@@ -26,7 +26,6 @@ struct SnoozeIntent: LiveActivityIntent {
 
         let defaults = UserDefaults.standard
         let defaultSharedSettings = AlarmPersistence.loadDefaultSharedSettings(from: defaults)
-        let testingModeEnabled = AlarmPersistence.loadTestingModeEnabled(from: defaults)
 
         var pending = AlarmPersistence.loadPendingSnoozeIDs(from: defaults)
         pending.insert(id)
@@ -35,11 +34,7 @@ struct SnoozeIntent: LiveActivityIntent {
         var alarms = AlarmPersistence.loadUserAlarms(from: defaults)
         if let index = alarms.firstIndex(where: { $0.id == id }) {
             var alarm = alarms[index]
-            var effectiveSharedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
-            effectiveSharedSettings.snoozeDurationMinutes = normalizedSnoozeDurationMinutes(
-                effectiveSharedSettings.snoozeDurationMinutes,
-                testingModeEnabled: testingModeEnabled
-            )
+            let effectiveSharedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
 
             guard effectiveSharedSettings.canSnoozeAgain(currentCount: alarm.snoozeCount) else {
                 pending.remove(id)
@@ -61,8 +56,7 @@ struct SnoozeIntent: LiveActivityIntent {
                     for: alarm,
                     schedule: .fixed(snoozeDate),
                     isShadowTrial: false,
-                    defaultSharedSettings: defaultSharedSettings,
-                    testingModeEnabled: testingModeEnabled
+                    defaultSharedSettings: defaultSharedSettings
                 )
                 _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
                 try AlarmManager.shared.stop(id: id)
@@ -74,8 +68,7 @@ struct SnoozeIntent: LiveActivityIntent {
                         for: alarm,
                         schedule: .fixed(snoozeDate),
                         isShadowTrial: false,
-                        defaultSharedSettings: defaultSharedSettings,
-                        testingModeEnabled: testingModeEnabled
+                        defaultSharedSettings: defaultSharedSettings
                     )
                     _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
                 } catch {
@@ -107,30 +100,18 @@ struct SnoozeIntent: LiveActivityIntent {
             trials[index] = trial
             AlarmPersistence.saveShadowTrials(trials, to: defaults)
 
-            let trialDuration = normalizedSnoozeDurationMinutes(
-                trial.snoozeDurationMinutes,
-                testingModeEnabled: testingModeEnabled
-            )
-            let snoozeDate = Date.now.addingTimeInterval(snoozeInterval(for: trialDuration))
+            let snoozeDate = Date.now.addingTimeInterval(snoozeInterval(for: trial.snoozeDurationMinutes))
 
             do {
                 // Preferred path: replace configuration first, then dismiss current alert.
-                let config = makeConfiguration(
-                    for: trial,
-                    schedule: .fixed(snoozeDate),
-                    testingModeEnabled: testingModeEnabled
-                )
+                let config = makeConfiguration(for: trial, schedule: .fixed(snoozeDate))
                 _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
                 try AlarmManager.shared.stop(id: id)
             } catch {
                 do {
                     // Recovery path: stop current alert first, then reschedule with updated config.
                     try AlarmManager.shared.stop(id: id)
-                    let config = makeConfiguration(
-                        for: trial,
-                        schedule: .fixed(snoozeDate),
-                        testingModeEnabled: testingModeEnabled
-                    )
+                    let config = makeConfiguration(for: trial, schedule: .fixed(snoozeDate))
                     _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
                 } catch {
                     pending.remove(id)
@@ -151,14 +132,9 @@ struct SnoozeIntent: LiveActivityIntent {
         for alarm: UserAlarm,
         schedule: Alarm.Schedule,
         isShadowTrial: Bool,
-        defaultSharedSettings: SharedAlarmSettings,
-        testingModeEnabled: Bool
+        defaultSharedSettings: SharedAlarmSettings
     ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
-        var sharedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
-        sharedSettings.snoozeDurationMinutes = normalizedSnoozeDurationMinutes(
-            sharedSettings.snoozeDurationMinutes,
-            testingModeEnabled: testingModeEnabled
-        )
+        let sharedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
         let showSnoozeButton = sharedSettings.canSnoozeAgain(currentCount: alarm.snoozeCount)
 
         let alertPresentation = AlarmPresentation.Alert(
@@ -199,8 +175,7 @@ struct SnoozeIntent: LiveActivityIntent {
 
     private func makeConfiguration(
         for trial: ShadowTrialAlarm,
-        schedule: Alarm.Schedule,
-        testingModeEnabled: Bool
+        schedule: Alarm.Schedule
     ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
         let showSnoozeButton = trial.canSnoozeAgain
 
@@ -224,15 +199,10 @@ struct SnoozeIntent: LiveActivityIntent {
             nil
         }
 
-        let countdownDuration: Alarm.CountdownDuration?
-        if showSnoozeButton {
-            let countdownMinutes = normalizedSnoozeDurationMinutes(
-                trial.snoozeDurationMinutes,
-                testingModeEnabled: testingModeEnabled
-            )
-            countdownDuration = .init(preAlert: nil, postAlert: snoozeInterval(for: countdownMinutes))
+        let countdownDuration: Alarm.CountdownDuration? = if showSnoozeButton {
+            .init(preAlert: nil, postAlert: snoozeInterval(for: trial.snoozeDurationMinutes))
         } else {
-            countdownDuration = nil
+            nil
         }
 
         return .init(
@@ -243,14 +213,6 @@ struct SnoozeIntent: LiveActivityIntent {
             secondaryIntent: secondaryIntent,
             sound: .default
         )
-    }
-
-    private func normalizedSnoozeDurationMinutes(_ minutes: Int, testingModeEnabled: Bool) -> Int {
-        if testingModeEnabled {
-            return minutes
-        }
-
-        return minutes == 0 ? 5 : minutes
     }
 
     private func snoozeInterval(for minutes: Int) -> TimeInterval {

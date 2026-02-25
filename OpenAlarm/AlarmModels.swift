@@ -200,11 +200,6 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         case lifecycleState
         case createdAt
         case updatedAt
-
-        // Legacy keys (pre shared-settings split)
-        case snoozeEnabled
-        case snoozeDurationMinutes
-        case maxSnoozes
     }
 
     init(from decoder: Decoder) throws {
@@ -219,19 +214,8 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         deleteAfterUse = try container.decodeIfPresent(Bool.self, forKey: .deleteAfterUse) ?? true
         wakeUpCheckEnabled = try container.decodeIfPresent(Bool.self, forKey: .wakeUpCheckEnabled) ?? false
 
-        if let decodedShared = try container.decodeIfPresent(SharedAlarmSettings.self, forKey: .customSharedSettings) {
-            customSharedSettings = decodedShared
-            useDefaultSharedSettings = try container.decodeIfPresent(Bool.self, forKey: .useDefaultSharedSettings) ?? true
-        } else {
-            // Legacy fallback for older persisted alarms.
-            let legacyShared = SharedAlarmSettings(
-                snoozeEnabled: try container.decodeIfPresent(Bool.self, forKey: .snoozeEnabled) ?? true,
-                snoozeDurationMinutes: try container.decodeIfPresent(Int.self, forKey: .snoozeDurationMinutes) ?? 5,
-                maxSnoozes: try container.decodeIfPresent(Int.self, forKey: .maxSnoozes) ?? 3
-            )
-            customSharedSettings = legacyShared
-            useDefaultSharedSettings = false
-        }
+        customSharedSettings = try container.decodeIfPresent(SharedAlarmSettings.self, forKey: .customSharedSettings) ?? .featureDefaults
+        useDefaultSharedSettings = try container.decodeIfPresent(Bool.self, forKey: .useDefaultSharedSettings) ?? true
 
         snoozeCount = try container.decodeIfPresent(Int.self, forKey: .snoozeCount) ?? 0
 

@@ -41,8 +41,7 @@ final class OnboardingEngine: ObservableObject {
 
     private let userDefaults: UserDefaults
     private let alarmPermissionService: AlarmPermissionService
-    private let oneTimeCompletedStepsKey = "ONBOARDING_ONE_TIME_COMPLETED_STEPS_V2"
-    private let legacyOnboardingCompleteKey = "ONBOARDING_COMPLETE"
+    private let oneTimeCompletedStepsKey = "ONBOARDING_ONE_TIME_COMPLETED_STEPS"
 
     private let oneTimeSteps: [OneTimeOnboardingStep] = [.welcome, .defaultSharedSettings]
     private lazy var reusableRules: [ReusableOnboardingRule] = [
@@ -111,11 +110,6 @@ final class OnboardingEngine: ObservableObject {
     }
 
     private func loadCompletedOneTimeSteps() -> Set<OneTimeOnboardingStep> {
-        // Legacy compatibility: old binary used one bool for the entire one-time flow.
-        if userDefaults.bool(forKey: legacyOnboardingCompleteKey) {
-            return Set(oneTimeSteps)
-        }
-
         guard let raw = userDefaults.array(forKey: oneTimeCompletedStepsKey) as? [String] else {
             return []
         }
@@ -125,10 +119,6 @@ final class OnboardingEngine: ObservableObject {
 
     private func saveCompletedOneTimeSteps(_ completed: Set<OneTimeOnboardingStep>) {
         userDefaults.set(completed.map(\.rawValue), forKey: oneTimeCompletedStepsKey)
-
-        if completed.count == oneTimeSteps.count {
-            userDefaults.set(true, forKey: legacyOnboardingCompleteKey)
-        }
     }
 
     private func refreshWorkflow() {

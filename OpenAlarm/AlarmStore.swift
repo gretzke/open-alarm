@@ -65,19 +65,16 @@ final class AlarmStore: ObservableObject {
     }
 
     func updateDefaultSharedSettings(_ settings: SharedAlarmSettings) {
-        var sanitized = settings
-        sanitized.snoozeDurationMinutes = normalizedSnoozeDurationMinutes(sanitized.snoozeDurationMinutes)
-
-        guard defaultSharedSettings != sanitized else {
+        guard defaultSharedSettings != settings else {
             return
         }
 
-        defaultSharedSettings = sanitized
-        AlarmPersistence.saveDefaultSharedSettings(sanitized, to: userDefaults)
+        defaultSharedSettings = settings
+        AlarmPersistence.saveDefaultSharedSettings(settings, to: userDefaults)
 
         var changed = false
         for index in alarms.indices where alarms[index].useDefaultSharedSettings {
-            alarms[index].customSharedSettings = sanitized
+            alarms[index].customSharedSettings = settings
             alarms[index].updatedAt = .now
             changed = true
         }
@@ -99,39 +96,6 @@ final class AlarmStore: ObservableObject {
 
         testingModeEnabled = enabled
         AlarmPersistence.saveTestingModeEnabled(enabled, to: userDefaults)
-
-        guard !enabled else {
-            return
-        }
-
-        var idsToReschedule: Set<UUID> = []
-
-        if defaultSharedSettings.snoozeDurationMinutes == 0 {
-            var adjustedDefaults = defaultSharedSettings
-            adjustedDefaults.snoozeDurationMinutes = 5
-            updateDefaultSharedSettings(adjustedDefaults)
-        }
-
-        var changed = false
-        for index in alarms.indices {
-            guard alarms[index].customSharedSettings.snoozeDurationMinutes == 0 else {
-                continue
-            }
-
-            alarms[index].customSharedSettings.snoozeDurationMinutes = 5
-            alarms[index].updatedAt = .now
-            idsToReschedule.insert(alarms[index].id)
-            changed = true
-        }
-
-        if changed {
-            alarms = sortAlarms(alarms)
-            save()
-
-            Task { @MainActor [weak self] in
-                await self?.rescheduleAlarms(withIDs: idsToReschedule)
-            }
-        }
     }
 
     func createAlarm(from draft: AlarmDraft) async throws {
@@ -182,8 +146,7 @@ final class AlarmStore: ObservableObject {
         let shadowID = UUID()
 
         var trialDraft = draft
-        var trialSharedSettings = draft.resolvedSharedSettings(defaults: defaultSharedSettings)
-        trialSharedSettings.snoozeDurationMinutes = normalizedSnoozeDurationMinutes(trialSharedSettings.snoozeDurationMinutes)
+        let trialSharedSettings = draft.resolvedSharedSettings(defaults: defaultSharedSettings)
         trialDraft.useDefaultSharedSettings = false
         trialDraft.customSharedSettings = trialSharedSettings
 
@@ -261,9 +224,6 @@ final class AlarmStore: ObservableObject {
             defaultSharedSettings: defaultSharedSettings,
             existingSnoozeCount: existingAlarm?.snoozeCount
         )
-        nextAlarm.customSharedSettings.snoozeDurationMinutes = normalizedSnoozeDurationMinutes(
-            nextAlarm.customSharedSettings.snoozeDurationMinutes
-        )
 
         do {
             let config = makeConfiguration(for: nextAlarm, schedule: nextAlarm.schedule, isShadowTrial: false)
@@ -306,27 +266,6 @@ final class AlarmStore: ObservableObject {
         }
     }
 
-    private func rescheduleAlarms(withIDs ids: Set<UUID>) async {
-        for alarm in alarms where ids.contains(alarm.id) {
-            do {
-                let config = makeConfiguration(for: alarm, schedule: alarm.schedule, isShadowTrial: false)
-                let remote = try await alarmManager.schedule(id: alarm.id, configuration: config)
-                lastKnownAlarmState[alarm.id] = remote.state
-                remoteStates[alarm.id] = remote.state
-            } catch {
-                // Best effort only; next refresh can reconcile state.
-            }
-        }
-    }
-
-    private func normalizedSnoozeDurationMinutes(_ minutes: Int) -> Int {
-        if testingModeEnabled {
-            return minutes
-        }
-
-        return minutes == 0 ? 5 : minutes
-    }
-
     private func makeConfiguration(
         for alarm: UserAlarm,
         schedule: Alarm.Schedule,
@@ -356,12 +295,10 @@ final class AlarmStore: ObservableObject {
             nil
         }
 
-        let countdownDuration: Alarm.CountdownDuration?
-        if showSnoozeButton {
-            let countdownMinutes = normalizedSnoozeDurationMinutes(sharedSettings.snoozeDurationMinutes)
-            countdownDuration = .init(preAlert: nil, postAlert: snoozeInterval(for: countdownMinutes))
+        let countdownDuration: Alarm.CountdownDuration? = if showSnoozeButton {
+            .init(preAlert: nil, postAlert: snoozeInterval(for: sharedSettings.snoozeDurationMinutes))
         } else {
-            countdownDuration = nil
+            nil
         }
 
         return .init(
