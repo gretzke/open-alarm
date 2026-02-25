@@ -224,6 +224,55 @@ final class AlarmStore: ObservableObject {
         try await upsertAlarm(existingAlarm: alarm, draft: draft)
     }
 
+    func updateNextAlarmOccurrence(_ alarm: UserAlarm, with draft: AlarmDraft) async throws {
+        try await ensureAuthorizedForScheduling()
+
+        guard alarm.isRepeating else {
+            try await updateAlarm(alarm, with: draft)
+            return
+        }
+
+        guard let index = alarms.firstIndex(where: { $0.id == alarm.id }) else {
+            throw AlarmStoreError.scheduleFailed
+        }
+
+        var current = alarms[index]
+        let timeComponents = Calendar.autoupdatingCurrent.dateComponents([.hour, .minute], from: draft.time)
+        let overrideHour = timeComponents.hour ?? current.hour
+        let overrideMinute = timeComponents.minute ?? current.minute
+
+        guard let nextOverrideDate = nextOccurrenceDate(
+            in: current.sortedRepeatDays,
+            hour: overrideHour,
+            minute: overrideMinute,
+            after: .now
+        ) else {
+            throw AlarmStoreError.scheduleFailed
+        }
+
+        current.nextTriggerOverrideDate = nextOverrideDate
+        current.snoozeCount = 0
+        current.updatedAt = .now
+
+        do {
+            let config = makeConfiguration(for: current, schedule: current.schedule, isShadowTrial: false)
+            let remoteAlarm = try await scheduleAlarmWithUpdateFallback(
+                id: current.id,
+                configuration: config,
+                isUpdate: true
+            )
+            current.lifecycleState = remoteAlarm.state == .alerting ? .alerting : .scheduled
+            lastKnownAlarmState[current.id] = remoteAlarm.state
+            remoteStates[current.id] = remoteAlarm.state
+        } catch {
+            throw AlarmStoreError.scheduleFailed
+        }
+
+        alarms[index] = current
+        alarms = sortAlarms(alarms)
+        save()
+    }
+
     func deleteAlarm(_ alarm: UserAlarm) {
         try? alarmManager.cancel(id: alarm.id)
         alarms.removeAll { $0.id == alarm.id }
@@ -348,6 +397,34 @@ final class AlarmStore: ObservableObject {
             try? alarmManager.cancel(id: id)
             return try await alarmManager.schedule(id: id, configuration: configuration)
         }
+    }
+
+    private func nextOccurrenceDate(
+        in weekdays: [AlarmWeekday],
+        hour: Int,
+        minute: Int,
+        after referenceDate: Date
+    ) -> Date? {
+        let calendar = Calendar.autoupdatingCurrent
+        let searchStart = referenceDate.addingTimeInterval(1)
+
+        let candidates = weekdays.compactMap { weekday -> Date? in
+            var components = DateComponents()
+            components.weekday = weekday.rawValue
+            components.hour = hour
+            components.minute = minute
+            components.second = 0
+
+            return calendar.nextDate(
+                after: searchStart,
+                matching: components,
+                matchingPolicy: .nextTime,
+                repeatedTimePolicy: .first,
+                direction: .forward
+            )
+        }
+
+        return candidates.min()
     }
 
     private func upsertAlarm(existingAlarm: UserAlarm?, draft: AlarmDraft) async throws {
@@ -563,6 +640,16 @@ final class AlarmStore: ObservableObject {
                 pendingSnoozeIDs.remove(alarmID)
             }
 
+            if updated[index].isRepeating,
+               let overrideDate = updated[index].nextTriggerOverrideDate,
+               currentState == nil,
+               overrideDate <= .now {
+                updated[index].nextTriggerOverrideDate = nil
+                updated[index].updatedAt = .now
+                scheduleRepeatRestore(for: updated[index])
+                changed = true
+            }
+
             if previousState == .alerting, currentState != .alerting {
                 applyPostAlertTransition(
                     alarm: &updated[index],
@@ -655,9 +742,15 @@ final class AlarmStore: ObservableObject {
         }
 
         if alarm.isRepeating {
-            if hadSnoozes {
+            if alarm.nextTriggerOverrideDate != nil {
+                alarm.nextTriggerOverrideDate = nil
+                alarm.updatedAt = .now
+                changed = true
+                scheduleRepeatRestore(for: alarm)
+            } else if hadSnoozes {
                 scheduleRepeatRestore(for: alarm)
             }
+
             if alarm.lifecycleState != .scheduled {
                 alarm.lifecycleState = .scheduled
                 changed = true
@@ -699,7 +792,11 @@ final class AlarmStore: ObservableObject {
 
             do {
                 let config = makeConfiguration(for: restoredAlarm, schedule: restoredAlarm.schedule, isShadowTrial: false)
-                let remote = try await alarmManager.schedule(id: restoredAlarm.id, configuration: config)
+                let remote = try await scheduleAlarmWithUpdateFallback(
+                    id: restoredAlarm.id,
+                    configuration: config,
+                    isUpdate: true
+                )
                 lastKnownAlarmState[restoredAlarm.id] = remote.state
                 remoteStates[restoredAlarm.id] = remote.state
             } catch {

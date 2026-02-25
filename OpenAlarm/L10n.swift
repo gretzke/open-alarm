@@ -38,6 +38,9 @@ enum L10n {
     static let alarmEditorSnoozeMaxLabel: LocalizedStringKey = "alarm_editor_snooze_max_label"
     static let alarmEditorUseDefaultSettingsToggle: LocalizedStringKey = "alarm_editor_use_default_settings_toggle"
     static let alarmEditorUseDefaultSettingsHint: LocalizedStringKey = "alarm_editor_use_default_settings_hint"
+    static let alarmEditorApplyChangePrompt: LocalizedStringKey = "alarm_editor_apply_change_prompt"
+    static let alarmEditorApplyNextOnlyOption: LocalizedStringKey = "alarm_editor_apply_next_only_option"
+    static let alarmEditorApplyScheduleOption: LocalizedStringKey = "alarm_editor_apply_schedule_option"
     static let alarmEditorTryOut: LocalizedStringKey = "alarm_editor_try_out"
     static let alarmEditorTryOutStartsIn5Seconds: LocalizedStringKey = "alarm_editor_try_out_starts_in_5_seconds"
 

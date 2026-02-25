@@ -35,6 +35,9 @@
 "alarm_editor_snooze_max_label" = "Max snoozes";
 "alarm_editor_use_default_settings_toggle" = "Use default settings";
 "alarm_editor_use_default_settings_hint" = "Shared settings are managed in Settings.";
+"alarm_editor_apply_change_prompt" = "Apply this time change to the next alarm only or to this schedule?";
+"alarm_editor_apply_next_only_option" = "Change Next Alarm Only";
+"alarm_editor_apply_schedule_option" = "Change This Schedule";
 "alarm_editor_snooze_unlimited" = "Unlimited";
 "alarm_editor_snooze_minutes_unit" = "min";
 "alarm_editor_snooze_debug_5_seconds" = "5 sec";
