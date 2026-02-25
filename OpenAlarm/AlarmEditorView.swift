@@ -53,8 +53,6 @@ struct AlarmEditorView: View {
     @State private var hasInitializedDraft = false
     @State private var showSaveScopePrompt = false
 
-    @Namespace private var saveScopeAnimation
-
     init(route: AlarmEditorRoute) {
         self.route = route
         _draft = State(initialValue: route.initialDraft)
@@ -114,7 +112,6 @@ struct AlarmEditorView: View {
                         } else {
                             Image(systemName: "checkmark")
                                 .font(.headline.weight(.semibold))
-                                .opacity(showSaveScopePrompt ? 0 : 1)
                         }
                     }
                     .tint(OAColor.actionCyan)
@@ -146,35 +143,23 @@ struct AlarmEditorView: View {
             }
 #endif
         }
-        .overlay {
-            if showSaveScopePrompt {
-                Color.black.opacity(0.28)
-                    .ignoresSafeArea()
-                    .onTapGesture {
-                        dismissSaveScopePrompt()
-                    }
-                    .transition(.opacity)
+        .confirmationDialog(
+            L10n.alarmEditorApplyChangePrompt,
+            isPresented: $showSaveScopePrompt,
+            titleVisibility: .visible
+        ) {
+            Button(L10n.alarmEditorApplyNextOnlyOption) {
+                saveAlarm(scope: .nextOnly)
+            }
+
+            Button(L10n.alarmEditorApplyScheduleOption) {
+                saveAlarm(scope: .schedule)
+            }
+
+            Button(L10n.actionCancel, role: .cancel) {
+                showSaveScopePrompt = false
             }
         }
-        .overlay(alignment: .topTrailing) {
-            if showSaveScopePrompt {
-                SaveScopePromptView(
-                    namespace: saveScopeAnimation,
-                    onNextOnly: {
-                        dismissSaveScopePrompt()
-                        saveAlarm(scope: .nextOnly)
-                    },
-                    onSchedule: {
-                        dismissSaveScopePrompt()
-                        saveAlarm(scope: .schedule)
-                    }
-                )
-                .padding(.top, 88)
-                .padding(.trailing, 16)
-                .transition(.scale(scale: 0.84, anchor: .topTrailing).combined(with: .opacity))
-            }
-        }
-        .animation(.spring(response: 0.32, dampingFraction: 0.86), value: showSaveScopePrompt)
     }
 
     private var timeSection: some View {
@@ -294,9 +279,7 @@ struct AlarmEditorView: View {
         }
 
         if shouldShowSaveScopePrompt {
-            withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
-                showSaveScopePrompt = true
-            }
+            showSaveScopePrompt = true
             return
         }
 
@@ -338,12 +321,6 @@ struct AlarmEditorView: View {
         return otherFieldsUnchanged
     }
 
-    private func dismissSaveScopePrompt() {
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
-            showSaveScopePrompt = false
-        }
-    }
-
     private func saveAlarm(scope: AlarmSaveScope) {
         guard !isSaving else {
             return
@@ -372,67 +349,4 @@ struct AlarmEditorView: View {
         }
     }
 
-}
-
-private struct SaveScopePromptView: View {
-    let namespace: Namespace.ID
-    let onNextOnly: () -> Void
-    let onSchedule: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(L10n.alarmEditorApplyChangePrompt)
-                .font(.headline)
-                .foregroundStyle(OAColor.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            VStack(spacing: 10) {
-                Button(action: onNextOnly) {
-                    Text(L10n.alarmEditorApplyNextOnlyOption)
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(OAColor.textPrimary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(
-                            RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                .fill(OAColor.glassFill)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
-                        )
-                }
-                .buttonStyle(.plain)
-
-                Button(action: onSchedule) {
-                    Text(L10n.alarmEditorApplyScheduleOption)
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(OAColor.textPrimary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(
-                            RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                .fill(OAColor.glassFill)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
-                        )
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(16)
-        .frame(maxWidth: 320)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(OAColor.background.opacity(0.92))
-                .matchedGeometryEffect(id: "save_scope_morph", in: namespace)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(OAColor.glassStroke.opacity(0.8), lineWidth: 0.8)
-        )
-        .shadow(color: .black.opacity(0.2), radius: 22, x: 0, y: 12)
-    }
 }
