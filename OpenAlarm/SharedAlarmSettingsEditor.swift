@@ -15,11 +15,18 @@ private enum SharedSettingsSelectionOption: Hashable {
 struct SharedAlarmSettingsEditor: View {
     @Binding var settings: SharedAlarmSettings
 
+    var allowFiveSecondSnoozeOption: Bool = false
     var openSnoozeDurationOnAppearFromLaunchArg: Bool = false
 
     @State private var selectionSheet: SharedSettingsSelectionSheet?
 
-    private let snoozeDurationOptions = [0, 1, 3, 5, 10, 15, 20, 30, 45, 60]
+    private var snoozeDurationOptions: [Int] {
+        if allowFiveSecondSnoozeOption {
+            return [0, 1, 3, 5, 10, 15, 20, 30, 45, 60]
+        }
+        return [1, 3, 5, 10, 15, 20, 30, 45, 60]
+    }
+
     private let maxSnoozeOptions: [Int?] = [nil, 1, 2, 3, 5, 10]
 
     var body: some View {
@@ -67,6 +74,8 @@ struct SharedAlarmSettingsEditor: View {
             }
         }
         .onAppear {
+            normalizeSnoozeDurationIfNeeded()
+
 #if DEBUG
             if openSnoozeDurationOnAppearFromLaunchArg,
                ProcessInfo.processInfo.arguments.contains("uitestOpenSnoozeDuration") {
@@ -74,6 +83,9 @@ struct SharedAlarmSettingsEditor: View {
                 selectionSheet = .snoozeDuration
             }
 #endif
+        }
+        .onChange(of: allowFiveSecondSnoozeOption) { _, _ in
+            normalizeSnoozeDurationIfNeeded()
         }
         .sheet(item: $selectionSheet) { item in
             SharedSettingsSelectionSheetView(
@@ -118,10 +130,17 @@ struct SharedAlarmSettingsEditor: View {
         }
     }
 
+    private func normalizeSnoozeDurationIfNeeded() {
+        if !allowFiveSecondSnoozeOption, settings.snoozeDurationMinutes == 0 {
+            settings.snoozeDurationMinutes = 5
+        }
+    }
+
     private func selectedOption(for item: SharedSettingsSelectionSheet) -> SharedSettingsSelectionOption {
         switch item {
         case .snoozeDuration:
-            return .value(settings.snoozeDurationMinutes)
+            let duration = allowFiveSecondSnoozeOption ? settings.snoozeDurationMinutes : max(settings.snoozeDurationMinutes, 1)
+            return .value(duration)
         case .maxSnoozes:
             return settings.maxSnoozes.map(SharedSettingsSelectionOption.value) ?? .unlimited
         }

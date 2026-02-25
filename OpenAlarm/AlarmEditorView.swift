@@ -66,6 +66,7 @@ struct AlarmEditorView: View {
                     if !draft.useDefaultSharedSettings {
                         SharedAlarmSettingsEditor(
                             settings: $draft.customSharedSettings,
+                            allowFiveSecondSnoozeOption: alarmStore.testingModeEnabled,
                             openSnoozeDurationOnAppearFromLaunchArg: true
                         )
                     }

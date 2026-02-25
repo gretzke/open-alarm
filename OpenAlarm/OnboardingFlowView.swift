@@ -113,6 +113,7 @@ private struct DefaultSharedSettingsStepView: View {
     let onSave: (SharedAlarmSettings) -> Void
     let onSkip: () -> Void
 
+    @EnvironmentObject private var alarmStore: AlarmStore
     @State private var settings: SharedAlarmSettings = .featureDefaults
 
     var body: some View {
@@ -168,7 +169,10 @@ private struct DefaultSharedSettingsStepView: View {
                     .buttonStyle(.plain)
                 }
 
-                SharedAlarmSettingsEditor(settings: $settings)
+                SharedAlarmSettingsEditor(
+                    settings: $settings,
+                    allowFiveSecondSnoozeOption: alarmStore.testingModeEnabled
+                )
             }
             .padding(24)
         }

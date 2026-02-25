@@ -43,6 +43,9 @@
 "settings_default_config_body" = "Shared alarm behavior for all alarms that use defaults.";
 "settings_default_config_manage_button" = "Configure defaults";
 "settings_default_config_page_body" = "Changes are saved immediately and applied to alarms using default settings.";
+"settings_testing_mode_title" = "Testing mode";
+"settings_testing_mode_body" = "Enable development-only alarm options like 5-second snooze.";
+"settings_testing_mode_toggle" = "Enable testing mode";
 "settings_permission_title" = "Alarm permission";
 "settings_permission_status_label" = "Status";
 "settings_permission_authorized" = "Authorized";

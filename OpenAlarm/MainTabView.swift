@@ -224,35 +224,49 @@ private struct SettingsHomeView: View {
                     .oaGlassCard()
 
                     VStack(alignment: .leading, spacing: 12) {
-                        Text(L10n.settingsPermissionTitle)
+                        Text(L10n.settingsTestingModeTitle)
                             .font(.headline)
                             .foregroundStyle(OAColor.textPrimary)
 
-                        HStack {
-                            Text(L10n.settingsPermissionStatusLabel)
-                                .font(.subheadline)
-                                .foregroundStyle(OAColor.textSecondary)
+                        Text(L10n.settingsTestingModeBody)
+                            .font(.subheadline)
+                            .foregroundStyle(OAColor.textSecondary)
 
-                            Spacer(minLength: 0)
-
-                            Text(alarmStore.permissionStatusLabel())
-                                .font(.subheadline.weight(.semibold))
+                        Toggle(isOn: Binding(
+                            get: { alarmStore.testingModeEnabled },
+                            set: { alarmStore.updateTestingModeEnabled($0) }
+                        )) {
+                            Text(L10n.settingsTestingModeToggle)
+                                .font(.body.weight(.semibold))
                                 .foregroundStyle(OAColor.textPrimary)
                         }
+                        .tint(OAColor.actionCyan)
 
                         Button {
                             alarmStore.openSettings()
                         } label: {
-                            Text(L10n.actionOpenSettings)
-                                .font(.headline.weight(.semibold))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
-                                .foregroundStyle(OAColor.background)
-                                .background(
-                                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                        .fill(OAColor.actionCyan)
-                                )
-                                .shadow(color: OAColor.actionCyan.opacity(0.36), radius: 16, x: 0, y: 10)
+                            HStack(spacing: 10) {
+                                Text(L10n.actionOpenSettings)
+                                    .font(.body.weight(.semibold))
+                                    .foregroundStyle(OAColor.textPrimary)
+
+                                Spacer(minLength: 0)
+
+                                Image(systemName: "arrow.up.right.square")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(OAColor.textSecondary)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                    .fill(OAColor.glassFill)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                    .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
+                            )
                         }
                         .buttonStyle(.plain)
                     }
@@ -278,10 +292,13 @@ private struct DefaultSharedSettingsView: View {
                     .font(.subheadline)
                     .foregroundStyle(OAColor.textSecondary)
 
-                SharedAlarmSettingsEditor(settings: Binding(
-                    get: { alarmStore.defaultSharedSettings },
-                    set: { alarmStore.updateDefaultSharedSettings($0) }
-                ))
+                SharedAlarmSettingsEditor(
+                    settings: Binding(
+                        get: { alarmStore.defaultSharedSettings },
+                        set: { alarmStore.updateDefaultSharedSettings($0) }
+                    ),
+                    allowFiveSecondSnoozeOption: alarmStore.testingModeEnabled
+                )
             }
             .padding(20)
             .oaGlassCard()
