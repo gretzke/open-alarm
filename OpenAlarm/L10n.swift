@@ -10,6 +10,12 @@ enum L10n {
     static let alarmListEmptyTitle: LocalizedStringKey = "alarm_list_empty_title"
     static let alarmListEmptySubtitle: LocalizedStringKey = "alarm_list_empty_subtitle"
 
+    static let napBannerTitle: LocalizedStringKey = "nap_banner_title"
+    static let napBannerSubtitle: LocalizedStringKey = "nap_banner_subtitle"
+    static let napActiveTitle: LocalizedStringKey = "nap_active_title"
+    static let napActivePaused: LocalizedStringKey = "nap_active_paused"
+    static let napDefaultAlarmLabel: LocalizedStringKey = "nap_default_alarm_label"
+
     static let alarmRowRepeatOneTime: LocalizedStringKey = "alarm_row_repeat_one_time"
     static let alarmRowRepeatPrefix: LocalizedStringKey = "alarm_row_repeat_prefix"
     static let alarmRowDeleteAfterUse: LocalizedStringKey = "alarm_row_delete_after_use"
@@ -35,6 +41,12 @@ enum L10n {
     static let alarmEditorTryOut: LocalizedStringKey = "alarm_editor_try_out"
     static let alarmEditorTryOutStartsIn5Seconds: LocalizedStringKey = "alarm_editor_try_out_starts_in_5_seconds"
 
+    static let napEditorTitle: LocalizedStringKey = "nap_editor_title"
+    static let napEditorDurationTitle: LocalizedStringKey = "nap_editor_duration_title"
+    static let napEditorHoursLabel: LocalizedStringKey = "nap_editor_hours_label"
+    static let napEditorMinutesLabel: LocalizedStringKey = "nap_editor_minutes_label"
+    static let napEditorStartButton: LocalizedStringKey = "nap_editor_start_button"
+
     static let alarmEditorErrorPermissionDenied: LocalizedStringKey = "alarm_editor_error_permission_denied"
     static let alarmEditorErrorGeneric: LocalizedStringKey = "alarm_editor_error_generic"
 
@@ -43,6 +55,10 @@ enum L10n {
     static let settingsDefaultConfigBody: LocalizedStringKey = "settings_default_config_body"
     static let settingsDefaultConfigManageButton: LocalizedStringKey = "settings_default_config_manage_button"
     static let settingsDefaultConfigPageBody: LocalizedStringKey = "settings_default_config_page_body"
+    static let settingsNapDefaultsTitle: LocalizedStringKey = "settings_nap_defaults_title"
+    static let settingsNapDefaultsBody: LocalizedStringKey = "settings_nap_defaults_body"
+    static let settingsNapDefaultsManageButton: LocalizedStringKey = "settings_nap_defaults_manage_button"
+    static let settingsNapDefaultsPageBody: LocalizedStringKey = "settings_nap_defaults_page_body"
     static let settingsTestingModeTitle: LocalizedStringKey = "settings_testing_mode_title"
     static let settingsTestingModeBody: LocalizedStringKey = "settings_testing_mode_body"
     static let settingsTestingModeToggle: LocalizedStringKey = "settings_testing_mode_toggle"
@@ -77,4 +93,6 @@ enum L10n {
     static let actionAdd: LocalizedStringKey = "action_add"
     static let actionSave: LocalizedStringKey = "action_save"
     static let actionDelete: LocalizedStringKey = "action_delete"
+    static let actionPause: LocalizedStringKey = "action_pause"
+    static let actionContinue: LocalizedStringKey = "action_continue"
 }

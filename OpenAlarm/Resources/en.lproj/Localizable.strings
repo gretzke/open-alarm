@@ -7,6 +7,12 @@
 "alarm_list_empty_title" = "No alarms yet";
 "alarm_list_empty_subtitle" = "Tap + to create your first alarm.";
 
+"nap_banner_title" = "Take a nap";
+"nap_banner_subtitle" = "Set a quick reset with zzz energy";
+"nap_active_title" = "Nap countdown";
+"nap_active_paused" = "Paused";
+"nap_default_alarm_label" = "Nap";
+
 "alarm_row_repeat_one_time" = "One time";
 "alarm_row_repeat_prefix" = "Repeats";
 "alarm_row_delete_after_use" = "Delete after use";
@@ -35,6 +41,12 @@
 "alarm_editor_try_out" = "Try it out";
 "alarm_editor_try_out_starts_in_5_seconds" = "Test alarm will ring in 5 seconds";
 
+"nap_editor_title" = "Take a nap";
+"nap_editor_duration_title" = "Duration";
+"nap_editor_hours_label" = "Hours";
+"nap_editor_minutes_label" = "Minutes";
+"nap_editor_start_button" = "Start";
+
 "alarm_editor_error_permission_denied" = "Alarm permission is required. Enable Alarms & Timers in Settings.";
 "alarm_editor_error_generic" = "Something went wrong. Please try again.";
 
@@ -43,6 +55,10 @@
 "settings_default_config_body" = "Shared alarm behavior for all alarms that use defaults.";
 "settings_default_config_manage_button" = "Configure defaults";
 "settings_default_config_page_body" = "Changes are saved immediately and applied to alarms using default settings.";
+"settings_nap_defaults_title" = "Nap timer";
+"settings_nap_defaults_body" = "Set the default nap length used by Take a nap.";
+"settings_nap_defaults_manage_button" = "Configure default nap";
+"settings_nap_defaults_page_body" = "Changes are saved immediately.";
 "settings_testing_mode_title" = "Testing mode";
 "settings_testing_mode_body" = "Enable development-only alarm options like 5-second snooze.";
 "settings_testing_mode_toggle" = "Enable testing mode";
@@ -77,3 +93,5 @@
 "action_add" = "Add";
 "action_save" = "Save";
 "action_delete" = "Delete";
+"action_pause" = "Pause";
+"action_continue" = "Continue";

@@ -7,6 +7,12 @@
 "alarm_list_empty_title" = "Noch keine Alarme";
 "alarm_list_empty_subtitle" = "Tippe auf +, um deinen ersten Alarm zu erstellen.";
 
+"nap_banner_title" = "Schläfchen machen";
+"nap_banner_subtitle" = "Schnell mit Zzz-Energie auftanken";
+"nap_active_title" = "Schläfchen-Countdown";
+"nap_active_paused" = "Pausiert";
+"nap_default_alarm_label" = "Schläfchen";
+
 "alarm_row_repeat_one_time" = "Einmalig";
 "alarm_row_repeat_prefix" = "Wiederholt";
 "alarm_row_delete_after_use" = "Nach Nutzung löschen";
@@ -35,6 +41,12 @@
 "alarm_editor_try_out" = "Ausprobieren";
 "alarm_editor_try_out_starts_in_5_seconds" = "Test-Alarm klingelt in 5 Sekunden";
 
+"nap_editor_title" = "Schläfchen";
+"nap_editor_duration_title" = "Dauer";
+"nap_editor_hours_label" = "Stunden";
+"nap_editor_minutes_label" = "Minuten";
+"nap_editor_start_button" = "Starten";
+
 "alarm_editor_error_permission_denied" = "Alarm-Berechtigung wird benötigt. Aktiviere „Alarme & Timer“ in den Einstellungen.";
 "alarm_editor_error_generic" = "Etwas ist schiefgelaufen. Bitte versuche es erneut.";
 
@@ -43,6 +55,10 @@
 "settings_default_config_body" = "Geteiltes Alarmverhalten für alle Alarme mit Standard-Einstellungen.";
 "settings_default_config_manage_button" = "Standards konfigurieren";
 "settings_default_config_page_body" = "Änderungen werden sofort gespeichert und auf Alarme mit Standard-Einstellungen angewendet.";
+"settings_nap_defaults_title" = "Schläfchen-Timer";
+"settings_nap_defaults_body" = "Lege die Standarddauer für „Schläfchen machen“ fest.";
+"settings_nap_defaults_manage_button" = "Standard-Schläfchen konfigurieren";
+"settings_nap_defaults_page_body" = "Änderungen werden sofort gespeichert.";
 "settings_testing_mode_title" = "Testmodus";
 "settings_testing_mode_body" = "Aktiviert entwicklungsbezogene Alarmoptionen wie 5-Sekunden-Snooze.";
 "settings_testing_mode_toggle" = "Testmodus aktivieren";
@@ -77,3 +93,5 @@
 "action_add" = "Hinzufügen";
 "action_save" = "Speichern";
 "action_delete" = "Löschen";
+"action_pause" = "Pausieren";
+"action_continue" = "Fortsetzen";

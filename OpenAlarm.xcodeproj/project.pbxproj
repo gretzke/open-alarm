@@ -11,6 +11,7 @@
 		05162562A0170BE9098361EE /* AlarmIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85010326D24CEF7C1A38D50D /* AlarmIntents.swift */; };
 		0B5A2C2BC6692B00E79A988E /* AlarmPermissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83400772796DC9406DADEF9F /* AlarmPermissionService.swift */; };
 		1068E5E14AAA376BDD6E846B /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0511AEB1608CC1DFD19C495 /* L10n.swift */; };
+		23C0CD1574BD2A54EDBFCCE1 /* NapEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA3152F133E737A1C6EF2905 /* NapEditorView.swift */; };
 		36C1824E2D70AF0163976EDA /* SharedAlarmSettingsEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C5DC43674A1A23D8D98A25C /* SharedAlarmSettingsEditor.swift */; };
 		42DA53AB032443282ACAC432 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E55D19BAE63F4BCAD183A095 /* MainTabView.swift */; };
 		4349AE16DB928CA08CA1900B /* AlarmEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C5513FF1DE8CF198A077C38 /* AlarmEditorView.swift */; };
@@ -50,6 +51,7 @@
 		E55D19BAE63F4BCAD183A095 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		E9ACF85F89CF9D011BF26A5E /* OpenAlarm.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OpenAlarm.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F68BF27EA97B5D8C42193398 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		FA3152F133E737A1C6EF2905 /* NapEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NapEditorView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -84,6 +86,7 @@
 				B0511AEB1608CC1DFD19C495 /* L10n.swift */,
 				E43A03F552339F3CF4DBCF2C /* LaunchScreen.storyboard */,
 				E55D19BAE63F4BCAD183A095 /* MainTabView.swift */,
+				FA3152F133E737A1C6EF2905 /* NapEditorView.swift */,
 				A6981BF284D917EBC650816B /* OnboardingEngine.swift */,
 				22E4F6FF18C9BE1617CD7543 /* OnboardingFlowView.swift */,
 				764BB1926C868CDA8BB0801A /* OpenAlarmApp.swift */,
@@ -187,6 +190,7 @@
 				43A37EA685F224896032D009 /* AppRootView.swift in Sources */,
 				1068E5E14AAA376BDD6E846B /* L10n.swift in Sources */,
 				42DA53AB032443282ACAC432 /* MainTabView.swift in Sources */,
+				23C0CD1574BD2A54EDBFCCE1 /* NapEditorView.swift in Sources */,
 				E072A215F811DC860E8ED2F1 /* OnboardingEngine.swift in Sources */,
 				0137578A7C3DB65015FC02BE /* OnboardingFlowView.swift in Sources */,
 				7A6C9625D2A75EB1C003316B /* OpenAlarmApp.swift in Sources */,

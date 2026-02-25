@@ -39,8 +39,11 @@ private struct AlarmHomeView: View {
     @EnvironmentObject private var alarmStore: AlarmStore
     @State private var editorRoute: AlarmEditorRoute?
     @State private var editorDetent: PresentationDetent = .fraction(0.82)
+    @State private var isPresentingNapEditor = false
+    @State private var now = Date.now
 
     private let editorPartialDetent: PresentationDetent = .fraction(0.82)
+    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private func presentEditor(_ route: AlarmEditorRoute) {
         editorDetent = editorPartialDetent
@@ -49,18 +52,49 @@ private struct AlarmHomeView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
+            List {
+                Section {
+                    NapBannerView {
+                        isPresentingNapEditor = true
+                    }
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+
+                    if let nap = alarmStore.activeNap {
+                        ActiveNapRowView(
+                            nap: nap,
+                            now: now,
+                            onPause: {
+                                alarmStore.pauseNap()
+                            },
+                            onContinue: {
+                                Task {
+                                    await alarmStore.resumeNap()
+                                }
+                            },
+                            onDelete: {
+                                alarmStore.deleteNap()
+                            }
+                        )
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                    }
+                }
+
                 if alarmStore.alarms.isEmpty {
-                    ContentUnavailableView(
-                        L10n.alarmListEmptyTitle,
-                        systemImage: "alarm",
-                        description: Text(L10n.alarmListEmptySubtitle)
-                    )
-                    .foregroundStyle(OAColor.textSecondary)
-                    .padding(.horizontal, 24)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    Section {
+                        ContentUnavailableView(
+                            L10n.alarmListEmptyTitle,
+                            systemImage: "alarm",
+                            description: Text(L10n.alarmListEmptySubtitle)
+                        )
+                        .foregroundStyle(OAColor.textSecondary)
+                        .padding(.vertical, 24)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                    }
                 } else {
-                    List {
+                    Section {
                         ForEach(alarmStore.alarms) { alarm in
                             AlarmRowView(
                                 alarm: alarm,
@@ -82,10 +116,10 @@ private struct AlarmHomeView: View {
                             .listRowBackground(Color.clear)
                         }
                     }
-                    .listStyle(.plain)
-                    .scrollContentBackground(.hidden)
                 }
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(OAColor.background.ignoresSafeArea())
             .navigationTitle(L10n.alarmListTitle)
@@ -107,6 +141,9 @@ private struct AlarmHomeView: View {
                 }
 #endif
             }
+            .onReceive(timer) { tick in
+                now = tick
+            }
         }
         .sheet(item: $editorRoute) { route in
             AlarmEditorView(route: route)
@@ -114,6 +151,147 @@ private struct AlarmHomeView: View {
                 .presentationDetents([editorPartialDetent, .large], selection: $editorDetent)
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $isPresentingNapEditor) {
+            NapEditorView(
+                initialDraft: NapDraft(
+                    totalMinutes: alarmStore.defaultNapDurationMinutes,
+                    customSharedSettings: alarmStore.defaultSharedSettings
+                )
+            )
+            .environmentObject(alarmStore)
+            .presentationDetents([.fraction(0.7), .large])
+            .presentationDragIndicator(.visible)
+        }
+    }
+}
+
+private struct NapBannerView: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(OAColor.glassFill)
+                        .frame(width: 44, height: 44)
+
+                    Image(systemName: "zzz")
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(OAColor.actionCyan)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L10n.napBannerTitle)
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(OAColor.textPrimary)
+
+                    Text(L10n.napBannerSubtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(OAColor.textSecondary)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(OAColor.textSecondary)
+            }
+            .padding(18)
+            .oaGlassCard()
+            .padding(.vertical, 6)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct ActiveNapRowView: View {
+    let nap: NapAlarmSession
+    let now: Date
+    let onPause: () -> Void
+    let onContinue: () -> Void
+    let onDelete: () -> Void
+
+    private var remainingTimeString: String {
+        let remaining = Int(nap.remainingSeconds(referenceDate: now))
+        let hours = remaining / 3600
+        let minutes = (remaining % 3600) / 60
+        let seconds = remaining % 60
+
+        if hours > 0 {
+            return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+        }
+
+        return String(format: "%02d:%02d", minutes, seconds)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(L10n.napActiveTitle)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(OAColor.textPrimary)
+
+                Spacer(minLength: 0)
+
+                if nap.isPaused {
+                    Text(L10n.napActivePaused)
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .foregroundStyle(OAColor.textPrimary)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(OAColor.glassFill)
+                        )
+                }
+            }
+
+            Text(remainingTimeString)
+                .font(.system(size: 38, weight: .bold, design: .rounded).monospacedDigit())
+                .foregroundStyle(OAColor.textPrimary)
+
+            HStack(spacing: 10) {
+                Button {
+                    if nap.isPaused {
+                        onContinue()
+                    } else {
+                        onPause()
+                    }
+                } label: {
+                    Label(nap.isPaused ? L10n.actionContinue : L10n.actionPause, systemImage: nap.isPaused ? "play.fill" : "pause.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .foregroundStyle(OAColor.background)
+                        .background(
+                            RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                .fill(OAColor.actionCyan)
+                        )
+                }
+                .buttonStyle(.plain)
+
+                Button(role: .destructive, action: onDelete) {
+                    Label(L10n.actionDelete, systemImage: "trash")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .foregroundStyle(OAColor.textPrimary)
+                        .background(
+                            RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                .fill(OAColor.glassFill)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                .stroke(OAColor.danger.opacity(0.75), lineWidth: 0.9)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(18)
+        .oaGlassCard()
+        .padding(.vertical, 6)
     }
 }
 
@@ -180,6 +358,17 @@ private struct AlarmRowView: View {
 private struct SettingsHomeView: View {
     @EnvironmentObject private var alarmStore: AlarmStore
 
+    private func napDurationSummary(minutes: Int) -> String {
+        let hours = minutes / 60
+        let mins = minutes % 60
+
+        if hours > 0 {
+            return "\(hours)h \(mins)m"
+        }
+
+        return "\(mins)m"
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -202,6 +391,50 @@ private struct SettingsHomeView: View {
                                     .foregroundStyle(OAColor.textPrimary)
 
                                 Spacer(minLength: 0)
+
+                                Image(systemName: "chevron.right")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(OAColor.textSecondary)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                    .fill(OAColor.glassFill)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                    .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(20)
+                    .oaGlassCard()
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(L10n.settingsNapDefaultsTitle)
+                            .font(.headline)
+                            .foregroundStyle(OAColor.textPrimary)
+
+                        Text(L10n.settingsNapDefaultsBody)
+                            .font(.subheadline)
+                            .foregroundStyle(OAColor.textSecondary)
+
+                        NavigationLink {
+                            NapDefaultDurationView()
+                        } label: {
+                            HStack(spacing: 10) {
+                                Text(L10n.settingsNapDefaultsManageButton)
+                                    .font(.body.weight(.semibold))
+                                    .foregroundStyle(OAColor.textPrimary)
+
+                                Spacer(minLength: 0)
+
+                                Text(napDurationSummary(minutes: alarmStore.defaultNapDurationMinutes))
+                                    .font(.body.weight(.medium))
+                                    .foregroundStyle(OAColor.textSecondary)
 
                                 Image(systemName: "chevron.right")
                                     .font(.footnote.weight(.semibold))
@@ -308,6 +541,100 @@ private struct DefaultSharedSettingsView: View {
         .background(OAColor.background.ignoresSafeArea())
         .navigationTitle(L10n.settingsDefaultConfigTitle)
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct NapDefaultDurationView: View {
+    @EnvironmentObject private var alarmStore: AlarmStore
+
+    @State private var hours: Int = 0
+    @State private var minutes: Int = 35
+    @State private var loaded = false
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(L10n.settingsNapDefaultsPageBody)
+                    .font(.subheadline)
+                    .foregroundStyle(OAColor.textSecondary)
+
+                NapDurationPicker(hours: $hours, minutes: $minutes)
+            }
+            .padding(20)
+            .oaGlassCard()
+            .padding(20)
+        }
+        .background(OAColor.background.ignoresSafeArea())
+        .navigationTitle(L10n.settingsNapDefaultsTitle)
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            guard !loaded else { return }
+            loaded = true
+            setDuration(minutes: alarmStore.defaultNapDurationMinutes)
+        }
+        .onChange(of: hours) { _, _ in
+            saveDuration()
+        }
+        .onChange(of: self.minutes) { _, _ in
+            saveDuration()
+        }
+    }
+
+    private func setDuration(minutes total: Int) {
+        let clamped = max(1, total)
+        hours = clamped / 60
+        minutes = clamped % 60
+    }
+
+    private func saveDuration() {
+        guard loaded else {
+            return
+        }
+
+        let total = max(1, hours * 60 + minutes)
+        alarmStore.updateDefaultNapDurationMinutes(total)
+    }
+}
+
+private struct NapDurationPicker: View {
+    @Binding var hours: Int
+    @Binding var minutes: Int
+
+    var body: some View {
+        HStack(spacing: 0) {
+            VStack(spacing: 6) {
+                Text(L10n.napEditorHoursLabel)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(OAColor.textSecondary)
+
+                Picker("", selection: $hours) {
+                    ForEach(0 ... 12, id: \.self) { value in
+                        Text(value.formatted())
+                            .tag(value)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .labelsHidden()
+            }
+            .frame(maxWidth: .infinity)
+
+            VStack(spacing: 6) {
+                Text(L10n.napEditorMinutesLabel)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(OAColor.textSecondary)
+
+                Picker("", selection: $minutes) {
+                    ForEach(0 ... 59, id: \.self) { value in
+                        Text(String(format: "%02d", value))
+                            .tag(value)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .labelsHidden()
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 

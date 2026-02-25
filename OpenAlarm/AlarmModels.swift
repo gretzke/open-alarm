@@ -242,6 +242,65 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
     }
 }
 
+struct NapAlarmSession: Identifiable, Codable, Equatable, Sendable {
+    var id: UUID
+    var durationMinutes: Int
+    var targetDate: Date
+    var pausedRemainingSeconds: TimeInterval?
+    var useDefaultSharedSettings: Bool
+    var customSharedSettings: SharedAlarmSettings
+    var snoozeCount: Int
+    var createdAt: Date
+    var updatedAt: Date
+
+    var isPaused: Bool {
+        pausedRemainingSeconds != nil
+    }
+
+    func resolvedSharedSettings(defaults: SharedAlarmSettings) -> SharedAlarmSettings {
+        useDefaultSharedSettings ? defaults : customSharedSettings
+    }
+
+    func remainingSeconds(referenceDate: Date = .now) -> TimeInterval {
+        if let pausedRemainingSeconds {
+            return max(0, pausedRemainingSeconds)
+        }
+
+        return max(0, targetDate.timeIntervalSince(referenceDate))
+    }
+}
+
+struct NapDraft: Equatable {
+    var durationHours: Int
+    var durationMinutes: Int
+    var useDefaultSharedSettings: Bool
+    var customSharedSettings: SharedAlarmSettings
+
+    init(
+        totalMinutes: Int,
+        useDefaultSharedSettings: Bool = true,
+        customSharedSettings: SharedAlarmSettings
+    ) {
+        let clampedMinutes = max(1, totalMinutes)
+        durationHours = clampedMinutes / 60
+        durationMinutes = clampedMinutes % 60
+        self.useDefaultSharedSettings = useDefaultSharedSettings
+        self.customSharedSettings = customSharedSettings
+    }
+
+    var totalMinutes: Int {
+        max(1, durationHours * 60 + durationMinutes)
+    }
+
+    mutating func applyDefaultSharedSettings(_ defaults: SharedAlarmSettings) {
+        customSharedSettings = defaults
+    }
+
+    func resolvedSharedSettings(defaults: SharedAlarmSettings) -> SharedAlarmSettings {
+        useDefaultSharedSettings ? defaults : customSharedSettings
+    }
+}
+
 struct AlarmDraft: Equatable {
     var name: String
     var time: Date

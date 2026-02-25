@@ -1,0 +1,175 @@
+import SwiftUI
+
+struct NapEditorView: View {
+    @EnvironmentObject private var alarmStore: AlarmStore
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var draft: NapDraft
+    @State private var isSaving = false
+    @State private var errorMessage: LocalizedStringKey?
+
+    init(initialDraft: NapDraft) {
+        _draft = State(initialValue: initialDraft)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    durationSection
+                    useDefaultSharedSettingsSection
+
+                    if !draft.useDefaultSharedSettings {
+                        SharedAlarmSettingsEditor(
+                            settings: $draft.customSharedSettings,
+                            allowFiveSecondSnoozeOption: alarmStore.testingModeEnabled
+                        )
+                    }
+
+                    if let errorMessage {
+                        Text(errorMessage)
+                            .font(.footnote)
+                            .foregroundStyle(OAColor.danger)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 4)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+            }
+            .background(Color.clear)
+            .navigationTitle(L10n.napEditorTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Text(L10n.actionCancel)
+                    }
+                    .tint(OAColor.actionCyan)
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        startNap()
+                    } label: {
+                        if isSaving {
+                            ProgressView()
+                                .tint(OAColor.actionCyan)
+                        } else {
+                            Text(L10n.napEditorStartButton)
+                        }
+                    }
+                    .tint(OAColor.actionCyan)
+                    .disabled(isSaving)
+                }
+            }
+        }
+        .background(Color.clear)
+        .preferredColorScheme(.dark)
+        .presentationBackground(.clear)
+        .onAppear {
+            if draft.useDefaultSharedSettings {
+                draft.applyDefaultSharedSettings(alarmStore.defaultSharedSettings)
+            }
+        }
+    }
+
+    private var durationSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(L10n.napEditorDurationTitle)
+                .font(.headline)
+                .foregroundStyle(OAColor.textSecondary)
+
+            NapDurationEditorPicker(hours: $draft.durationHours, minutes: $draft.durationMinutes)
+        }
+    }
+
+    private var useDefaultSharedSettingsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle(isOn: Binding(
+                get: { draft.useDefaultSharedSettings },
+                set: { useDefault in
+                    draft.useDefaultSharedSettings = useDefault
+                    draft.applyDefaultSharedSettings(alarmStore.defaultSharedSettings)
+                }
+            )) {
+                Text(L10n.alarmEditorUseDefaultSettingsToggle)
+                    .font(.headline)
+                    .foregroundStyle(OAColor.textPrimary)
+            }
+            .tint(OAColor.actionCyan)
+
+            Text(L10n.alarmEditorUseDefaultSettingsHint)
+                .font(.footnote)
+                .foregroundStyle(OAColor.textSecondary)
+        }
+    }
+
+    private func startNap() {
+        guard !isSaving else {
+            return
+        }
+
+        errorMessage = nil
+        isSaving = true
+
+        Task {
+            do {
+                try await alarmStore.createNap(from: draft)
+                dismiss()
+            } catch {
+                errorMessage = alarmStore.userFacingErrorMessage(for: error)
+            }
+            isSaving = false
+        }
+    }
+}
+
+private struct NapDurationEditorPicker: View {
+    @Binding var hours: Int
+    @Binding var minutes: Int
+
+    var body: some View {
+        HStack(spacing: 0) {
+            VStack(spacing: 6) {
+                Text(L10n.napEditorHoursLabel)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(OAColor.textSecondary)
+
+                Picker("", selection: $hours) {
+                    ForEach(0 ... 12, id: \.self) { value in
+                        Text(value.formatted())
+                            .tag(value)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .labelsHidden()
+            }
+            .frame(maxWidth: .infinity)
+
+            VStack(spacing: 6) {
+                Text(L10n.napEditorMinutesLabel)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(OAColor.textSecondary)
+
+                Picker("", selection: $minutes) {
+                    ForEach(0 ... 59, id: \.self) { value in
+                        Text(String(format: "%02d", value))
+                            .tag(value)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .labelsHidden()
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+#Preview {
+    NapEditorView(initialDraft: NapDraft(totalMinutes: 35, customSharedSettings: .featureDefaults))
+        .environmentObject(AlarmStore())
+}
