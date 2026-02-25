@@ -40,6 +40,7 @@ private struct AlarmHomeView: View {
     @State private var editorRoute: AlarmEditorRoute?
     @State private var editorDetent: PresentationDetent = .fraction(0.82)
     @State private var isPresentingNapEditor = false
+    @State private var pendingDisableConfirmationAlarm: UserAlarm?
     @State private var now = Date.now
 
     private let editorPartialDetent: PresentationDetent = .fraction(0.82)
@@ -108,7 +109,10 @@ private struct AlarmHomeView: View {
                         ForEach(alarmStore.alarms) { alarm in
                             AlarmRowView(
                                 alarm: alarm,
-                                lifecycleText: alarmStore.lifecycleLabel(for: alarm.lifecycleState)
+                                now: now,
+                                onToggle: { isOn in
+                                    handleAlarmToggle(alarm, isOn: isOn)
+                                }
                             )
                             .contentShape(Rectangle())
                             .onTapGesture {
@@ -170,6 +174,51 @@ private struct AlarmHomeView: View {
             .environmentObject(alarmStore)
             .presentationDetents([.fraction(0.4), .large])
             .presentationDragIndicator(.visible)
+        }
+        .confirmationDialog(
+            L10n.alarmRowSkipNextPrompt,
+            isPresented: Binding(
+                get: { pendingDisableConfirmationAlarm != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        pendingDisableConfirmationAlarm = nil
+                    }
+                }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button(L10n.alarmRowSkipNextYes) {
+                if let alarm = pendingDisableConfirmationAlarm {
+                    setAlarmEnabled(alarm, isOn: false, skipNext: true)
+                }
+                pendingDisableConfirmationAlarm = nil
+            }
+
+            Button(L10n.alarmRowSkipNextNo) {
+                if let alarm = pendingDisableConfirmationAlarm {
+                    setAlarmEnabled(alarm, isOn: false, skipNext: false)
+                }
+                pendingDisableConfirmationAlarm = nil
+            }
+
+            Button(L10n.actionCancel, role: .cancel) {
+                pendingDisableConfirmationAlarm = nil
+            }
+        }
+    }
+
+    private func handleAlarmToggle(_ alarm: UserAlarm, isOn: Bool) {
+        if !isOn, alarm.isRepeating, alarm.isEnabled {
+            pendingDisableConfirmationAlarm = alarm
+            return
+        }
+
+        setAlarmEnabled(alarm, isOn: isOn, skipNext: nil)
+    }
+
+    private func setAlarmEnabled(_ alarm: UserAlarm, isOn: Bool, skipNext: Bool?) {
+        Task {
+            try? await alarmStore.setAlarmEnabled(alarm, enabled: isOn, skipNext: skipNext)
         }
     }
 }

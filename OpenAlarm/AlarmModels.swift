@@ -115,6 +115,8 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
     var useDefaultSharedSettings: Bool
     var customSharedSettings: SharedAlarmSettings
     var nextTriggerOverrideDate: Date?
+    var isEnabled: Bool
+    var skipNextUntilDate: Date?
     var snoozeCount: Int
 
     var lifecycleState: AlarmLifecycleState
@@ -132,6 +134,8 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         useDefaultSharedSettings: Bool,
         customSharedSettings: SharedAlarmSettings,
         nextTriggerOverrideDate: Date?,
+        isEnabled: Bool,
+        skipNextUntilDate: Date?,
         snoozeCount: Int,
         lifecycleState: AlarmLifecycleState,
         createdAt: Date,
@@ -147,6 +151,8 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         self.useDefaultSharedSettings = useDefaultSharedSettings
         self.customSharedSettings = customSharedSettings
         self.nextTriggerOverrideDate = nextTriggerOverrideDate
+        self.isEnabled = isEnabled
+        self.skipNextUntilDate = skipNextUntilDate
         self.snoozeCount = snoozeCount
         self.lifecycleState = lifecycleState
         self.createdAt = createdAt
@@ -155,6 +161,14 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
 
     var isRepeating: Bool {
         !repeatDays.isEmpty
+    }
+
+    var isSkippingNext: Bool {
+        !isEnabled && skipNextUntilDate != nil
+    }
+
+    var isFullyDisabled: Bool {
+        !isEnabled && skipNextUntilDate == nil
     }
 
     var triggerDateForDisplay: Date {
@@ -208,6 +222,8 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         case useDefaultSharedSettings
         case customSharedSettings
         case nextTriggerOverrideDate
+        case isEnabled
+        case skipNextUntilDate
         case snoozeCount
         case lifecycleState
         case createdAt
@@ -229,6 +245,8 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         customSharedSettings = try container.decodeIfPresent(SharedAlarmSettings.self, forKey: .customSharedSettings) ?? .featureDefaults
         useDefaultSharedSettings = try container.decodeIfPresent(Bool.self, forKey: .useDefaultSharedSettings) ?? true
         nextTriggerOverrideDate = try container.decodeIfPresent(Date.self, forKey: .nextTriggerOverrideDate)
+        isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
+        skipNextUntilDate = try container.decodeIfPresent(Date.self, forKey: .skipNextUntilDate)
 
         snoozeCount = try container.decodeIfPresent(Int.self, forKey: .snoozeCount) ?? 0
 
@@ -249,6 +267,8 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         try container.encode(useDefaultSharedSettings, forKey: .useDefaultSharedSettings)
         try container.encode(customSharedSettings, forKey: .customSharedSettings)
         try container.encodeIfPresent(nextTriggerOverrideDate, forKey: .nextTriggerOverrideDate)
+        try container.encode(isEnabled, forKey: .isEnabled)
+        try container.encodeIfPresent(skipNextUntilDate, forKey: .skipNextUntilDate)
         try container.encode(snoozeCount, forKey: .snoozeCount)
         try container.encode(lifecycleState, forKey: .lifecycleState)
         try container.encode(createdAt, forKey: .createdAt)
@@ -385,6 +405,8 @@ struct AlarmDraft: Equatable {
         existingCreatedAt: Date?,
         defaultSharedSettings: SharedAlarmSettings,
         existingNextTriggerOverrideDate: Date? = nil,
+        existingIsEnabled: Bool = true,
+        existingSkipNextUntilDate: Date? = nil,
         existingSnoozeCount: Int?
     ) -> UserAlarm {
         let timeComponents = Calendar.autoupdatingCurrent.dateComponents([.hour, .minute], from: time)
@@ -403,6 +425,8 @@ struct AlarmDraft: Equatable {
             useDefaultSharedSettings: useDefaultSharedSettings,
             customSharedSettings: persistedCustomSharedSettings,
             nextTriggerOverrideDate: existingNextTriggerOverrideDate,
+            isEnabled: existingIsEnabled,
+            skipNextUntilDate: existingSkipNextUntilDate,
             snoozeCount: existingSnoozeCount ?? 0,
             lifecycleState: .scheduled,
             createdAt: existingCreatedAt ?? .now,

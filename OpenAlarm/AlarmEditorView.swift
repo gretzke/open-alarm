@@ -336,7 +336,7 @@ struct AlarmEditorView: View {
                     case .nextOnly:
                         try await alarmStore.updateNextAlarmOccurrence(existing, with: draft)
                     case .schedule:
-                        try await alarmStore.updateAlarm(existing, with: draft)
+                        try await alarmStore.updateAlarm(existing, with: draft, clearNextOverride: shouldShowSaveScopePrompt)
                     }
                 } else {
                     try await alarmStore.createAlarm(from: draft)

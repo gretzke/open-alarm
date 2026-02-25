@@ -220,8 +220,8 @@ final class AlarmStore: ObservableObject {
         try await upsertAlarm(existingAlarm: nil, draft: draft)
     }
 
-    func updateAlarm(_ alarm: UserAlarm, with draft: AlarmDraft) async throws {
-        try await upsertAlarm(existingAlarm: alarm, draft: draft)
+    func updateAlarm(_ alarm: UserAlarm, with draft: AlarmDraft, clearNextOverride: Bool = false) async throws {
+        try await upsertAlarm(existingAlarm: alarm, draft: draft, clearNextOverride: clearNextOverride)
     }
 
     func updateNextAlarmOccurrence(_ alarm: UserAlarm, with draft: AlarmDraft) async throws {
@@ -251,6 +251,8 @@ final class AlarmStore: ObservableObject {
         }
 
         current.nextTriggerOverrideDate = nextOverrideDate
+        current.isEnabled = true
+        current.skipNextUntilDate = nil
         current.snoozeCount = 0
         current.updatedAt = .now
 
@@ -440,7 +442,7 @@ final class AlarmStore: ObservableObject {
         return candidates.min()
     }
 
-    private func upsertAlarm(existingAlarm: UserAlarm?, draft: AlarmDraft) async throws {
+    private func upsertAlarm(existingAlarm: UserAlarm?, draft: AlarmDraft, clearNextOverride: Bool = false) async throws {
         try await ensureAuthorizedForScheduling()
 
         let id = existingAlarm?.id ?? UUID()
@@ -451,19 +453,28 @@ final class AlarmStore: ObservableObject {
             existingSnoozeCount: existingAlarm?.snoozeCount
         )
 
-        do {
-            let config = makeConfiguration(for: nextAlarm, schedule: nextAlarm.schedule, isShadowTrial: false)
-            let remoteAlarm = try await scheduleAlarmWithUpdateFallback(
-                id: id,
-                configuration: config,
-                isUpdate: existingAlarm != nil
-            )
-            nextAlarm.lifecycleState = remoteAlarm.state == .alerting ? .alerting : .scheduled
+        if nextAlarm.isEnabled || nextAlarm.isSkippingNext {
+            do {
+                let config = makeConfiguration(for: nextAlarm, schedule: nextAlarm.schedule, isShadowTrial: false)
+                let remoteAlarm = try await scheduleAlarmWithUpdateFallback(
+                    id: id,
+                    configuration: config,
+                    isUpdate: existingAlarm != nil
+                )
+                nextAlarm.lifecycleState = remoteAlarm.state == .alerting ? .alerting : .scheduled
+                nextAlarm.snoozeCount = 0
+                lastKnownAlarmState[id] = remoteAlarm.state
+                remoteStates[id] = remoteAlarm.state
+            } catch {
+                throw AlarmStoreError.scheduleFailed
+            }
+        } else {
+            try? alarmManager.stop(id: id)
+            try? alarmManager.cancel(id: id)
+            nextAlarm.lifecycleState = .scheduled
             nextAlarm.snoozeCount = 0
-            lastKnownAlarmState[id] = remoteAlarm.state
-            remoteStates[id] = remoteAlarm.state
-        } catch {
-            throw AlarmStoreError.scheduleFailed
+            lastKnownAlarmState.removeValue(forKey: id)
+            remoteStates.removeValue(forKey: id)
         }
 
         if let existingIndex = alarms.firstIndex(where: { $0.id == id }) {
@@ -485,6 +496,10 @@ final class AlarmStore: ObservableObject {
 
     private func rescheduleAlarmsUsingDefaultSharedSettings() async {
         for alarm in alarms where alarm.useDefaultSharedSettings {
+            guard alarm.isEnabled || alarm.isSkippingNext else {
+                continue
+            }
+
             do {
                 let config = makeConfiguration(for: alarm, schedule: alarm.schedule, isShadowTrial: false)
                 let remote = try await alarmManager.schedule(id: alarm.id, configuration: config)
@@ -755,12 +770,29 @@ final class AlarmStore: ObservableObject {
         }
 
         if alarm.isRepeating {
-            if alarm.nextTriggerOverrideDate != nil {
-                alarm.nextTriggerOverrideDate = nil
+            if !alarm.isEnabled,
+               let skipUntil = alarm.skipNextUntilDate,
+               skipUntil <= .now {
+                alarm.isEnabled = true
+                alarm.skipNextUntilDate = nil
                 alarm.updatedAt = .now
                 changed = true
-                scheduleRepeatRestore(for: alarm)
-            } else if hadSnoozes {
+            }
+
+            if let overrideDate = alarm.nextTriggerOverrideDate {
+                let overrideConsumed =
+                    (previousState == .alerting && currentState != .alerting) ||
+                    (currentState == nil && overrideDate <= .now)
+
+                if overrideConsumed {
+                    alarm.nextTriggerOverrideDate = nil
+                    alarm.updatedAt = .now
+                    changed = true
+                    if alarm.isEnabled || alarm.isSkippingNext {
+                        scheduleRepeatRestore(for: alarm)
+                    }
+                }
+            } else if hadSnoozes, alarm.isEnabled {
                 scheduleRepeatRestore(for: alarm)
             }
 
