@@ -116,8 +116,8 @@ private struct DefaultSharedSettingsStepView: View {
     @State private var settings: SharedAlarmSettings = .featureDefaults
 
     var body: some View {
-        VStack(spacing: 24) {
-            VStack(alignment: .leading, spacing: 16) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
                 Text(L10n.onboardingDefaultConfigTitle)
                     .font(.title.bold())
                     .foregroundStyle(OAColor.textPrimary)
@@ -128,52 +128,51 @@ private struct DefaultSharedSettingsStepView: View {
                     .foregroundStyle(OAColor.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                SharedAlarmSettingsEditor(settings: $settings)
-
                 Text(L10n.onboardingDefaultConfigHint)
                     .font(.footnote)
                     .foregroundStyle(OAColor.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
+
+                HStack(spacing: 12) {
+                    Button(action: onSkip) {
+                        Text(L10n.actionSkip)
+                            .font(.headline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .foregroundStyle(OAColor.textPrimary)
+                            .background(
+                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                    .fill(OAColor.glassFill)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                    .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
+                            )
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        onSave(settings)
+                    } label: {
+                        Text(L10n.actionNext)
+                            .font(.headline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .foregroundStyle(OAColor.background)
+                            .background(
+                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                    .fill(OAColor.actionCyan)
+                            )
+                            .shadow(color: OAColor.actionCyan.opacity(0.36), radius: 16, x: 0, y: 10)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                SharedAlarmSettingsEditor(settings: $settings)
             }
             .padding(24)
-            .oaGlassCard()
-
-            HStack(spacing: 12) {
-                Button(action: onSkip) {
-                    Text(L10n.actionSkip)
-                        .font(.headline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .foregroundStyle(OAColor.textPrimary)
-                        .background(
-                            RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                .fill(OAColor.glassFill)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
-                        )
-                }
-                .buttonStyle(.plain)
-
-                Button {
-                    onSave(settings)
-                } label: {
-                    Text(L10n.actionNext)
-                        .font(.headline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .foregroundStyle(OAColor.background)
-                        .background(
-                            RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                .fill(OAColor.actionCyan)
-                        )
-                        .shadow(color: OAColor.actionCyan.opacity(0.36), radius: 16, x: 0, y: 10)
-                }
-                .buttonStyle(.plain)
-            }
         }
-        .padding(24)
+        .scrollIndicators(.hidden)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(OAColor.background.ignoresSafeArea())
         .onAppear {

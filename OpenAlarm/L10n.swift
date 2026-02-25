@@ -41,6 +41,8 @@ enum L10n {
     static let settingsTitle: LocalizedStringKey = "settings_title"
     static let settingsDefaultConfigTitle: LocalizedStringKey = "settings_default_config_title"
     static let settingsDefaultConfigBody: LocalizedStringKey = "settings_default_config_body"
+    static let settingsDefaultConfigManageButton: LocalizedStringKey = "settings_default_config_manage_button"
+    static let settingsDefaultConfigPageBody: LocalizedStringKey = "settings_default_config_page_body"
     static let settingsPermissionTitle: LocalizedStringKey = "settings_permission_title"
     static let settingsPermissionStatusLabel: LocalizedStringKey = "settings_permission_status_label"
     static let settingsPermissionAuthorized: LocalizedStringKey = "settings_permission_authorized"

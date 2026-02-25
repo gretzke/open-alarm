@@ -41,6 +41,8 @@
 "settings_title" = "Settings";
 "settings_default_config_title" = "Default configuration";
 "settings_default_config_body" = "Shared alarm behavior for all alarms that use defaults.";
+"settings_default_config_manage_button" = "Configure defaults";
+"settings_default_config_page_body" = "Changes are saved immediately and applied to alarms using default settings.";
 "settings_permission_title" = "Alarm permission";
 "settings_permission_status_label" = "Status";
 "settings_permission_authorized" = "Authorized";

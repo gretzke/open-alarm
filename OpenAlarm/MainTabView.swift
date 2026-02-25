@@ -192,10 +192,33 @@ private struct SettingsHomeView: View {
                             .font(.subheadline)
                             .foregroundStyle(OAColor.textSecondary)
 
-                        SharedAlarmSettingsEditor(settings: Binding(
-                            get: { alarmStore.defaultSharedSettings },
-                            set: { alarmStore.updateDefaultSharedSettings($0) }
-                        ))
+                        NavigationLink {
+                            DefaultSharedSettingsView()
+                        } label: {
+                            HStack(spacing: 10) {
+                                Text(L10n.settingsDefaultConfigManageButton)
+                                    .font(.body.weight(.semibold))
+                                    .foregroundStyle(OAColor.textPrimary)
+
+                                Spacer(minLength: 0)
+
+                                Image(systemName: "chevron.right")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(OAColor.textSecondary)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                    .fill(OAColor.glassFill)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                    .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
                     .padding(20)
                     .oaGlassCard()
@@ -242,6 +265,31 @@ private struct SettingsHomeView: View {
             .navigationTitle(L10n.settingsTitle)
             .navigationBarTitleDisplayMode(.inline)
         }
+    }
+}
+
+private struct DefaultSharedSettingsView: View {
+    @EnvironmentObject private var alarmStore: AlarmStore
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(L10n.settingsDefaultConfigPageBody)
+                    .font(.subheadline)
+                    .foregroundStyle(OAColor.textSecondary)
+
+                SharedAlarmSettingsEditor(settings: Binding(
+                    get: { alarmStore.defaultSharedSettings },
+                    set: { alarmStore.updateDefaultSharedSettings($0) }
+                ))
+            }
+            .padding(20)
+            .oaGlassCard()
+            .padding(20)
+        }
+        .background(OAColor.background.ignoresSafeArea())
+        .navigationTitle(L10n.settingsDefaultConfigTitle)
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

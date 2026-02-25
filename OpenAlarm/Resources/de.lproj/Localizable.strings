@@ -41,6 +41,8 @@
 "settings_title" = "Einstellungen";
 "settings_default_config_title" = "Standard-Konfiguration";
 "settings_default_config_body" = "Geteiltes Alarmverhalten für alle Alarme mit Standard-Einstellungen.";
+"settings_default_config_manage_button" = "Standards konfigurieren";
+"settings_default_config_page_body" = "Änderungen werden sofort gespeichert und auf Alarme mit Standard-Einstellungen angewendet.";
 "settings_permission_title" = "Alarm-Berechtigung";
 "settings_permission_status_label" = "Status";
 "settings_permission_authorized" = "Erlaubt";
