@@ -168,7 +168,7 @@ private struct AlarmHomeView: View {
                 )
             )
             .environmentObject(alarmStore)
-            .presentationDetents([.fraction(0.25), .large])
+            .presentationDetents([.fraction(0.4), .large])
             .presentationDragIndicator(.visible)
         }
     }
