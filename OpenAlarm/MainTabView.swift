@@ -74,8 +74,9 @@ private struct AlarmHomeView: View {
                                 Button(role: .destructive) {
                                     alarmStore.deleteAlarm(alarm)
                                 } label: {
-                                    Text(L10n.actionDelete)
+                                    Label(L10n.actionDelete, systemImage: "trash")
                                 }
+                                .tint(OAColor.danger)
                             }
                             .listRowSeparator(.hidden)
                             .listRowBackground(Color.clear)
