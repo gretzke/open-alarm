@@ -81,6 +81,16 @@ private struct AlarmHomeView: View {
                     }
                 }
 
+                Section {
+                    Text(L10n.alarmListTitle)
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .foregroundStyle(OAColor.textPrimary)
+                        .padding(.horizontal, 4)
+                        .padding(.top, 6)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                }
+
                 if alarmStore.alarms.isEmpty {
                     Section {
                         ContentUnavailableView(
@@ -122,7 +132,6 @@ private struct AlarmHomeView: View {
             .scrollContentBackground(.hidden)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(OAColor.background.ignoresSafeArea())
-            .navigationTitle(L10n.alarmListTitle)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
