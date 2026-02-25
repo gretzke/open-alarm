@@ -135,8 +135,10 @@ final class OnboardingEngine: ObservableObject {
         var workflow: [OnboardingStep] = []
 
         let completedOneTimeSteps = loadCompletedOneTimeSteps()
-        let pendingOneTimeSteps = oneTimeSteps.filter { !completedOneTimeSteps.contains($0) }
-        workflow.append(contentsOf: pendingOneTimeSteps.map(OnboardingStep.oneTime))
+
+        if !completedOneTimeSteps.contains(.welcome) {
+            workflow.append(.oneTime(.welcome))
+        }
 
         let reusableWorkflow = reusableRules
             .sorted { lhs, rhs in
@@ -149,6 +151,11 @@ final class OnboardingEngine: ObservableObject {
             .map(OnboardingStep.reusable)
 
         workflow.append(contentsOf: reusableWorkflow)
+
+        if !completedOneTimeSteps.contains(.defaultSharedSettings) {
+            workflow.append(.oneTime(.defaultSharedSettings))
+        }
+
         activeStep = workflow.first
     }
 }

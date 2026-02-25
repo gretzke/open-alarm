@@ -153,7 +153,7 @@ struct SharedAlarmSettingsEditor: View {
             .presentationBackground(.clear)
             .presentationBackgroundInteraction(.enabled)
         }
-        .overlay(alignment: .bottom) {
+        .overlay(alignment: .top) {
             if showTryOutToast {
                 Text(L10n.alarmEditorTryOutStartsIn5Seconds)
                     .font(.subheadline.weight(.semibold))
@@ -162,14 +162,15 @@ struct SharedAlarmSettingsEditor: View {
                     .padding(.vertical, 12)
                     .background(
                         Capsule(style: .continuous)
-                            .fill(OAColor.glassFill)
+                            .fill(OAColor.background.opacity(0.96))
                     )
                     .overlay(
                         Capsule(style: .continuous)
-                            .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
+                            .stroke(OAColor.actionCyan.opacity(0.55), lineWidth: 0.9)
                     )
-                    .padding(.bottom, 4)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .shadow(color: .black.opacity(0.22), radius: 10, x: 0, y: 6)
+                    .padding(.top, 6)
+                    .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
         .animation(.easeInOut(duration: 0.2), value: showTryOutToast)
