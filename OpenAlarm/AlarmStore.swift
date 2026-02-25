@@ -313,6 +313,7 @@ final class AlarmStore: ObservableObject {
                 updatedAlarm.skipNextUntilDate = skipUntil
             } else {
                 updatedAlarm.skipNextUntilDate = nil
+                updatedAlarm.nextTriggerOverrideDate = nil
             }
 
             try? alarmManager.stop(id: updatedAlarm.id)

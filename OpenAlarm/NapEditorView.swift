@@ -45,9 +45,11 @@ struct NapEditorView: View {
                     Button {
                         dismiss()
                     } label: {
-                        Text(L10n.actionCancel)
+                        Image(systemName: "xmark")
+                            .font(.headline.weight(.semibold))
                     }
-                    .tint(OAColor.actionCyan)
+                    .tint(OAColor.textPrimary)
+                    .accessibilityLabel(L10n.actionCancel)
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
@@ -58,11 +60,19 @@ struct NapEditorView: View {
                             ProgressView()
                                 .tint(OAColor.actionCyan)
                         } else {
-                            Text(L10n.napEditorStartButton)
+                            Image(systemName: "checkmark")
+                                .font(.headline.weight(.bold))
+                                .foregroundStyle(OAColor.background)
+                                .frame(width: 32, height: 32)
+                                .background(
+                                    Circle()
+                                        .fill(OAColor.actionCyan)
+                                )
                         }
                     }
-                    .tint(OAColor.actionCyan)
+                    .buttonStyle(.plain)
                     .disabled(isSaving)
+                    .accessibilityLabel(L10n.napEditorStartButton)
                 }
             }
         }

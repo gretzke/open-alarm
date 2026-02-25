@@ -94,18 +94,14 @@ private struct AlarmHomeView: View {
                             presentEditor(.create)
                         } label: {
                             Image(systemName: "plus")
-                                .font(.headline.weight(.bold))
-                                .foregroundStyle(OAColor.textPrimary)
-                                .frame(width: 34, height: 34)
-                                .background(
-                                    Circle()
-                                        .fill(OAColor.glassFill)
-                                )
+                                .font(.title2.weight(.bold))
+                                .foregroundStyle(OAColor.actionCyan)
+                                .frame(width: 40, height: 40)
+                                .glassEffect(.regular, in: Circle())
                                 .overlay(
                                     Circle()
                                         .stroke(OAColor.glassStroke.opacity(0.85), lineWidth: 0.9)
                                 )
-                                .shadow(color: OAColor.glassGlow.opacity(0.7), radius: 10, x: 0, y: 4)
                         }
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("alarm_add_button")
@@ -392,18 +388,15 @@ private struct AlarmRowView: View {
             return countdownText(until: nextRunDate)
         }
 
-        let timeText = nextRunDate.formatted(.dateTime.hour().minute())
-
         if calendar.isDateInToday(nextRunDate) {
-            return String(format: String(localized: "alarm_row_today_at_format"), timeText)
+            return String(localized: "alarm_row_next_run_today")
         }
 
         if calendar.isDateInTomorrow(nextRunDate) {
-            return String(format: String(localized: "alarm_row_tomorrow_at_format"), timeText)
+            return String(localized: "alarm_row_next_run_tomorrow")
         }
 
-        let weekdayText = nextRunDate.formatted(.dateTime.weekday(.wide))
-        return String(format: String(localized: "alarm_row_weekday_at_format"), weekdayText, timeText)
+        return nextRunDate.formatted(.dateTime.weekday(.wide))
     }
 
     private var nextRunDate: Date? {
@@ -449,21 +442,31 @@ private struct AlarmRowView: View {
 
     private func countdownText(until nextRunDate: Date) -> String {
         let totalMinutes = max(1, Int(ceil(nextRunDate.timeIntervalSince(now) / 60)))
-
-        if totalMinutes >= 60 {
-            let hours = totalMinutes / 60
-            let minutes = totalMinutes % 60
-            return String(
-                format: String(localized: "alarm_row_countdown_hours_minutes"),
-                hours,
-                minutes
-            )
-        }
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
 
         return String(
-            format: String(localized: "alarm_row_countdown_minutes"),
-            totalMinutes
+            format: String(localized: "alarm_row_countdown_hours_minutes"),
+            hours,
+            minutes
         )
+    }
+
+    private func popoverActionButton(title: LocalizedStringKey, tint: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(tint)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: OARadius.button, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                        .stroke(OAColor.glassStroke.opacity(0.75), lineWidth: 0.8)
+                )
+        }
+        .buttonStyle(.plain)
     }
 
     private func nextRepeatingDate(after referenceDate: Date) -> Date? {
@@ -506,7 +509,7 @@ private struct AlarmRowView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(resolvedName)
@@ -552,40 +555,32 @@ private struct AlarmRowView: View {
                     attachmentAnchor: .rect(.bounds),
                     arrowEdge: .top
                 ) {
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 10) {
                         Text(L10n.alarmRowSkipNextPrompt)
                             .font(.footnote.weight(.semibold))
                             .foregroundStyle(OAColor.textSecondary)
 
-                        Button {
-                            onSkipNextSelected()
-                        } label: {
-                            Text(L10n.alarmRowSkipNextYes)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(OAColor.textPrimary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.vertical, 6)
-                        }
+                        popoverActionButton(
+                            title: L10n.alarmRowSkipNextYes,
+                            tint: OAColor.textPrimary,
+                            action: onSkipNextSelected
+                        )
 
-                        Button {
-                            onDisableCompletelySelected()
-                        } label: {
-                            Text(L10n.alarmRowSkipNextNo)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(OAColor.danger)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.vertical, 6)
-                        }
+                        popoverActionButton(
+                            title: L10n.alarmRowSkipNextNo,
+                            tint: OAColor.danger,
+                            action: onDisableCompletelySelected
+                        )
                     }
                     .padding(14)
-                    .frame(width: 250)
+                    .frame(width: 280, alignment: .leading)
                     .presentationCompactAdaptation(.popover)
                 }
             }
 
             if alarm.isSkippingNext {
                 Text(L10n.alarmRowSkippingNextStatus)
-                    .font(.caption.weight(.semibold))
+                    .font(.caption)
                     .foregroundStyle(OAColor.textSecondary)
             }
 

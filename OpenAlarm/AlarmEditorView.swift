@@ -51,6 +51,7 @@ struct AlarmEditorView: View {
     @State private var isSaving = false
     @State private var errorMessage: LocalizedStringKey?
     @State private var hasInitializedDraft = false
+    @State private var showSaveScopePopover = false
 
     init(route: AlarmEditorRoute) {
         self.route = route
@@ -105,30 +106,54 @@ struct AlarmEditorView: View {
                     if isSaving {
                         ProgressView()
                             .tint(OAColor.actionCyan)
-                    } else if shouldShowSaveScopePrompt {
-                        Menu {
-                            Button(L10n.alarmEditorApplyNextOnlyOption) {
-                                saveAlarm(scope: .nextOnly)
-                            }
-
-                            Button(L10n.alarmEditorApplyScheduleOption) {
+                    } else {
+                        Button {
+                            if shouldShowSaveScopePrompt {
+                                showSaveScopePopover = true
+                            } else {
                                 saveAlarm(scope: .schedule)
                             }
                         } label: {
                             Image(systemName: "checkmark")
-                                .font(.headline.weight(.semibold))
+                                .font(.headline.weight(.bold))
+                                .foregroundStyle(OAColor.background)
+                                .frame(width: 32, height: 32)
+                                .background(
+                                    Circle()
+                                        .fill(OAColor.actionCyan)
+                                )
                         }
-                        .menuIndicator(.hidden)
-                        .tint(OAColor.actionCyan)
-                        .accessibilityLabel(route.existingAlarm == nil ? L10n.actionAdd : L10n.actionSave)
-                    } else {
-                        Button {
-                            saveAlarm(scope: .schedule)
-                        } label: {
-                            Image(systemName: "checkmark")
-                                .font(.headline.weight(.semibold))
+                        .buttonStyle(.plain)
+                        .popover(
+                            isPresented: $showSaveScopePopover,
+                            attachmentAnchor: .rect(.bounds),
+                            arrowEdge: .top
+                        ) {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text(L10n.alarmEditorApplyChangePrompt)
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(OAColor.textSecondary)
+
+                                saveScopeActionButton(
+                                    title: L10n.alarmEditorApplyNextOnlyOption,
+                                    tint: OAColor.textPrimary
+                                ) {
+                                    saveAlarm(scope: .nextOnly)
+                                    showSaveScopePopover = false
+                                }
+
+                                saveScopeActionButton(
+                                    title: L10n.alarmEditorApplyScheduleOption,
+                                    tint: OAColor.actionCyan
+                                ) {
+                                    saveAlarm(scope: .schedule)
+                                    showSaveScopePopover = false
+                                }
+                            }
+                            .padding(14)
+                            .frame(width: 300, alignment: .leading)
+                            .presentationCompactAdaptation(.popover)
                         }
-                        .tint(OAColor.actionCyan)
                         .accessibilityLabel(route.existingAlarm == nil ? L10n.actionAdd : L10n.actionSave)
                     }
                 }
@@ -156,6 +181,11 @@ struct AlarmEditorView: View {
                 draft.useDefaultSharedSettings = false
             }
 #endif
+        }
+        .onChange(of: shouldShowSaveScopePrompt) { _, newValue in
+            if !newValue {
+                showSaveScopePopover = false
+            }
         }
     }
 
@@ -265,6 +295,23 @@ struct AlarmEditorView: View {
                 .background(
                     RoundedRectangle(cornerRadius: OARadius.chip, style: .continuous)
                         .fill(isSelected ? OAColor.actionCyan : OAColor.glassFill)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func saveScopeActionButton(title: LocalizedStringKey, tint: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(tint)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: OARadius.button, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                        .stroke(OAColor.glassStroke.opacity(0.75), lineWidth: 0.8)
                 )
         }
         .buttonStyle(.plain)

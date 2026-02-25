@@ -25,7 +25,7 @@
 "alarm_row_next_run_prefix" = "Klingelt";
 "alarm_row_next_run_today" = "Heute";
 "alarm_row_next_run_tomorrow" = "Morgen";
-"alarm_row_countdown_hours_minutes" = "in %d Std %d Min";
+"alarm_row_countdown_hours_minutes" = "in %d Std, %d Min";
 "alarm_row_countdown_minutes" = "in %d Min";
 "alarm_row_today_at_format" = "Heute um %@";
 "alarm_row_tomorrow_at_format" = "Morgen um %@";
