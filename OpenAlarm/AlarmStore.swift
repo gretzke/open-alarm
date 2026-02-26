@@ -149,8 +149,7 @@ final class AlarmStore: ObservableObject {
     func updateDefaultWakeUpCheckDefaults(_ defaults: WakeUpCheckDefaults) {
         let normalized = WakeUpCheckDefaults(
             enabledByDefault: defaults.enabledByDefault,
-            delayMinutes: defaults.clampedDelayMinutes,
-            disableSnoozeOnReAlert: defaults.disableSnoozeOnReAlert
+            delayMinutes: defaults.clampedDelayMinutes
         )
 
         guard defaultWakeUpCheckDefaults != normalized else {
@@ -165,8 +164,7 @@ final class AlarmStore: ObservableObject {
         updateDefaultWakeUpCheckDefaults(
             WakeUpCheckDefaults(
                 enabledByDefault: false,
-                delayMinutes: defaultWakeUpCheckDefaults.delayMinutes,
-                disableSnoozeOnReAlert: defaultWakeUpCheckDefaults.disableSnoozeOnReAlert
+                delayMinutes: defaultWakeUpCheckDefaults.delayMinutes
             )
         )
 
@@ -911,7 +909,6 @@ final class AlarmStore: ObservableObject {
             changed = true
         }
 
-        let shouldDisableSnoozeOnReAlert = alarm.wakeUpCheckDisableSnoozeOnReAlert
         let alarmID = alarm.id
 
         Task { @MainActor [weak self] in
@@ -934,7 +931,7 @@ final class AlarmStore: ObservableObject {
                     for: latestAlarm,
                     schedule: .fixed(deadlineAt),
                     isShadowTrial: false,
-                    forceDisableSnooze: shouldDisableSnoozeOnReAlert
+                    forceDisableSnooze: true
                 )
                 let remoteAlarm = try await scheduleAlarmWithUpdateFallback(
                     id: latestAlarm.id,

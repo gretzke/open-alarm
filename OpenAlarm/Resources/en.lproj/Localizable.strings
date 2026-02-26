@@ -53,7 +53,6 @@
 "alarm_editor_use_default_settings_hint" = "Shared settings are managed in Settings.";
 "alarm_editor_wake_check_toggle" = "Wake-up check";
 "alarm_editor_wake_check_delay_label" = "Check delay";
-"alarm_editor_wake_check_no_snooze_toggle" = "No snooze on wake-check re-ring";
 "alarm_editor_wake_check_permission_prompt_title" = "Enable wake-up checks";
 "alarm_editor_wake_check_permission_prompt_body" = "OpenAlarm needs notification permission to send wake-up check confirmations.";
 "alarm_editor_wake_check_permission_denied_title" = "Notifications are off";
@@ -92,7 +91,6 @@
 "settings_wake_check_title" = "Wake-up check defaults";
 "settings_wake_check_body" = "If enabled, alarms require confirmation after dismissal and can re-ring until confirmed awake.";
 "settings_wake_check_delay_label" = "Default check delay";
-"settings_wake_check_no_snooze_toggle" = "No snooze on wake-check re-ring";
 "settings_wake_check_enable_by_default_toggle" = "Enable wake-up check for new alarms";
 "settings_wake_check_permission_title" = "Notification permission";
 "settings_permission_title" = "Alarm permission";

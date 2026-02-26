@@ -164,7 +164,6 @@ struct AlarmEditorView: View {
                 draft.applyDefaultSharedSettings(alarmStore.defaultSharedSettings)
                 draft.wakeUpCheckEnabled = alarmStore.defaultWakeUpCheckDefaults.enabledByDefault
                 draft.wakeUpCheckDelayMinutes = alarmStore.defaultWakeUpCheckDefaults.clampedDelayMinutes
-                draft.wakeUpCheckDisableSnoozeOnReAlert = alarmStore.defaultWakeUpCheckDefaults.disableSnoozeOnReAlert
             } else if draft.useDefaultSharedSettings {
                 draft.applyDefaultSharedSettings(alarmStore.defaultSharedSettings)
             }
@@ -311,13 +310,6 @@ struct AlarmEditorView: View {
                     .oaGlassButtonChrome()
                 }
                 .buttonStyle(.plain)
-
-                Toggle(isOn: $draft.wakeUpCheckDisableSnoozeOnReAlert) {
-                    Text(L10n.alarmEditorWakeCheckNoSnoozeToggle)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(OAColor.textPrimary)
-                }
-                .tint(OAColor.actionCyan)
             }
         }
     }
@@ -389,7 +381,6 @@ struct AlarmEditorView: View {
             case .authorized:
                 draft.wakeUpCheckEnabled = true
                 draft.wakeUpCheckDelayMinutes = alarmStore.defaultWakeUpCheckDefaults.clampedDelayMinutes
-                draft.wakeUpCheckDisableSnoozeOnReAlert = alarmStore.defaultWakeUpCheckDefaults.disableSnoozeOnReAlert
             case .notDetermined:
                 showWakeCheckPermissionPrompt = true
             case .denied:
@@ -405,7 +396,6 @@ struct AlarmEditorView: View {
             case .authorized:
                 draft.wakeUpCheckEnabled = true
                 draft.wakeUpCheckDelayMinutes = alarmStore.defaultWakeUpCheckDefaults.clampedDelayMinutes
-                draft.wakeUpCheckDisableSnoozeOnReAlert = alarmStore.defaultWakeUpCheckDefaults.disableSnoozeOnReAlert
             case .notDetermined, .denied:
                 draft.wakeUpCheckEnabled = false
                 showWakeCheckPermissionDenied = true

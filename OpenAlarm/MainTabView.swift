@@ -758,20 +758,6 @@ private struct SettingsHomeView: View {
                         }
                         .buttonStyle(.plain)
 
-                        Toggle(isOn: Binding(
-                            get: { alarmStore.defaultWakeUpCheckDefaults.disableSnoozeOnReAlert },
-                            set: { value in
-                                var defaults = alarmStore.defaultWakeUpCheckDefaults
-                                defaults.disableSnoozeOnReAlert = value
-                                alarmStore.updateDefaultWakeUpCheckDefaults(defaults)
-                            }
-                        )) {
-                            Text(L10n.settingsWakeCheckNoSnoozeToggle)
-                                .font(.body.weight(.semibold))
-                                .foregroundStyle(OAColor.textPrimary)
-                        }
-                        .tint(OAColor.actionCyan)
-
                         HStack(spacing: 8) {
                             Text(L10n.settingsWakeCheckPermissionTitle)
                                 .font(.body.weight(.semibold))

@@ -9,12 +9,10 @@ enum NotificationPermissionStatus: Equatable {
 struct WakeUpCheckDefaults: Codable, Equatable, Sendable {
     var enabledByDefault: Bool
     var delayMinutes: Int
-    var disableSnoozeOnReAlert: Bool
 
     static let featureDefaults = WakeUpCheckDefaults(
         enabledByDefault: false,
-        delayMinutes: 5,
-        disableSnoozeOnReAlert: true
+        delayMinutes: 5
     )
 
     var clampedDelayMinutes: Int {

@@ -53,7 +53,6 @@
 "alarm_editor_use_default_settings_hint" = "Geteilte Einstellungen werden in den Einstellungen verwaltet.";
 "alarm_editor_wake_check_toggle" = "Aufwach-Check";
 "alarm_editor_wake_check_delay_label" = "Check-Verzögerung";
-"alarm_editor_wake_check_no_snooze_toggle" = "Kein Snooze beim erneuten Klingeln";
 "alarm_editor_wake_check_permission_prompt_title" = "Aufwach-Check aktivieren";
 "alarm_editor_wake_check_permission_prompt_body" = "OpenAlarm benötigt Mitteilungen, um Aufwach-Checks zu senden.";
 "alarm_editor_wake_check_permission_denied_title" = "Mitteilungen sind deaktiviert";
@@ -92,7 +91,6 @@
 "settings_wake_check_title" = "Aufwach-Check-Standards";
 "settings_wake_check_body" = "Wenn aktiviert, muss nach dem Ausschalten bestätigt werden, dass du wach bist; sonst klingelt es erneut.";
 "settings_wake_check_delay_label" = "Standard-Verzögerung";
-"settings_wake_check_no_snooze_toggle" = "Kein Snooze beim erneuten Klingeln";
 "settings_wake_check_enable_by_default_toggle" = "Aufwach-Check für neue Alarme aktivieren";
 "settings_wake_check_permission_title" = "Mitteilungs-Berechtigung";
 "settings_permission_title" = "Alarm-Berechtigung";
