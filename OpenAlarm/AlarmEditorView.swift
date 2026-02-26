@@ -127,15 +127,17 @@ struct AlarmEditorView: View {
                             attachmentAnchor: .rect(.bounds),
                             arrowEdge: .top
                         ) {
-                            VStack(alignment: .leading, spacing: 10) {
-                                saveScopeActionButton(title: L10n.alarmEditorApplyNextOnlyOption) {
-                                    saveAlarm(scope: .nextOnly)
-                                    showSaveScopePopover = false
-                                }
+                            GlassEffectContainer(spacing: 10) {
+                                VStack(alignment: .leading, spacing: 10) {
+                                    saveScopeActionButton(title: L10n.alarmEditorApplyNextOnlyOption) {
+                                        saveAlarm(scope: .nextOnly)
+                                        showSaveScopePopover = false
+                                    }
 
-                                saveScopeActionButton(title: L10n.alarmEditorApplyScheduleOption) {
-                                    saveAlarm(scope: .schedule)
-                                    showSaveScopePopover = false
+                                    saveScopeActionButton(title: L10n.alarmEditorApplyScheduleOption) {
+                                        saveAlarm(scope: .schedule)
+                                        showSaveScopePopover = false
+                                    }
                                 }
                             }
                             .padding(14)
@@ -306,14 +308,7 @@ struct AlarmEditorView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
                     .frame(maxWidth: .infinity)
-                    .background(
-                        RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                            .fill(OAColor.glassFill)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                            .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
-                    )
+                    .oaGlassButtonChrome()
                 }
                 .buttonStyle(.plain)
 
@@ -426,14 +421,7 @@ struct AlarmEditorView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
-                .glassEffect(
-                    .regular.tint(OAColor.actionCyan.opacity(0.22)).interactive(),
-                    in: RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                        .stroke(OAColor.glassStroke.opacity(0.75), lineWidth: 0.8)
-                )
+                .oaGlassProminentButtonChrome()
         }
         .buttonStyle(.plain)
     }

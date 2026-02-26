@@ -68,14 +68,7 @@ struct SharedAlarmSettingsEditor: View {
                     )
                 }
                 .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                        .fill(OAColor.glassFill)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                        .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
-                )
+                .oaGlassPanel()
             }
 
             Button {
@@ -85,12 +78,8 @@ struct SharedAlarmSettingsEditor: View {
                     .font(.headline.weight(.semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .foregroundStyle(OAColor.background)
-                    .background(
-                        RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                            .fill(OAColor.actionCyan)
-                    )
-                    .shadow(color: OAColor.actionCyan.opacity(0.36), radius: 16, x: 0, y: 10)
+                    .foregroundStyle(OAColor.actionCyan)
+                    .oaGlassProminentButtonChrome()
             }
             .buttonStyle(.plain)
             .disabled(isSchedulingTryOut)
@@ -250,35 +239,30 @@ private struct SharedSettingsSelectionSheetView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 10) {
-                    ForEach(options, id: \.self) { option in
-                        Button {
-                            onSelect(option)
-                        } label: {
-                            HStack {
-                                Text(format(option))
-                                    .foregroundStyle(OAColor.textPrimary)
-                                Spacer(minLength: 0)
-                                if option == selected {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(OAColor.actionCyan)
+                GlassEffectContainer(spacing: 10) {
+                    VStack(spacing: 10) {
+                        ForEach(options, id: \.self) { option in
+                            Button {
+                                onSelect(option)
+                            } label: {
+                                HStack {
+                                    Text(format(option))
+                                        .foregroundStyle(OAColor.textPrimary)
+                                    Spacer(minLength: 0)
+                                    if option == selected {
+                                        Image(systemName: "checkmark")
+                                            .foregroundStyle(OAColor.actionCyan)
+                                    }
                                 }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .contentShape(Rectangle())
+                                .oaGlassButtonChrome()
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
-                            .background(
-                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                    .fill(Color.clear)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                    .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
-                            )
+                            .frame(maxWidth: .infinity)
+                            .buttonStyle(.plain)
                         }
-                        .frame(maxWidth: .infinity)
-                        .buttonStyle(.plain)
                     }
                 }
                 .padding(20)

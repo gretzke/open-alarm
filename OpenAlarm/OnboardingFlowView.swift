@@ -92,14 +92,9 @@ private struct WelcomeStepView: View {
                     .font(.headline.weight(.semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .foregroundStyle(OAColor.background)
-                    .background(
-                        RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                            .fill(OAColor.actionCyan)
-                    )
-                    .shadow(color: OAColor.actionCyan.opacity(0.36), radius: 16, x: 0, y: 10)
             }
-            .buttonStyle(.plain)
+            .tint(OAColor.actionCyan)
+            .buttonStyle(.glassProminent)
             .accessibilityIdentifier("onboarding_welcome_next")
         }
         .padding(24)
@@ -141,14 +136,7 @@ private struct DefaultSharedSettingsStepView: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
                             .foregroundStyle(OAColor.textPrimary)
-                            .background(
-                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                    .fill(OAColor.glassFill)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                    .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
-                            )
+                            .oaGlassButtonChrome()
                     }
                     .buttonStyle(.plain)
 
@@ -159,14 +147,9 @@ private struct DefaultSharedSettingsStepView: View {
                             .font(.headline.weight(.semibold))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
-                            .foregroundStyle(OAColor.background)
-                            .background(
-                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                    .fill(OAColor.actionCyan)
-                            )
-                            .shadow(color: OAColor.actionCyan.opacity(0.36), radius: 16, x: 0, y: 10)
                     }
-                    .buttonStyle(.plain)
+                    .tint(OAColor.actionCyan)
+                    .buttonStyle(.glassProminent)
                 }
 
                 SharedAlarmSettingsEditor(
@@ -223,7 +206,7 @@ private struct AlarmPermissionPrePromptStepView: View {
                 HStack(spacing: 10) {
                     if isRequesting {
                         ProgressView()
-                            .tint(OAColor.background)
+                            .tint(OAColor.textPrimary)
                     }
 
                     Text(isRequesting ? L10n.actionRequesting : L10n.actionNext)
@@ -231,14 +214,9 @@ private struct AlarmPermissionPrePromptStepView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .foregroundStyle(OAColor.background)
-                .background(
-                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                        .fill(OAColor.actionCyan)
-                )
-                .shadow(color: OAColor.actionCyan.opacity(0.36), radius: 16, x: 0, y: 10)
             }
-            .buttonStyle(.plain)
+            .tint(OAColor.actionCyan)
+            .buttonStyle(.glassProminent)
             .disabled(isRequesting)
             .accessibilityIdentifier("onboarding_permission_request_next")
         }
@@ -276,14 +254,9 @@ private struct AlarmPermissionDeniedStepView: View {
                     .font(.headline.weight(.semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .foregroundStyle(OAColor.background)
-                    .background(
-                        RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                            .fill(OAColor.actionCyan)
-                    )
-                    .shadow(color: OAColor.actionCyan.opacity(0.36), radius: 16, x: 0, y: 10)
             }
-            .buttonStyle(.plain)
+            .tint(OAColor.actionCyan)
+            .buttonStyle(.glassProminent)
             .accessibilityIdentifier("onboarding_permission_denied_open_settings")
         }
         .padding(24)

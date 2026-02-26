@@ -25,20 +25,73 @@ enum OARadius {
 struct OAGlassCardModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .background(
-                RoundedRectangle(cornerRadius: OARadius.card, style: .continuous)
-                    .fill(OAColor.glassFill)
+            .glassEffect(
+                .regular,
+                in: RoundedRectangle(cornerRadius: OARadius.card, style: .continuous)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: OARadius.card, style: .continuous)
                     .stroke(OAColor.glassStroke, lineWidth: 1)
             )
-            .shadow(color: OAColor.glassGlow, radius: 16, x: 0, y: 8)
+            .shadow(color: OAColor.glassGlow.opacity(0.65), radius: 14, x: 0, y: 8)
+    }
+}
+
+private struct OAGlassPanelModifier: ViewModifier {
+    let cornerRadius: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .glassEffect(
+                .regular,
+                in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(OAColor.glassStroke.opacity(0.75), lineWidth: 0.8)
+            )
+    }
+}
+
+private struct OAGlassButtonChromeModifier: ViewModifier {
+    let tint: Color?
+    let cornerRadius: CGFloat
+
+    func body(content: Content) -> some View {
+        Group {
+            if let tint {
+                content.glassEffect(
+                    .regular.tint(tint).interactive(),
+                    in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                )
+            } else {
+                content.glassEffect(
+                    .regular.interactive(),
+                    in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                )
+            }
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .stroke(OAColor.glassStroke.opacity(0.75), lineWidth: 0.8)
+        )
     }
 }
 
 extension View {
     func oaGlassCard() -> some View {
         modifier(OAGlassCardModifier())
+    }
+
+    func oaGlassPanel(cornerRadius: CGFloat = OARadius.button) -> some View {
+        modifier(OAGlassPanelModifier(cornerRadius: cornerRadius))
+    }
+
+    func oaGlassButtonChrome(cornerRadius: CGFloat = OARadius.button) -> some View {
+        modifier(OAGlassButtonChromeModifier(tint: nil, cornerRadius: cornerRadius))
+    }
+
+    func oaGlassProminentButtonChrome(_ tint: Color = OAColor.actionCyan, cornerRadius: CGFloat = OARadius.button) -> some View {
+        modifier(OAGlassButtonChromeModifier(tint: tint.opacity(0.28), cornerRadius: cornerRadius))
     }
 }

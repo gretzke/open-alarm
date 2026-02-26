@@ -224,8 +224,13 @@ private struct NapBannerView: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(OAColor.glassFill)
+                        .fill(Color.clear)
                         .frame(width: 44, height: 44)
+                        .glassEffect(.regular, in: Circle())
+                        .overlay(
+                            Circle()
+                                .stroke(OAColor.glassStroke.opacity(0.75), lineWidth: 0.8)
+                        )
 
                     Image(systemName: "zzz")
                         .font(.title3.weight(.bold))
@@ -296,11 +301,8 @@ private struct ActiveNapRowView: View {
                         .font(.subheadline.weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
-                        .foregroundStyle(OAColor.background)
-                        .background(
-                            RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                .fill(OAColor.actionCyan)
-                        )
+                        .foregroundStyle(OAColor.actionCyan)
+                        .oaGlassProminentButtonChrome()
                 }
                 .buttonStyle(.plain)
 
@@ -309,15 +311,8 @@ private struct ActiveNapRowView: View {
                         .font(.subheadline.weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
-                        .foregroundStyle(OAColor.textPrimary)
-                        .background(
-                            RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                .fill(OAColor.glassFill)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                .stroke(OAColor.danger.opacity(0.75), lineWidth: 0.9)
-                        )
+                        .foregroundStyle(OAColor.danger)
+                        .oaGlassButtonChrome()
                 }
                 .buttonStyle(.plain)
             }
@@ -460,14 +455,7 @@ private struct AlarmRowView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
-                .glassEffect(
-                    .regular.tint(OAColor.actionCyan.opacity(0.22)).interactive(),
-                    in: RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                        .stroke(OAColor.glassStroke.opacity(0.75), lineWidth: 0.8)
-                )
+                .oaGlassProminentButtonChrome()
         }
         .buttonStyle(.plain)
     }
@@ -558,16 +546,18 @@ private struct AlarmRowView: View {
                     attachmentAnchor: .rect(.bounds),
                     arrowEdge: .top
                 ) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        popoverActionButton(
-                            title: L10n.alarmRowSkipNextYes,
-                            action: onSkipNextSelected
-                        )
+                    GlassEffectContainer(spacing: 10) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            popoverActionButton(
+                                title: L10n.alarmRowSkipNextYes,
+                                action: onSkipNextSelected
+                            )
 
-                        popoverActionButton(
-                            title: L10n.alarmRowSkipNextNo,
-                            action: onDisableCompletelySelected
-                        )
+                            popoverActionButton(
+                                title: L10n.alarmRowSkipNextNo,
+                                action: onDisableCompletelySelected
+                            )
+                        }
                     }
                     .padding(14)
                     .frame(width: 252, alignment: .leading)
@@ -712,14 +702,7 @@ private struct SettingsHomeView: View {
                             .padding(.horizontal, 16)
                             .padding(.vertical, 14)
                             .frame(maxWidth: .infinity)
-                            .background(
-                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                    .fill(OAColor.glassFill)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                    .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
-                            )
+                            .oaGlassButtonChrome()
                         }
                         .buttonStyle(.plain)
                     }
@@ -771,14 +754,7 @@ private struct SettingsHomeView: View {
                             .padding(.horizontal, 16)
                             .padding(.vertical, 14)
                             .frame(maxWidth: .infinity)
-                            .background(
-                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                    .fill(OAColor.glassFill)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                    .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
-                            )
+                            .oaGlassButtonChrome()
                         }
                         .buttonStyle(.plain)
 
@@ -837,14 +813,7 @@ private struct SettingsHomeView: View {
                             .padding(.horizontal, 16)
                             .padding(.vertical, 14)
                             .frame(maxWidth: .infinity)
-                            .background(
-                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                    .fill(OAColor.glassFill)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                    .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
-                            )
+                            .oaGlassButtonChrome()
                         }
                         .buttonStyle(.plain)
                     }
@@ -883,14 +852,7 @@ private struct SettingsHomeView: View {
                             .padding(.horizontal, 16)
                             .padding(.vertical, 14)
                             .frame(maxWidth: .infinity)
-                            .background(
-                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                    .fill(OAColor.glassFill)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                    .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
-                            )
+                            .oaGlassButtonChrome()
                         }
                         .buttonStyle(.plain)
                     }
