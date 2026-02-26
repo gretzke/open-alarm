@@ -79,6 +79,11 @@ enum AlarmWeekday: Int, CaseIterable, Codable, Hashable, Sendable, Identifiable 
     }
 }
 
+
+enum AlarmFeatureRequirement: Hashable, Sendable {
+    case notifications
+}
+
 struct SharedAlarmSettings: Codable, Equatable, Sendable {
     var snoozeEnabled: Bool
     var snoozeDurationMinutes: Int
@@ -104,6 +109,20 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         }
 
         return currentCount < maxSnoozes
+    }
+
+    var featureRequirements: Set<AlarmFeatureRequirement> {
+        var requirements = Set<AlarmFeatureRequirement>()
+
+        if wakeUpCheckEnabled {
+            requirements.insert(.notifications)
+        }
+
+        return requirements
+    }
+
+    func hasFeatureRequirement(_ requirement: AlarmFeatureRequirement) -> Bool {
+        featureRequirements.contains(requirement)
     }
 
     private enum CodingKeys: String, CodingKey {

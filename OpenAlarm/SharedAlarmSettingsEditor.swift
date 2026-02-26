@@ -12,6 +12,13 @@ private enum SharedSettingsSelectionOption: Hashable {
     case unlimited
 }
 
+private enum WakeCheckPermissionFlowStep: String, Identifiable {
+    case prePrompt
+    case denied
+
+    var id: String { rawValue }
+}
+
 struct SharedAlarmSettingsEditor: View {
     @EnvironmentObject private var alarmStore: AlarmStore
 
@@ -24,8 +31,7 @@ struct SharedAlarmSettingsEditor: View {
     @State private var isSchedulingTryOut = false
     @State private var showTryOutToast = false
     @State private var tryOutError: LocalizedStringKey?
-    @State private var showWakeCheckPermissionPrompt = false
-    @State private var showWakeCheckPermissionDenied = false
+    @State private var wakeCheckPermissionFlowStep: WakeCheckPermissionFlowStep?
 
     private var snoozeDurationOptions: [Int] {
         if allowFiveSecondSnoozeOption {
@@ -78,10 +84,18 @@ struct SharedAlarmSettingsEditor: View {
                 Toggle(isOn: Binding(
                     get: { settings.wakeUpCheckEnabled },
                     set: { enabled in
-                        if enabled {
+                        guard enabled else {
+                            settings.wakeUpCheckEnabled = false
+                            return
+                        }
+
+                        var candidate = settings
+                        candidate.wakeUpCheckEnabled = true
+
+                        if candidate.hasFeatureRequirement(.notifications) {
                             attemptEnableWakeCheck()
                         } else {
-                            settings.wakeUpCheckEnabled = false
+                            settings.wakeUpCheckEnabled = true
                         }
                     }
                 )) {
@@ -220,29 +234,25 @@ struct SharedAlarmSettingsEditor: View {
         .task {
             await alarmStore.refreshNotificationPermissionStatus()
         }
-        .alert(L10n.alarmEditorWakeCheckPermissionPromptTitle, isPresented: $showWakeCheckPermissionPrompt) {
-            Button(L10n.actionNext) {
-                requestWakeCheckPermissionAfterPrompt()
+        .fullScreenCover(item: $wakeCheckPermissionFlowStep) { step in
+            switch step {
+            case .prePrompt:
+                WakeCheckPermissionPrePromptView {
+                    requestWakeCheckPermissionAfterPrompt()
+                }
+            case .denied:
+                WakeCheckPermissionDeniedView(
+                    onOpenSettings: {
+                        wakeCheckPermissionFlowStep = nil
+                        alarmStore.openSettings()
+                    },
+                    onDisableFeature: {
+                        settings.wakeUpCheckEnabled = false
+                        alarmStore.disableWakeUpCheckFeatureGlobally()
+                        wakeCheckPermissionFlowStep = nil
+                    }
+                )
             }
-            Button(L10n.actionCancel, role: .cancel) {
-                settings.wakeUpCheckEnabled = false
-            }
-        } message: {
-            Text(L10n.alarmEditorWakeCheckPermissionPromptBody)
-        }
-        .alert(L10n.alarmEditorWakeCheckPermissionDeniedTitle, isPresented: $showWakeCheckPermissionDenied) {
-            Button(L10n.actionOpenSettings) {
-                alarmStore.openSettings()
-            }
-            Button(L10n.alarmEditorWakeCheckDisableFeatureAction, role: .destructive) {
-                settings.wakeUpCheckEnabled = false
-                alarmStore.disableWakeUpCheckFeatureGlobally()
-            }
-            Button(L10n.actionCancel, role: .cancel) {
-                settings.wakeUpCheckEnabled = false
-            }
-        } message: {
-            Text(L10n.alarmEditorWakeCheckPermissionDeniedBody)
         }
     }
 
@@ -292,10 +302,13 @@ struct SharedAlarmSettingsEditor: View {
             switch status {
             case .authorized:
                 settings.wakeUpCheckEnabled = true
+                wakeCheckPermissionFlowStep = nil
             case .notDetermined:
-                showWakeCheckPermissionPrompt = true
+                settings.wakeUpCheckEnabled = false
+                wakeCheckPermissionFlowStep = .prePrompt
             case .denied:
-                showWakeCheckPermissionDenied = true
+                settings.wakeUpCheckEnabled = false
+                wakeCheckPermissionFlowStep = .denied
             }
         }
     }
@@ -306,9 +319,10 @@ struct SharedAlarmSettingsEditor: View {
             switch status {
             case .authorized:
                 settings.wakeUpCheckEnabled = true
+                wakeCheckPermissionFlowStep = nil
             case .notDetermined, .denied:
                 settings.wakeUpCheckEnabled = false
-                showWakeCheckPermissionDenied = true
+                wakeCheckPermissionFlowStep = .denied
             }
         }
     }
@@ -334,6 +348,98 @@ struct SharedAlarmSettingsEditor: View {
             }
             isSchedulingTryOut = false
         }
+    }
+}
+
+private struct WakeCheckPermissionPrePromptView: View {
+    let onRequestPermission: () -> Void
+
+    var body: some View {
+        VStack(spacing: 24) {
+            VStack(spacing: 16) {
+                Image(systemName: "checkmark.bubble")
+                    .font(.system(size: 52, weight: .semibold))
+                    .foregroundStyle(OAColor.actionCyan)
+
+                Text(L10n.alarmEditorWakeCheckPermissionPromptTitle)
+                    .font(.title.bold())
+                    .foregroundStyle(OAColor.textPrimary)
+                    .multilineTextAlignment(.center)
+
+                Text(L10n.alarmEditorWakeCheckPermissionPromptBody)
+                    .font(.body)
+                    .foregroundStyle(OAColor.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(24)
+            .oaGlassCard()
+
+            Button(action: onRequestPermission) {
+                Text(L10n.actionNext)
+                    .font(.headline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+            }
+            .tint(OAColor.actionCyan)
+            .buttonStyle(.glassProminent)
+            .accessibilityIdentifier("wake_check_permission_next")
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(OAColor.background.ignoresSafeArea())
+    }
+}
+
+private struct WakeCheckPermissionDeniedView: View {
+    let onOpenSettings: () -> Void
+    let onDisableFeature: () -> Void
+
+    var body: some View {
+        VStack(spacing: 24) {
+            VStack(spacing: 16) {
+                Image(systemName: "bell.slash.fill")
+                    .font(.system(size: 52, weight: .semibold))
+                    .foregroundStyle(OAColor.danger)
+
+                Text(L10n.alarmEditorWakeCheckPermissionDeniedTitle)
+                    .font(.title.bold())
+                    .foregroundStyle(OAColor.textPrimary)
+                    .multilineTextAlignment(.center)
+
+                Text(L10n.alarmEditorWakeCheckPermissionDeniedBody)
+                    .font(.body)
+                    .foregroundStyle(OAColor.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(24)
+            .oaGlassCard()
+
+            VStack(spacing: 12) {
+                Button(action: onOpenSettings) {
+                    Text(L10n.actionOpenSettings)
+                        .font(.headline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                }
+                .tint(OAColor.actionCyan)
+                .buttonStyle(.glassProminent)
+                .accessibilityIdentifier("wake_check_permission_open_settings")
+
+                Button(action: onDisableFeature) {
+                    Text(L10n.alarmEditorWakeCheckDisableFeatureAction)
+                        .font(.headline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                }
+                .foregroundStyle(OAColor.textPrimary)
+                .oaGlassButtonChrome()
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("wake_check_permission_disable_feature")
+            }
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(OAColor.background.ignoresSafeArea())
     }
 }
 

@@ -162,6 +162,10 @@ final class AlarmStore: ObservableObject {
 
         var changed = false
         for index in alarms.indices {
+            guard !alarms[index].useDefaultSharedSettings else {
+                continue
+            }
+
             if alarms[index].customSharedSettings.wakeUpCheckEnabled {
                 alarms[index].customSharedSettings.wakeUpCheckEnabled = false
                 alarms[index].updatedAt = .now
