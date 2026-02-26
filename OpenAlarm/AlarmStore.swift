@@ -1206,11 +1206,11 @@ final class AlarmStore: ObservableObject {
                     alarm.nextTriggerOverrideDate = nil
                     alarm.updatedAt = .now
                     changed = true
-                    if alarm.isEnabled {
+                    if alarm.isEnabled, !alarm.wakeUpCheckEnabled {
                         scheduleRepeatRestore(for: alarm)
                     }
                 }
-            } else if hadSnoozes, alarm.isEnabled {
+            } else if hadSnoozes, alarm.isEnabled, !alarm.wakeUpCheckEnabled {
                 scheduleRepeatRestore(for: alarm)
             }
 
