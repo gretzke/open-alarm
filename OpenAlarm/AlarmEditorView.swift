@@ -124,7 +124,7 @@ struct AlarmEditorView: View {
                         .buttonStyle(.glassProminent)
                         .popover(
                             isPresented: $showSaveScopePopover,
-                            attachmentAnchor: .rect(.bounds),
+                            attachmentAnchor: .point(.topTrailing),
                             arrowEdge: .top
                         ) {
                             GlassEffectContainer(spacing: 10) {
