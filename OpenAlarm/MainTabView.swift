@@ -752,7 +752,6 @@ private struct DefaultSharedSettingsView: View {
                             alarmStore.updateDefaultWakeUpCheckDefaults(defaults)
                         }
                     ),
-                    showWakeCheckPermissionStatus: true,
                     allowFiveSecondSnoozeOption: alarmStore.testingModeEnabled
                 )
             }
