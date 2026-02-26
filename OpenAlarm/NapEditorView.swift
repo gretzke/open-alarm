@@ -62,12 +62,10 @@ struct NapEditorView: View {
                         } else {
                             Image(systemName: "checkmark")
                                 .font(.headline.weight(.bold))
-                                .foregroundStyle(OAColor.actionCyan)
-                                .frame(width: 32, height: 32)
-                                .glassEffect(.regular.tint(OAColor.actionCyan.opacity(0.28)).interactive(), in: Circle())
                         }
                     }
-                    .buttonStyle(.plain)
+                    .tint(OAColor.actionCyan)
+                    .buttonStyle(.glassProminent)
                     .disabled(isSaving)
                     .accessibilityLabel(L10n.napEditorStartButton)
                 }
