@@ -173,25 +173,16 @@ enum AlarmPersistence {
         }
     }
 
-    static func loadDefaultWakeUpCheckDefaults(from defaults: UserDefaults = .standard) -> WakeUpCheckDefaults {
+    static func loadLegacyDefaultWakeUpCheckDefaults(from defaults: UserDefaults = .standard) -> WakeUpCheckDefaults? {
         guard let data = defaults.data(forKey: defaultWakeUpCheckDefaultsKey) else {
-            return .featureDefaults
+            return nil
         }
 
-        do {
-            return try JSONDecoder().decode(WakeUpCheckDefaults.self, from: data)
-        } catch {
-            return .featureDefaults
-        }
+        return try? JSONDecoder().decode(WakeUpCheckDefaults.self, from: data)
     }
 
-    static func saveDefaultWakeUpCheckDefaults(_ settings: WakeUpCheckDefaults, to defaults: UserDefaults = .standard) {
-        do {
-            let data = try JSONEncoder().encode(settings)
-            defaults.set(data, forKey: defaultWakeUpCheckDefaultsKey)
-        } catch {
-            defaults.removeObject(forKey: defaultWakeUpCheckDefaultsKey)
-        }
+    static func clearLegacyDefaultWakeUpCheckDefaults(from defaults: UserDefaults = .standard) {
+        defaults.removeObject(forKey: defaultWakeUpCheckDefaultsKey)
     }
 
     static func loadWakeUpCheckSessions(from defaults: UserDefaults = .standard) -> [WakeUpCheckSession] {

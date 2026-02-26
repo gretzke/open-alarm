@@ -71,8 +71,6 @@ struct AlarmEditorView: View {
                     if !draft.useDefaultSharedSettings {
                         SharedAlarmSettingsEditor(
                             settings: $draft.customSharedSettings,
-                            wakeCheckEnabled: $draft.wakeUpCheckEnabled,
-                            wakeCheckDelayMinutes: $draft.wakeUpCheckDelayMinutes,
                             allowFiveSecondSnoozeOption: alarmStore.testingModeEnabled,
                             openSnoozeDurationOnAppearFromLaunchArg: true
                         )
@@ -161,12 +159,8 @@ struct AlarmEditorView: View {
             if route.existingAlarm == nil {
                 draft.useDefaultSharedSettings = true
                 draft.applyDefaultSharedSettings(alarmStore.defaultSharedSettings)
-                draft.wakeUpCheckEnabled = alarmStore.defaultWakeUpCheckDefaults.enabledByDefault
-                draft.wakeUpCheckDelayMinutes = alarmStore.defaultWakeUpCheckDefaults.clampedDelayMinutes
             } else if draft.useDefaultSharedSettings {
                 draft.applyDefaultSharedSettings(alarmStore.defaultSharedSettings)
-                draft.wakeUpCheckEnabled = alarmStore.defaultWakeUpCheckDefaults.enabledByDefault
-                draft.wakeUpCheckDelayMinutes = alarmStore.defaultWakeUpCheckDefaults.clampedDelayMinutes
             }
 
 #if DEBUG
@@ -258,10 +252,6 @@ struct AlarmEditorView: View {
                 set: { useDefault in
                     draft.useDefaultSharedSettings = useDefault
                     draft.applyDefaultSharedSettings(alarmStore.defaultSharedSettings)
-                    if useDefault {
-                        draft.wakeUpCheckEnabled = alarmStore.defaultWakeUpCheckDefaults.enabledByDefault
-                        draft.wakeUpCheckDelayMinutes = alarmStore.defaultWakeUpCheckDefaults.clampedDelayMinutes
-                    }
                 }
             )) {
                 Text(L10n.alarmEditorUseDefaultSettingsToggle)
@@ -340,9 +330,9 @@ struct AlarmEditorView: View {
         let otherFieldsUnchanged =
             normalizedExistingName == normalizedDraftName &&
             existing.deleteAfterUse == draft.deleteAfterUse &&
-            existing.wakeUpCheckEnabled == draft.wakeUpCheckEnabled &&
             existing.useDefaultSharedSettings == draft.useDefaultSharedSettings &&
-            existing.customSharedSettings == draft.customSharedSettings
+            existing.resolvedSharedSettings(defaults: alarmStore.defaultSharedSettings) ==
+                draft.resolvedSharedSettings(defaults: alarmStore.defaultSharedSettings)
 
         return otherFieldsUnchanged
     }

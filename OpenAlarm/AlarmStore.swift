@@ -8,7 +8,6 @@ import UIKit
 final class AlarmStore: ObservableObject {
     @Published private(set) var alarms: [UserAlarm] = []
     @Published var defaultSharedSettings: SharedAlarmSettings
-    @Published var defaultWakeUpCheckDefaults: WakeUpCheckDefaults
     @Published var defaultNapDurationMinutes: Int
     @Published var testingModeEnabled: Bool
     @Published private(set) var activeNap: NapAlarmSession?
@@ -40,12 +39,19 @@ final class AlarmStore: ObservableObject {
         self.wakeUpCheckNotificationService = wakeUpCheckNotificationService ?? WakeUpCheckNotificationService()
         self.userDefaults = userDefaults
         self.defaultSharedSettings = AlarmPersistence.loadDefaultSharedSettings(from: userDefaults)
-        self.defaultWakeUpCheckDefaults = AlarmPersistence.loadDefaultWakeUpCheckDefaults(from: userDefaults)
         self.defaultNapDurationMinutes = AlarmPersistence.loadDefaultNapDurationMinutes(from: userDefaults)
         self.testingModeEnabled = AlarmPersistence.loadTestingModeEnabled(from: userDefaults)
         self.activeNap = AlarmPersistence.loadActiveNapSession(from: userDefaults)
         self.permissionStatus = self.permissionService.currentStatus()
         self.wakeUpCheckSessionsByAlarmID = Dictionary(uniqueKeysWithValues: AlarmPersistence.loadWakeUpCheckSessions(from: userDefaults).map { ($0.alarmID, $0) })
+
+        // Legacy migration: previous builds stored wake-check defaults separately.
+        if let legacyWakeDefaults = AlarmPersistence.loadLegacyDefaultWakeUpCheckDefaults(from: userDefaults) {
+            self.defaultSharedSettings.wakeUpCheckEnabled = legacyWakeDefaults.enabledByDefault
+            self.defaultSharedSettings.wakeUpCheckDelayMinutes = legacyWakeDefaults.clampedDelayMinutes
+            AlarmPersistence.saveDefaultSharedSettings(self.defaultSharedSettings, to: userDefaults)
+            AlarmPersistence.clearLegacyDefaultWakeUpCheckDefaults(from: userDefaults)
+        }
 
         self.wakeUpCheckNotificationService.ensureCategoryRegistered()
 
@@ -146,33 +152,21 @@ final class AlarmStore: ObservableObject {
         }
     }
 
-    func updateDefaultWakeUpCheckDefaults(_ defaults: WakeUpCheckDefaults) {
-        let normalized = WakeUpCheckDefaults(
-            enabledByDefault: defaults.enabledByDefault,
-            delayMinutes: defaults.clampedDelayMinutes
-        )
-
-        guard defaultWakeUpCheckDefaults != normalized else {
-            return
+    func disableWakeUpCheckFeatureGlobally() {
+        var defaults = defaultSharedSettings
+        if defaults.wakeUpCheckEnabled {
+            defaults.wakeUpCheckEnabled = false
+            defaultSharedSettings = defaults
+            AlarmPersistence.saveDefaultSharedSettings(defaults, to: userDefaults)
         }
 
-        defaultWakeUpCheckDefaults = normalized
-        AlarmPersistence.saveDefaultWakeUpCheckDefaults(normalized, to: userDefaults)
-    }
-
-    func disableWakeUpCheckFeatureGlobally() {
-        updateDefaultWakeUpCheckDefaults(
-            WakeUpCheckDefaults(
-                enabledByDefault: false,
-                delayMinutes: defaultWakeUpCheckDefaults.delayMinutes
-            )
-        )
-
         var changed = false
-        for index in alarms.indices where alarms[index].wakeUpCheckEnabled {
-            alarms[index].wakeUpCheckEnabled = false
-            alarms[index].updatedAt = .now
-            changed = true
+        for index in alarms.indices {
+            if alarms[index].customSharedSettings.wakeUpCheckEnabled {
+                alarms[index].customSharedSettings.wakeUpCheckEnabled = false
+                alarms[index].updatedAt = .now
+                changed = true
+            }
         }
 
         if changed {
@@ -449,7 +443,6 @@ final class AlarmStore: ObservableObject {
             time: .now,
             repeatDays: [],
             deleteAfterUse: true,
-            wakeUpCheckEnabled: false,
             useDefaultSharedSettings: false,
             customSharedSettings: sharedSettings
         )
@@ -505,7 +498,7 @@ final class AlarmStore: ObservableObject {
             snoozeDurationMinutes: trialSharedSettings.snoozeDurationMinutes,
             maxSnoozes: trialSharedSettings.maxSnoozes,
             snoozeCount: 0,
-            wakeUpCheckEnabled: baseAlarm.wakeUpCheckEnabled,
+            wakeUpCheckEnabled: trialSharedSettings.wakeUpCheckEnabled,
             lifecycleState: .scheduled,
             createdAt: .now,
             updatedAt: .now
@@ -667,7 +660,8 @@ final class AlarmStore: ObservableObject {
             remoteStates.removeValue(forKey: id)
         }
 
-        if !nextAlarm.wakeUpCheckEnabled,
+        let wakeCheckEnabled = nextAlarm.resolvedSharedSettings(defaults: defaultSharedSettings).wakeUpCheckEnabled
+        if !wakeCheckEnabled,
            let session = wakeUpCheckSessionsByAlarmID.removeValue(forKey: id) {
             wakeUpCheckNotificationService.cancel(notificationID: session.notificationID)
             persistWakeUpCheckSessions()
@@ -867,12 +861,6 @@ final class AlarmStore: ObservableObject {
 
     private func startWakeUpCheckCycle(for alarm: inout UserAlarm, changed: inout Bool) -> Bool {
         guard notificationPermissionStatus == .authorized else {
-            if alarm.wakeUpCheckEnabled {
-                alarm.wakeUpCheckEnabled = false
-                alarm.updatedAt = .now
-                changed = true
-            }
-
             if let session = wakeUpCheckSessionsByAlarmID.removeValue(forKey: alarm.id) {
                 wakeUpCheckNotificationService.cancel(notificationID: session.notificationID)
                 persistWakeUpCheckSessions()
@@ -881,7 +869,8 @@ final class AlarmStore: ObservableObject {
             return false
         }
 
-        let delayMinutes = min(60, max(1, alarm.wakeUpCheckDelayMinutes))
+        let resolvedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
+        let delayMinutes = min(60, max(1, resolvedSettings.wakeUpCheckDelayMinutes))
         let checkAt = Date.now.addingTimeInterval(TimeInterval(delayMinutes * 60))
         let deadlineAt = checkAt.addingTimeInterval(3 * 60)
 
@@ -1168,6 +1157,7 @@ final class AlarmStore: ObservableObject {
 
         // Snooze transition path should remain active and not mark completion.
         let effectiveSharedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
+        let wakeCheckEnabled = effectiveSharedSettings.wakeUpCheckEnabled
 
         if effectiveSharedSettings.snoozeEnabled,
            hadSnoozes,
@@ -1204,15 +1194,15 @@ final class AlarmStore: ObservableObject {
                     alarm.nextTriggerOverrideDate = nil
                     alarm.updatedAt = .now
                     changed = true
-                    if alarm.isEnabled, !alarm.wakeUpCheckEnabled {
+                    if alarm.isEnabled, !wakeCheckEnabled {
                         scheduleRepeatRestore(for: alarm)
                     }
                 }
-            } else if hadSnoozes, alarm.isEnabled, !alarm.wakeUpCheckEnabled {
+            } else if hadSnoozes, alarm.isEnabled, !wakeCheckEnabled {
                 scheduleRepeatRestore(for: alarm)
             }
 
-            if alarm.wakeUpCheckEnabled,
+            if wakeCheckEnabled,
                startWakeUpCheckCycle(for: &alarm, changed: &changed) {
                 return
             }
@@ -1224,7 +1214,7 @@ final class AlarmStore: ObservableObject {
             return
         }
 
-        if alarm.wakeUpCheckEnabled,
+        if wakeCheckEnabled,
            startWakeUpCheckCycle(for: &alarm, changed: &changed) {
             return
         }

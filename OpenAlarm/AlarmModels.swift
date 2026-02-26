@@ -83,11 +83,15 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
     var snoozeEnabled: Bool
     var snoozeDurationMinutes: Int
     var maxSnoozes: Int?
+    var wakeUpCheckEnabled: Bool
+    var wakeUpCheckDelayMinutes: Int
 
     static let featureDefaults = SharedAlarmSettings(
         snoozeEnabled: false,
         snoozeDurationMinutes: 5,
-        maxSnoozes: 3
+        maxSnoozes: 3,
+        wakeUpCheckEnabled: false,
+        wakeUpCheckDelayMinutes: 5
     )
 
     func canSnoozeAgain(currentCount: Int) -> Bool {
@@ -101,6 +105,37 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
 
         return currentCount < maxSnoozes
     }
+
+    private enum CodingKeys: String, CodingKey {
+        case snoozeEnabled
+        case snoozeDurationMinutes
+        case maxSnoozes
+        case wakeUpCheckEnabled
+        case wakeUpCheckDelayMinutes
+    }
+
+    init(
+        snoozeEnabled: Bool,
+        snoozeDurationMinutes: Int,
+        maxSnoozes: Int?,
+        wakeUpCheckEnabled: Bool,
+        wakeUpCheckDelayMinutes: Int
+    ) {
+        self.snoozeEnabled = snoozeEnabled
+        self.snoozeDurationMinutes = snoozeDurationMinutes
+        self.maxSnoozes = maxSnoozes
+        self.wakeUpCheckEnabled = wakeUpCheckEnabled
+        self.wakeUpCheckDelayMinutes = max(1, wakeUpCheckDelayMinutes)
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        snoozeEnabled = try container.decodeIfPresent(Bool.self, forKey: .snoozeEnabled) ?? SharedAlarmSettings.featureDefaults.snoozeEnabled
+        snoozeDurationMinutes = try container.decodeIfPresent(Int.self, forKey: .snoozeDurationMinutes) ?? SharedAlarmSettings.featureDefaults.snoozeDurationMinutes
+        maxSnoozes = try container.decodeIfPresent(Int.self, forKey: .maxSnoozes) ?? SharedAlarmSettings.featureDefaults.maxSnoozes
+        wakeUpCheckEnabled = try container.decodeIfPresent(Bool.self, forKey: .wakeUpCheckEnabled) ?? SharedAlarmSettings.featureDefaults.wakeUpCheckEnabled
+        wakeUpCheckDelayMinutes = max(1, try container.decodeIfPresent(Int.self, forKey: .wakeUpCheckDelayMinutes) ?? SharedAlarmSettings.featureDefaults.wakeUpCheckDelayMinutes)
+    }
 }
 
 struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
@@ -110,8 +145,6 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
     var minute: Int
     var repeatDays: [AlarmWeekday]
     var deleteAfterUse: Bool
-    var wakeUpCheckEnabled: Bool
-    var wakeUpCheckDelayMinutes: Int
 
     var useDefaultSharedSettings: Bool
     var customSharedSettings: SharedAlarmSettings
@@ -131,8 +164,6 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         minute: Int,
         repeatDays: [AlarmWeekday],
         deleteAfterUse: Bool,
-        wakeUpCheckEnabled: Bool,
-        wakeUpCheckDelayMinutes: Int,
         useDefaultSharedSettings: Bool,
         customSharedSettings: SharedAlarmSettings,
         nextTriggerOverrideDate: Date?,
@@ -149,8 +180,6 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         self.minute = minute
         self.repeatDays = repeatDays.sorted { $0.rawValue < $1.rawValue }
         self.deleteAfterUse = deleteAfterUse
-        self.wakeUpCheckEnabled = wakeUpCheckEnabled
-        self.wakeUpCheckDelayMinutes = max(1, wakeUpCheckDelayMinutes)
         self.useDefaultSharedSettings = useDefaultSharedSettings
         self.customSharedSettings = customSharedSettings
         self.nextTriggerOverrideDate = nextTriggerOverrideDate
@@ -221,8 +250,8 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         case minute
         case repeatDays
         case deleteAfterUse
-        case wakeUpCheckEnabled
-        case wakeUpCheckDelayMinutes
+        case wakeUpCheckEnabled // legacy migration key
+        case wakeUpCheckDelayMinutes // legacy migration key
         case useDefaultSharedSettings
         case customSharedSettings
         case nextTriggerOverrideDate
@@ -244,11 +273,18 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         repeatDays = (try container.decodeIfPresent([AlarmWeekday].self, forKey: .repeatDays) ?? [])
             .sorted { $0.rawValue < $1.rawValue }
         deleteAfterUse = try container.decodeIfPresent(Bool.self, forKey: .deleteAfterUse) ?? true
-        wakeUpCheckEnabled = try container.decodeIfPresent(Bool.self, forKey: .wakeUpCheckEnabled) ?? false
-        wakeUpCheckDelayMinutes = max(1, try container.decodeIfPresent(Int.self, forKey: .wakeUpCheckDelayMinutes) ?? WakeUpCheckDefaults.featureDefaults.delayMinutes)
 
         customSharedSettings = try container.decodeIfPresent(SharedAlarmSettings.self, forKey: .customSharedSettings) ?? .featureDefaults
         useDefaultSharedSettings = try container.decodeIfPresent(Bool.self, forKey: .useDefaultSharedSettings) ?? true
+
+        // Legacy migration: older builds stored wake-check values on UserAlarm instead of SharedAlarmSettings.
+        if let legacyWakeEnabled = try container.decodeIfPresent(Bool.self, forKey: .wakeUpCheckEnabled) {
+            customSharedSettings.wakeUpCheckEnabled = legacyWakeEnabled
+        }
+        if let legacyWakeDelay = try container.decodeIfPresent(Int.self, forKey: .wakeUpCheckDelayMinutes) {
+            customSharedSettings.wakeUpCheckDelayMinutes = max(1, legacyWakeDelay)
+        }
+
         nextTriggerOverrideDate = try container.decodeIfPresent(Date.self, forKey: .nextTriggerOverrideDate)
         isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
         skipNextUntilDate = try container.decodeIfPresent(Date.self, forKey: .skipNextUntilDate)
@@ -268,8 +304,6 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         try container.encode(minute, forKey: .minute)
         try container.encode(repeatDays, forKey: .repeatDays)
         try container.encode(deleteAfterUse, forKey: .deleteAfterUse)
-        try container.encode(wakeUpCheckEnabled, forKey: .wakeUpCheckEnabled)
-        try container.encode(wakeUpCheckDelayMinutes, forKey: .wakeUpCheckDelayMinutes)
         try container.encode(useDefaultSharedSettings, forKey: .useDefaultSharedSettings)
         try container.encode(customSharedSettings, forKey: .customSharedSettings)
         try container.encodeIfPresent(nextTriggerOverrideDate, forKey: .nextTriggerOverrideDate)
@@ -346,8 +380,6 @@ struct AlarmDraft: Equatable {
     var time: Date
     var repeatDays: Set<AlarmWeekday>
     var deleteAfterUse: Bool
-    var wakeUpCheckEnabled: Bool
-    var wakeUpCheckDelayMinutes: Int
 
     var useDefaultSharedSettings: Bool
     var customSharedSettings: SharedAlarmSettings
@@ -357,8 +389,6 @@ struct AlarmDraft: Equatable {
         time: Date = .now,
         repeatDays: Set<AlarmWeekday> = [],
         deleteAfterUse: Bool = true,
-        wakeUpCheckEnabled: Bool = false,
-        wakeUpCheckDelayMinutes: Int = WakeUpCheckDefaults.featureDefaults.delayMinutes,
         useDefaultSharedSettings: Bool = true,
         customSharedSettings: SharedAlarmSettings = .featureDefaults
     ) {
@@ -366,8 +396,6 @@ struct AlarmDraft: Equatable {
         self.time = time
         self.repeatDays = repeatDays
         self.deleteAfterUse = deleteAfterUse
-        self.wakeUpCheckEnabled = wakeUpCheckEnabled
-        self.wakeUpCheckDelayMinutes = max(1, wakeUpCheckDelayMinutes)
         self.useDefaultSharedSettings = useDefaultSharedSettings
         self.customSharedSettings = customSharedSettings
     }
@@ -377,8 +405,6 @@ struct AlarmDraft: Equatable {
         self.time = alarm.triggerDateForDisplay
         self.repeatDays = Set(alarm.repeatDays)
         self.deleteAfterUse = alarm.deleteAfterUse
-        self.wakeUpCheckEnabled = alarm.wakeUpCheckEnabled
-        self.wakeUpCheckDelayMinutes = alarm.wakeUpCheckDelayMinutes
         self.useDefaultSharedSettings = alarm.useDefaultSharedSettings
         self.customSharedSettings = alarm.customSharedSettings
     }
@@ -431,8 +457,6 @@ struct AlarmDraft: Equatable {
             minute: minute,
             repeatDays: Array(repeatDays),
             deleteAfterUse: deleteAfterUse,
-            wakeUpCheckEnabled: wakeUpCheckEnabled,
-            wakeUpCheckDelayMinutes: wakeUpCheckDelayMinutes,
             useDefaultSharedSettings: useDefaultSharedSettings,
             customSharedSettings: persistedCustomSharedSettings,
             nextTriggerOverrideDate: existingNextTriggerOverrideDate,

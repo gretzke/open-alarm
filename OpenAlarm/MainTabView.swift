@@ -736,22 +736,6 @@ private struct DefaultSharedSettingsView: View {
                         get: { alarmStore.defaultSharedSettings },
                         set: { alarmStore.updateDefaultSharedSettings($0) }
                     ),
-                    wakeCheckEnabled: Binding(
-                        get: { alarmStore.defaultWakeUpCheckDefaults.enabledByDefault },
-                        set: { enabled in
-                            var defaults = alarmStore.defaultWakeUpCheckDefaults
-                            defaults.enabledByDefault = enabled
-                            alarmStore.updateDefaultWakeUpCheckDefaults(defaults)
-                        }
-                    ),
-                    wakeCheckDelayMinutes: Binding(
-                        get: { alarmStore.defaultWakeUpCheckDefaults.clampedDelayMinutes },
-                        set: { minutes in
-                            var defaults = alarmStore.defaultWakeUpCheckDefaults
-                            defaults.delayMinutes = minutes
-                            alarmStore.updateDefaultWakeUpCheckDefaults(defaults)
-                        }
-                    ),
                     allowFiveSecondSnoozeOption: alarmStore.testingModeEnabled
                 )
             }
