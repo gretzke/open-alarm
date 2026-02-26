@@ -392,6 +392,7 @@ final class AlarmStore: ObservableObject {
             if updatedAlarm.isRepeating, skipNext == true,
                let skipUntil = nextPlannedTriggerDate(for: updatedAlarm, after: .now) {
                 updatedAlarm.skipNextUntilDate = skipUntil
+                updatedAlarm.nextTriggerOverrideDate = nil
             } else {
                 updatedAlarm.skipNextUntilDate = nil
                 updatedAlarm.nextTriggerOverrideDate = nil
