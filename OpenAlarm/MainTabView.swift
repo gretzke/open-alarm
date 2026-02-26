@@ -610,6 +610,11 @@ private struct AlarmRowView: View {
 private struct SettingsHomeView: View {
     @EnvironmentObject private var alarmStore: AlarmStore
 
+    @State private var showWakeCheckPermissionPrompt = false
+    @State private var showWakeCheckPermissionDenied = false
+
+    private let wakeCheckDelayOptions: [Int] = [1, 3, 5, 10, 15, 20, 30, 45, 60]
+
     private func napDurationSummary(minutes: Int) -> String {
         let hours = minutes / 60
         let mins = minutes % 60
@@ -619,6 +624,66 @@ private struct SettingsHomeView: View {
         }
 
         return "\(mins)m"
+    }
+
+    private func wakeCheckDelayLabel(_ minutes: Int) -> String {
+        "\(minutes) \(String(localized: "alarm_editor_snooze_minutes_unit"))"
+    }
+
+    private var wakeCheckPermissionLabel: LocalizedStringKey {
+        switch alarmStore.notificationPermissionStatus {
+        case .authorized:
+            return L10n.settingsPermissionAuthorized
+        case .notDetermined:
+            return L10n.settingsPermissionNotDetermined
+        case .denied:
+            return L10n.settingsPermissionDenied
+        }
+    }
+
+    private var wakeCheckEnabledBinding: Binding<Bool> {
+        Binding(
+            get: { alarmStore.defaultWakeUpCheckDefaults.enabledByDefault },
+            set: { enabled in
+                if enabled {
+                    attemptEnableWakeCheckDefaults()
+                } else {
+                    var defaults = alarmStore.defaultWakeUpCheckDefaults
+                    defaults.enabledByDefault = false
+                    alarmStore.updateDefaultWakeUpCheckDefaults(defaults)
+                }
+            }
+        )
+    }
+
+    private func attemptEnableWakeCheckDefaults() {
+        Task {
+            let status = await alarmStore.refreshNotificationPermissionStatus()
+            switch status {
+            case .authorized:
+                var defaults = alarmStore.defaultWakeUpCheckDefaults
+                defaults.enabledByDefault = true
+                alarmStore.updateDefaultWakeUpCheckDefaults(defaults)
+            case .notDetermined:
+                showWakeCheckPermissionPrompt = true
+            case .denied:
+                showWakeCheckPermissionDenied = true
+            }
+        }
+    }
+
+    private func requestWakeCheckPermissionAfterPrompt() {
+        Task {
+            let status = await alarmStore.requestNotificationPermissionIfNeeded()
+            switch status {
+            case .authorized:
+                var defaults = alarmStore.defaultWakeUpCheckDefaults
+                defaults.enabledByDefault = true
+                alarmStore.updateDefaultWakeUpCheckDefaults(defaults)
+            case .notDetermined, .denied:
+                showWakeCheckPermissionDenied = true
+            }
+        }
     }
 
     var body: some View {
@@ -657,6 +722,91 @@ private struct SettingsHomeView: View {
                             )
                         }
                         .buttonStyle(.plain)
+                    }
+                    .padding(20)
+                    .oaGlassCard()
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(L10n.settingsWakeCheckTitle)
+                            .font(.headline)
+                            .foregroundStyle(OAColor.textPrimary)
+
+                        Text(L10n.settingsWakeCheckBody)
+                            .font(.footnote)
+                            .foregroundStyle(OAColor.textSecondary)
+
+                        Toggle(isOn: wakeCheckEnabledBinding) {
+                            Text(L10n.settingsWakeCheckEnableByDefaultToggle)
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(OAColor.textPrimary)
+                        }
+                        .tint(OAColor.actionCyan)
+
+                        Menu {
+                            ForEach(wakeCheckDelayOptions, id: \.self) { minutes in
+                                Button {
+                                    var defaults = alarmStore.defaultWakeUpCheckDefaults
+                                    defaults.delayMinutes = minutes
+                                    alarmStore.updateDefaultWakeUpCheckDefaults(defaults)
+                                } label: {
+                                    Text(wakeCheckDelayLabel(minutes))
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 10) {
+                                Text(L10n.settingsWakeCheckDelayLabel)
+                                    .font(.body.weight(.semibold))
+                                    .foregroundStyle(OAColor.textPrimary)
+
+                                Spacer(minLength: 0)
+
+                                Text(wakeCheckDelayLabel(alarmStore.defaultWakeUpCheckDefaults.clampedDelayMinutes))
+                                    .font(.body.weight(.medium))
+                                    .foregroundStyle(OAColor.textSecondary)
+
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(OAColor.textSecondary)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                    .fill(OAColor.glassFill)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                    .stroke(OAColor.glassStroke.opacity(0.7), lineWidth: 0.8)
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        Toggle(isOn: Binding(
+                            get: { alarmStore.defaultWakeUpCheckDefaults.disableSnoozeOnReAlert },
+                            set: { value in
+                                var defaults = alarmStore.defaultWakeUpCheckDefaults
+                                defaults.disableSnoozeOnReAlert = value
+                                alarmStore.updateDefaultWakeUpCheckDefaults(defaults)
+                            }
+                        )) {
+                            Text(L10n.settingsWakeCheckNoSnoozeToggle)
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(OAColor.textPrimary)
+                        }
+                        .tint(OAColor.actionCyan)
+
+                        HStack(spacing: 8) {
+                            Text(L10n.settingsWakeCheckPermissionTitle)
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(OAColor.textPrimary)
+
+                            Spacer(minLength: 0)
+
+                            Text(wakeCheckPermissionLabel)
+                                .font(.body.weight(.medium))
+                                .foregroundStyle(OAColor.textSecondary)
+                        }
                     }
                     .padding(20)
                     .oaGlassCard()
@@ -752,6 +902,28 @@ private struct SettingsHomeView: View {
             .background(OAColor.background.ignoresSafeArea())
             .navigationTitle(L10n.settingsTitle)
             .navigationBarTitleDisplayMode(.inline)
+            .task {
+                await alarmStore.refreshNotificationPermissionStatus()
+            }
+            .alert(L10n.alarmEditorWakeCheckPermissionPromptTitle, isPresented: $showWakeCheckPermissionPrompt) {
+                Button(L10n.actionNext) {
+                    requestWakeCheckPermissionAfterPrompt()
+                }
+                Button(L10n.actionCancel, role: .cancel) { }
+            } message: {
+                Text(L10n.alarmEditorWakeCheckPermissionPromptBody)
+            }
+            .alert(L10n.alarmEditorWakeCheckPermissionDeniedTitle, isPresented: $showWakeCheckPermissionDenied) {
+                Button(L10n.actionOpenSettings) {
+                    alarmStore.openSettings()
+                }
+                Button(L10n.alarmEditorWakeCheckDisableFeatureAction, role: .destructive) {
+                    alarmStore.disableWakeUpCheckFeatureGlobally()
+                }
+                Button(L10n.actionCancel, role: .cancel) { }
+            } message: {
+                Text(L10n.alarmEditorWakeCheckPermissionDeniedBody)
+            }
         }
     }
 }

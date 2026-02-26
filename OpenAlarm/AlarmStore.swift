@@ -8,37 +8,55 @@ import UIKit
 final class AlarmStore: ObservableObject {
     @Published private(set) var alarms: [UserAlarm] = []
     @Published var defaultSharedSettings: SharedAlarmSettings
+    @Published var defaultWakeUpCheckDefaults: WakeUpCheckDefaults
     @Published var defaultNapDurationMinutes: Int
     @Published var testingModeEnabled: Bool
     @Published private(set) var activeNap: NapAlarmSession?
     @Published private(set) var permissionStatus: AlarmPermissionStatus
+    @Published private(set) var notificationPermissionStatus: NotificationPermissionStatus = .notDetermined
     @Published private(set) var remoteStates: [UUID: Alarm.State] = [:]
 
     private let alarmManager: AlarmManager
     private let permissionService: AlarmPermissionService
+    private let notificationPermissionService: NotificationPermissionService
+    private let wakeUpCheckNotificationService: WakeUpCheckNotificationService
     private let userDefaults: UserDefaults
 
     private var alarmUpdatesTask: Task<Void, Never>?
     private var lastKnownAlarmState: [UUID: Alarm.State] = [:]
     private var pendingRepeatRestores: Set<UUID> = []
+    private var wakeUpCheckSessionsByAlarmID: [UUID: WakeUpCheckSession] = [:]
 
     init(
         alarmManager: AlarmManager = .shared,
         permissionService: AlarmPermissionService? = nil,
+        notificationPermissionService: NotificationPermissionService? = nil,
+        wakeUpCheckNotificationService: WakeUpCheckNotificationService? = nil,
         userDefaults: UserDefaults = .standard
     ) {
         self.alarmManager = alarmManager
         self.permissionService = permissionService ?? AlarmPermissionService(manager: alarmManager)
+        self.notificationPermissionService = notificationPermissionService ?? NotificationPermissionService()
+        self.wakeUpCheckNotificationService = wakeUpCheckNotificationService ?? WakeUpCheckNotificationService()
         self.userDefaults = userDefaults
         self.defaultSharedSettings = AlarmPersistence.loadDefaultSharedSettings(from: userDefaults)
+        self.defaultWakeUpCheckDefaults = AlarmPersistence.loadDefaultWakeUpCheckDefaults(from: userDefaults)
         self.defaultNapDurationMinutes = AlarmPersistence.loadDefaultNapDurationMinutes(from: userDefaults)
         self.testingModeEnabled = AlarmPersistence.loadTestingModeEnabled(from: userDefaults)
         self.activeNap = AlarmPersistence.loadActiveNapSession(from: userDefaults)
         self.permissionStatus = self.permissionService.currentStatus()
+        self.wakeUpCheckSessionsByAlarmID = Dictionary(uniqueKeysWithValues: AlarmPersistence.loadWakeUpCheckSessions(from: userDefaults).map { ($0.alarmID, $0) })
+
+        self.wakeUpCheckNotificationService.ensureCategoryRegistered()
 
         load()
         observeAlarmUpdates()
         refreshFromSystem()
+
+        Task { @MainActor [weak self] in
+            await self?.refreshNotificationPermissionStatus()
+            await self?.reconcilePendingWakeUpCheckConfirmations()
+        }
     }
 
     deinit {
@@ -47,6 +65,11 @@ final class AlarmStore: ObservableObject {
 
     func handleAppOpened() {
         refreshFromSystem()
+
+        Task { @MainActor [weak self] in
+            await self?.refreshNotificationPermissionStatus()
+            await self?.reconcilePendingWakeUpCheckConfirmations()
+        }
     }
 
     func requestPermissionIfNeeded() async -> AlarmPermissionStatus {
@@ -59,6 +82,25 @@ final class AlarmStore: ObservableObject {
             permissionStatus = .authorized
         }
         return permissionStatus
+    }
+
+    @discardableResult
+    func refreshNotificationPermissionStatus() async -> NotificationPermissionStatus {
+        notificationPermissionStatus = await notificationPermissionService.currentStatus()
+        return notificationPermissionStatus
+    }
+
+    func requestNotificationPermissionIfNeeded() async -> NotificationPermissionStatus {
+        let status = await refreshNotificationPermissionStatus()
+
+        switch status {
+        case .notDetermined:
+            notificationPermissionStatus = await notificationPermissionService.requestAuthorization()
+        case .authorized, .denied:
+            break
+        }
+
+        return notificationPermissionStatus
     }
 
     func openSettings() {
@@ -102,6 +144,45 @@ final class AlarmStore: ObservableObject {
                 await self?.rescheduleAlarmsUsingDefaultSharedSettings()
             }
         }
+    }
+
+    func updateDefaultWakeUpCheckDefaults(_ defaults: WakeUpCheckDefaults) {
+        let normalized = WakeUpCheckDefaults(
+            enabledByDefault: defaults.enabledByDefault,
+            delayMinutes: defaults.clampedDelayMinutes,
+            disableSnoozeOnReAlert: defaults.disableSnoozeOnReAlert
+        )
+
+        guard defaultWakeUpCheckDefaults != normalized else {
+            return
+        }
+
+        defaultWakeUpCheckDefaults = normalized
+        AlarmPersistence.saveDefaultWakeUpCheckDefaults(normalized, to: userDefaults)
+    }
+
+    func disableWakeUpCheckFeatureGlobally() {
+        updateDefaultWakeUpCheckDefaults(
+            WakeUpCheckDefaults(
+                enabledByDefault: false,
+                delayMinutes: defaultWakeUpCheckDefaults.delayMinutes,
+                disableSnoozeOnReAlert: defaultWakeUpCheckDefaults.disableSnoozeOnReAlert
+            )
+        )
+
+        var changed = false
+        for index in alarms.indices where alarms[index].wakeUpCheckEnabled {
+            alarms[index].wakeUpCheckEnabled = false
+            alarms[index].updatedAt = .now
+            changed = true
+        }
+
+        if changed {
+            alarms = sortAlarms(alarms)
+            save()
+        }
+
+        clearAllWakeUpCheckSessions(restoreSchedules: true)
     }
 
     func updateTestingModeEnabled(_ enabled: Bool) {
@@ -323,6 +404,11 @@ final class AlarmStore: ObservableObject {
             lastKnownAlarmState.removeValue(forKey: updatedAlarm.id)
             remoteStates.removeValue(forKey: updatedAlarm.id)
 
+            if let session = wakeUpCheckSessionsByAlarmID.removeValue(forKey: updatedAlarm.id) {
+                wakeUpCheckNotificationService.cancel(notificationID: session.notificationID)
+                persistWakeUpCheckSessions()
+            }
+
             var pending = AlarmPersistence.loadPendingSnoozeIDs(from: userDefaults)
             if pending.remove(updatedAlarm.id) != nil {
                 AlarmPersistence.savePendingSnoozeIDs(pending, to: userDefaults)
@@ -340,9 +426,19 @@ final class AlarmStore: ObservableObject {
         remoteStates.removeValue(forKey: alarm.id)
         lastKnownAlarmState.removeValue(forKey: alarm.id)
 
+        if let session = wakeUpCheckSessionsByAlarmID.removeValue(forKey: alarm.id) {
+            wakeUpCheckNotificationService.cancel(notificationID: session.notificationID)
+            persistWakeUpCheckSessions()
+        }
+
         var pending = AlarmPersistence.loadPendingSnoozeIDs(from: userDefaults)
         if pending.remove(alarm.id) != nil {
             AlarmPersistence.savePendingSnoozeIDs(pending, to: userDefaults)
+        }
+
+        var pendingWakeConfirm = AlarmPersistence.loadPendingWakeUpCheckConfirmIDs(from: userDefaults)
+        if pendingWakeConfirm.remove(alarm.id) != nil {
+            AlarmPersistence.savePendingWakeUpCheckConfirmIDs(pendingWakeConfirm, to: userDefaults)
         }
 
         save()
@@ -572,6 +668,12 @@ final class AlarmStore: ObservableObject {
             remoteStates.removeValue(forKey: id)
         }
 
+        if !nextAlarm.wakeUpCheckEnabled,
+           let session = wakeUpCheckSessionsByAlarmID.removeValue(forKey: id) {
+            wakeUpCheckNotificationService.cancel(notificationID: session.notificationID)
+            persistWakeUpCheckSessions()
+        }
+
         if let existingIndex = alarms.firstIndex(where: { $0.id == id }) {
             alarms[existingIndex] = nextAlarm
         } else {
@@ -624,7 +726,8 @@ final class AlarmStore: ObservableObject {
     private func makeConfiguration(
         for alarm: UserAlarm,
         schedule: Alarm.Schedule,
-        isShadowTrial: Bool
+        isShadowTrial: Bool,
+        forceDisableSnooze: Bool = false
     ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
         let sharedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
 
@@ -634,7 +737,8 @@ final class AlarmStore: ObservableObject {
             schedule: schedule,
             sharedSettings: sharedSettings,
             snoozeCount: alarm.snoozeCount,
-            isShadowTrial: isShadowTrial
+            isShadowTrial: isShadowTrial,
+            forceDisableSnooze: forceDisableSnooze
         )
     }
 
@@ -650,7 +754,8 @@ final class AlarmStore: ObservableObject {
             schedule: schedule,
             sharedSettings: sharedSettings,
             snoozeCount: nap.snoozeCount,
-            isShadowTrial: false
+            isShadowTrial: false,
+            forceDisableSnooze: false
         )
     }
 
@@ -660,9 +765,10 @@ final class AlarmStore: ObservableObject {
         schedule: Alarm.Schedule,
         sharedSettings: SharedAlarmSettings,
         snoozeCount: Int,
-        isShadowTrial: Bool
+        isShadowTrial: Bool,
+        forceDisableSnooze: Bool
     ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
-        let showSnoozeButton = sharedSettings.canSnoozeAgain(currentCount: snoozeCount)
+        let showSnoozeButton = !forceDisableSnooze && sharedSettings.canSnoozeAgain(currentCount: snoozeCount)
 
         let alertPresentation = AlarmPresentation.Alert(
             title: localizedResource(from: title),
@@ -711,6 +817,8 @@ final class AlarmStore: ObservableObject {
                 if Task.isCancelled {
                     return
                 }
+
+                await reconcilePendingWakeUpCheckConfirmations()
                 applyRemoteAlarms(incoming)
             }
         }
@@ -724,6 +832,200 @@ final class AlarmStore: ObservableObject {
         } catch {
             remoteStates = [:]
         }
+    }
+
+    private func persistWakeUpCheckSessions() {
+        AlarmPersistence.saveWakeUpCheckSessions(Array(wakeUpCheckSessionsByAlarmID.values), to: userDefaults)
+    }
+
+    private func clearAllWakeUpCheckSessions(restoreSchedules: Bool = false) {
+        let affectedAlarmIDs = Set(wakeUpCheckSessionsByAlarmID.keys)
+
+        for session in wakeUpCheckSessionsByAlarmID.values {
+            wakeUpCheckNotificationService.cancel(notificationID: session.notificationID)
+            try? alarmManager.stop(id: session.alarmID)
+            try? alarmManager.cancel(id: session.alarmID)
+        }
+
+        wakeUpCheckSessionsByAlarmID.removeAll()
+        persistWakeUpCheckSessions()
+
+        if restoreSchedules {
+            for alarmID in affectedAlarmIDs {
+                guard let alarm = alarms.first(where: { $0.id == alarmID }), alarm.isEnabled else {
+                    continue
+                }
+                scheduleRepeatRestore(for: alarm)
+            }
+        }
+
+        var pendingConfirm = AlarmPersistence.loadPendingWakeUpCheckConfirmIDs(from: userDefaults)
+        if !pendingConfirm.isEmpty {
+            pendingConfirm.removeAll()
+            AlarmPersistence.savePendingWakeUpCheckConfirmIDs(pendingConfirm, to: userDefaults)
+        }
+    }
+
+    private func startWakeUpCheckCycle(for alarm: inout UserAlarm, changed: inout Bool) -> Bool {
+        guard notificationPermissionStatus == .authorized else {
+            if alarm.wakeUpCheckEnabled {
+                alarm.wakeUpCheckEnabled = false
+                alarm.updatedAt = .now
+                changed = true
+            }
+
+            if let session = wakeUpCheckSessionsByAlarmID.removeValue(forKey: alarm.id) {
+                wakeUpCheckNotificationService.cancel(notificationID: session.notificationID)
+                persistWakeUpCheckSessions()
+            }
+
+            return false
+        }
+
+        let delayMinutes = min(60, max(1, alarm.wakeUpCheckDelayMinutes))
+        let checkAt = Date.now.addingTimeInterval(TimeInterval(delayMinutes * 60))
+        let deadlineAt = checkAt.addingTimeInterval(3 * 60)
+
+        let previousCycle = wakeUpCheckSessionsByAlarmID[alarm.id]?.cycle ?? 0
+        let session = WakeUpCheckSession(
+            alarmID: alarm.id,
+            cycle: previousCycle + 1,
+            checkAt: checkAt,
+            deadlineAt: deadlineAt,
+            notificationID: WakeUpCheckNotificationConstants.notificationID(alarmID: alarm.id, cycle: previousCycle + 1),
+            isAwaitingConfirmation: true,
+            createdAt: .now,
+            updatedAt: .now
+        )
+
+        if let previous = wakeUpCheckSessionsByAlarmID[alarm.id] {
+            wakeUpCheckNotificationService.cancel(notificationID: previous.notificationID)
+        }
+
+        wakeUpCheckSessionsByAlarmID[alarm.id] = session
+        persistWakeUpCheckSessions()
+
+        if alarm.lifecycleState != .awaitingWakeCheck {
+            alarm.lifecycleState = .awaitingWakeCheck
+            changed = true
+        }
+
+        let shouldDisableSnoozeOnReAlert = alarm.wakeUpCheckDisableSnoozeOnReAlert
+        let alarmID = alarm.id
+
+        Task { @MainActor [weak self] in
+            guard let self else {
+                return
+            }
+
+            guard let latestAlarm = alarms.first(where: { $0.id == alarmID }) else {
+                if wakeUpCheckSessionsByAlarmID[alarmID]?.notificationID == session.notificationID {
+                    wakeUpCheckSessionsByAlarmID.removeValue(forKey: alarmID)
+                    persistWakeUpCheckSessions()
+                }
+                return
+            }
+
+            do {
+                try await wakeUpCheckNotificationService.scheduleWakeCheckNotification(for: session)
+
+                let config = makeConfiguration(
+                    for: latestAlarm,
+                    schedule: .fixed(deadlineAt),
+                    isShadowTrial: false,
+                    forceDisableSnooze: shouldDisableSnoozeOnReAlert
+                )
+                let remoteAlarm = try await scheduleAlarmWithUpdateFallback(
+                    id: latestAlarm.id,
+                    configuration: config,
+                    isUpdate: true
+                )
+
+                lastKnownAlarmState[latestAlarm.id] = remoteAlarm.state
+                remoteStates[latestAlarm.id] = remoteAlarm.state
+            } catch {
+                if wakeUpCheckSessionsByAlarmID[latestAlarm.id]?.notificationID == session.notificationID {
+                    wakeUpCheckSessionsByAlarmID.removeValue(forKey: latestAlarm.id)
+                    persistWakeUpCheckSessions()
+                }
+            }
+        }
+
+        return true
+    }
+
+    private func reconcilePendingWakeUpCheckConfirmations() async {
+        var pendingConfirmIDs = AlarmPersistence.loadPendingWakeUpCheckConfirmIDs(from: userDefaults)
+        guard !pendingConfirmIDs.isEmpty else {
+            return
+        }
+
+        for alarmID in pendingConfirmIDs {
+            await completeWakeUpCheck(for: alarmID)
+        }
+
+        pendingConfirmIDs.removeAll()
+        AlarmPersistence.savePendingWakeUpCheckConfirmIDs(pendingConfirmIDs, to: userDefaults)
+    }
+
+    private func completeWakeUpCheck(for alarmID: UUID) async {
+        if let session = wakeUpCheckSessionsByAlarmID.removeValue(forKey: alarmID) {
+            wakeUpCheckNotificationService.cancel(notificationID: session.notificationID)
+            persistWakeUpCheckSessions()
+        }
+
+        guard let index = alarms.firstIndex(where: { $0.id == alarmID }) else {
+            return
+        }
+
+        var alarm = alarms[index]
+        alarm.snoozeCount = 0
+        alarm.updatedAt = .now
+
+        try? alarmManager.stop(id: alarmID)
+        try? alarmManager.cancel(id: alarmID)
+        remoteStates.removeValue(forKey: alarmID)
+        lastKnownAlarmState.removeValue(forKey: alarmID)
+
+        var pendingSnooze = AlarmPersistence.loadPendingSnoozeIDs(from: userDefaults)
+        if pendingSnooze.remove(alarmID) != nil {
+            AlarmPersistence.savePendingSnoozeIDs(pendingSnooze, to: userDefaults)
+        }
+
+        if alarm.isRepeating, alarm.isEnabled {
+            alarm.lifecycleState = .scheduled
+            alarms[index] = alarm
+            alarms = sortAlarms(alarms)
+            save()
+
+            do {
+                let config = makeConfiguration(for: alarm, schedule: alarm.schedule, isShadowTrial: false)
+                let remote = try await scheduleAlarmWithUpdateFallback(
+                    id: alarm.id,
+                    configuration: config,
+                    isUpdate: true
+                )
+                lastKnownAlarmState[alarm.id] = remote.state
+                remoteStates[alarm.id] = remote.state
+            } catch {
+                // Best effort. Foreground refresh can recover.
+            }
+            return
+        }
+
+        alarm.lifecycleState = .completed
+
+        if alarm.deleteAfterUse {
+            alarms.remove(at: index)
+        } else {
+            alarm.isEnabled = false
+            alarm.skipNextUntilDate = nil
+            alarm.nextTriggerOverrideDate = nil
+            alarms[index] = alarm
+        }
+
+        alarms = sortAlarms(alarms)
+        save()
     }
 
     private func applyRemoteAlarms(_ incoming: [Alarm]) {
@@ -825,7 +1127,12 @@ final class AlarmStore: ObservableObject {
                 remoteStates.removeValue(forKey: id)
                 lastKnownAlarmState.removeValue(forKey: id)
                 pendingSnoozeIDs.remove(id)
+
+                if let session = wakeUpCheckSessionsByAlarmID.removeValue(forKey: id) {
+                    wakeUpCheckNotificationService.cancel(notificationID: session.notificationID)
+                }
             }
+            persistWakeUpCheckSessions()
             updated.removeAll { idsToAutoDelete.contains($0.id) }
             changed = true
         }
@@ -907,6 +1214,11 @@ final class AlarmStore: ObservableObject {
                 scheduleRepeatRestore(for: alarm)
             }
 
+            if alarm.wakeUpCheckEnabled,
+               startWakeUpCheckCycle(for: &alarm, changed: &changed) {
+                return
+            }
+
             if alarm.lifecycleState != .scheduled {
                 alarm.lifecycleState = .scheduled
                 changed = true
@@ -914,11 +1226,8 @@ final class AlarmStore: ObservableObject {
             return
         }
 
-        if alarm.wakeUpCheckEnabled {
-            if alarm.lifecycleState != .awaitingWakeCheck {
-                alarm.lifecycleState = .awaitingWakeCheck
-                changed = true
-            }
+        if alarm.wakeUpCheckEnabled,
+           startWakeUpCheckCycle(for: &alarm, changed: &changed) {
             return
         }
 

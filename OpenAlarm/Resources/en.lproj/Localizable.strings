@@ -35,6 +35,9 @@
 "alarm_state_alerting" = "Ringing";
 "alarm_state_awaiting_wake_check" = "Pending wake check";
 "alarm_state_completed" = "Completed";
+"wake_check_notification_title" = "Wake-up check";
+"wake_check_notification_body" = "Tap to confirm you’re awake.";
+"wake_check_notification_action_awake" = "I’m awake";
 
 "alarm_editor_new_title" = "New Alarm";
 "alarm_editor_edit_title" = "Edit Alarm";
@@ -48,6 +51,14 @@
 "alarm_editor_snooze_max_label" = "Max snoozes";
 "alarm_editor_use_default_settings_toggle" = "Use default settings";
 "alarm_editor_use_default_settings_hint" = "Shared settings are managed in Settings.";
+"alarm_editor_wake_check_toggle" = "Wake-up check";
+"alarm_editor_wake_check_delay_label" = "Check delay";
+"alarm_editor_wake_check_no_snooze_toggle" = "No snooze on wake-check re-ring";
+"alarm_editor_wake_check_permission_prompt_title" = "Enable wake-up checks";
+"alarm_editor_wake_check_permission_prompt_body" = "OpenAlarm needs notification permission to send wake-up check confirmations.";
+"alarm_editor_wake_check_permission_denied_title" = "Notifications are off";
+"alarm_editor_wake_check_permission_denied_body" = "Enable notifications in Settings or disable Wake-up Check for all alarms.";
+"alarm_editor_wake_check_disable_feature_action" = "Disable Wake-up Check";
 "alarm_editor_apply_change_prompt" = "Apply this time change to the next alarm only or to this schedule?";
 "alarm_editor_apply_next_only_option" = "Change Next Alarm Only";
 "alarm_editor_apply_schedule_option" = "Change This Schedule";
@@ -78,6 +89,12 @@
 "settings_testing_mode_title" = "Testing mode";
 "settings_testing_mode_body" = "Enable development-only alarm options like 5-second snooze.";
 "settings_testing_mode_toggle" = "Enable testing mode";
+"settings_wake_check_title" = "Wake-up check defaults";
+"settings_wake_check_body" = "If enabled, alarms require confirmation after dismissal and can re-ring until confirmed awake.";
+"settings_wake_check_delay_label" = "Default check delay";
+"settings_wake_check_no_snooze_toggle" = "No snooze on wake-check re-ring";
+"settings_wake_check_enable_by_default_toggle" = "Enable wake-up check for new alarms";
+"settings_wake_check_permission_title" = "Notification permission";
 "settings_permission_title" = "Alarm permission";
 "settings_permission_status_label" = "Status";
 "settings_permission_authorized" = "Authorized";

@@ -35,6 +35,9 @@
 "alarm_state_alerting" = "Klingelt";
 "alarm_state_awaiting_wake_check" = "Wake-Check ausstehend";
 "alarm_state_completed" = "Abgeschlossen";
+"wake_check_notification_title" = "Aufwach-Check";
+"wake_check_notification_body" = "Tippe, um zu bestätigen, dass du wach bist.";
+"wake_check_notification_action_awake" = "Ich bin wach";
 
 "alarm_editor_new_title" = "Neuer Alarm";
 "alarm_editor_edit_title" = "Alarm bearbeiten";
@@ -48,6 +51,14 @@
 "alarm_editor_snooze_max_label" = "Max. Snoozes";
 "alarm_editor_use_default_settings_toggle" = "Standard-Einstellungen verwenden";
 "alarm_editor_use_default_settings_hint" = "Geteilte Einstellungen werden in den Einstellungen verwaltet.";
+"alarm_editor_wake_check_toggle" = "Aufwach-Check";
+"alarm_editor_wake_check_delay_label" = "Check-Verzögerung";
+"alarm_editor_wake_check_no_snooze_toggle" = "Kein Snooze beim erneuten Klingeln";
+"alarm_editor_wake_check_permission_prompt_title" = "Aufwach-Check aktivieren";
+"alarm_editor_wake_check_permission_prompt_body" = "OpenAlarm benötigt Mitteilungen, um Aufwach-Checks zu senden.";
+"alarm_editor_wake_check_permission_denied_title" = "Mitteilungen sind deaktiviert";
+"alarm_editor_wake_check_permission_denied_body" = "Aktiviere Mitteilungen in den Einstellungen oder deaktiviere Aufwach-Check für alle Alarme.";
+"alarm_editor_wake_check_disable_feature_action" = "Aufwach-Check deaktivieren";
 "alarm_editor_apply_change_prompt" = "Diese Zeitänderung nur auf den nächsten Alarm oder auf den gesamten Plan anwenden?";
 "alarm_editor_apply_next_only_option" = "Nur nächsten Alarm ändern";
 "alarm_editor_apply_schedule_option" = "Diesen Plan ändern";
@@ -78,6 +89,12 @@
 "settings_testing_mode_title" = "Testmodus";
 "settings_testing_mode_body" = "Aktiviert entwicklungsbezogene Alarmoptionen wie 5-Sekunden-Snooze.";
 "settings_testing_mode_toggle" = "Testmodus aktivieren";
+"settings_wake_check_title" = "Aufwach-Check-Standards";
+"settings_wake_check_body" = "Wenn aktiviert, muss nach dem Ausschalten bestätigt werden, dass du wach bist; sonst klingelt es erneut.";
+"settings_wake_check_delay_label" = "Standard-Verzögerung";
+"settings_wake_check_no_snooze_toggle" = "Kein Snooze beim erneuten Klingeln";
+"settings_wake_check_enable_by_default_toggle" = "Aufwach-Check für neue Alarme aktivieren";
+"settings_wake_check_permission_title" = "Mitteilungs-Berechtigung";
 "settings_permission_title" = "Alarm-Berechtigung";
 "settings_permission_status_label" = "Status";
 "settings_permission_authorized" = "Erlaubt";

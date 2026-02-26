@@ -11,6 +11,7 @@
 		05162562A0170BE9098361EE /* AlarmIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85010326D24CEF7C1A38D50D /* AlarmIntents.swift */; };
 		0B5A2C2BC6692B00E79A988E /* AlarmPermissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83400772796DC9406DADEF9F /* AlarmPermissionService.swift */; };
 		1068E5E14AAA376BDD6E846B /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0511AEB1608CC1DFD19C495 /* L10n.swift */; };
+		1C03AE89BE0AC99AD3E829DE /* NotificationPermissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DF22129177248C5394DFFC2 /* NotificationPermissionService.swift */; };
 		23C0CD1574BD2A54EDBFCCE1 /* NapEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA3152F133E737A1C6EF2905 /* NapEditorView.swift */; };
 		36C1824E2D70AF0163976EDA /* SharedAlarmSettingsEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C5DC43674A1A23D8D98A25C /* SharedAlarmSettingsEditor.swift */; };
 		42DA53AB032443282ACAC432 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E55D19BAE63F4BCAD183A095 /* MainTabView.swift */; };
@@ -21,7 +22,10 @@
 		58BDACC5F57BBA0A5953274E /* OpenAlarmTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91529C2531FED87446559016 /* OpenAlarmTheme.swift */; };
 		75F6F1776DF5731E152893A0 /* AlarmStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B70862277833BF001ABA7BBE /* AlarmStore.swift */; };
 		7A6C9625D2A75EB1C003316B /* OpenAlarmApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 764BB1926C868CDA8BB0801A /* OpenAlarmApp.swift */; };
+		8399559AD42B82F57361E9E3 /* WakeUpCheckModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 568AC6EB43A9044628BFB421 /* WakeUpCheckModels.swift */; };
+		99FFE75EAF79B740FE9D2225 /* WakeUpCheckNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7049E02D02264E608DE04480 /* WakeUpCheckNotificationService.swift */; };
 		A07CAFA80E4CC40C1C53496B /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = E43A03F552339F3CF4DBCF2C /* LaunchScreen.storyboard */; };
+		A6D55657E1563EC89C608EFD /* OpenAlarmNotificationDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0213A81B71B2B9C6B189C61F /* OpenAlarmNotificationDelegate.swift */; };
 		BDD2C5EBBA247FBB4FD16F4D /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 2E7F4014449CC01093832222 /* InfoPlist.strings */; };
 		BF8889E27B6255835899C3B5 /* AlarmModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7C07703BA4BEC265B421B03 /* AlarmModels.swift */; };
 		D0827BEDA4B4C360461E9F23 /* AlarmPersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0F3414FB10A9E51937B6877 /* AlarmPersistence.swift */; };
@@ -29,13 +33,17 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0213A81B71B2B9C6B189C61F /* OpenAlarmNotificationDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAlarmNotificationDelegate.swift; sourceTree = "<group>"; };
 		0D166817BB079DD4546C285D /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		1AAB5EE73D1350495BF00CA8 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		22E4F6FF18C9BE1617CD7543 /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowView.swift; sourceTree = "<group>"; };
 		3C5513FF1DE8CF198A077C38 /* AlarmEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmEditorView.swift; sourceTree = "<group>"; };
+		568AC6EB43A9044628BFB421 /* WakeUpCheckModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeUpCheckModels.swift; sourceTree = "<group>"; };
 		59535AE7D6830B97391FD0E5 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Localizable.strings; sourceTree = "<group>"; };
 		5C5DC43674A1A23D8D98A25C /* SharedAlarmSettingsEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedAlarmSettingsEditor.swift; sourceTree = "<group>"; };
+		5DF22129177248C5394DFFC2 /* NotificationPermissionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPermissionService.swift; sourceTree = "<group>"; };
 		6093C9086BF89A5DE696608D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		7049E02D02264E608DE04480 /* WakeUpCheckNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeUpCheckNotificationService.swift; sourceTree = "<group>"; };
 		764BB1926C868CDA8BB0801A /* OpenAlarmApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAlarmApp.swift; sourceTree = "<group>"; };
 		83400772796DC9406DADEF9F /* AlarmPermissionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmPermissionService.swift; sourceTree = "<group>"; };
 		85010326D24CEF7C1A38D50D /* AlarmIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmIntents.swift; sourceTree = "<group>"; };
@@ -87,11 +95,15 @@
 				E43A03F552339F3CF4DBCF2C /* LaunchScreen.storyboard */,
 				E55D19BAE63F4BCAD183A095 /* MainTabView.swift */,
 				FA3152F133E737A1C6EF2905 /* NapEditorView.swift */,
+				5DF22129177248C5394DFFC2 /* NotificationPermissionService.swift */,
 				A6981BF284D917EBC650816B /* OnboardingEngine.swift */,
 				22E4F6FF18C9BE1617CD7543 /* OnboardingFlowView.swift */,
 				764BB1926C868CDA8BB0801A /* OpenAlarmApp.swift */,
+				0213A81B71B2B9C6B189C61F /* OpenAlarmNotificationDelegate.swift */,
 				91529C2531FED87446559016 /* OpenAlarmTheme.swift */,
 				5C5DC43674A1A23D8D98A25C /* SharedAlarmSettingsEditor.swift */,
+				568AC6EB43A9044628BFB421 /* WakeUpCheckModels.swift */,
+				7049E02D02264E608DE04480 /* WakeUpCheckNotificationService.swift */,
 				FD7B31457CC502B622019E4F /* Resources */,
 			);
 			path = OpenAlarm;
@@ -191,11 +203,15 @@
 				1068E5E14AAA376BDD6E846B /* L10n.swift in Sources */,
 				42DA53AB032443282ACAC432 /* MainTabView.swift in Sources */,
 				23C0CD1574BD2A54EDBFCCE1 /* NapEditorView.swift in Sources */,
+				1C03AE89BE0AC99AD3E829DE /* NotificationPermissionService.swift in Sources */,
 				E072A215F811DC860E8ED2F1 /* OnboardingEngine.swift in Sources */,
 				0137578A7C3DB65015FC02BE /* OnboardingFlowView.swift in Sources */,
 				7A6C9625D2A75EB1C003316B /* OpenAlarmApp.swift in Sources */,
+				A6D55657E1563EC89C608EFD /* OpenAlarmNotificationDelegate.swift in Sources */,
 				58BDACC5F57BBA0A5953274E /* OpenAlarmTheme.swift in Sources */,
 				36C1824E2D70AF0163976EDA /* SharedAlarmSettingsEditor.swift in Sources */,
+				8399559AD42B82F57361E9E3 /* WakeUpCheckModels.swift in Sources */,
+				99FFE75EAF79B740FE9D2225 /* WakeUpCheckNotificationService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
