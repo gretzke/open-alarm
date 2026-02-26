@@ -52,8 +52,6 @@ struct AlarmEditorView: View {
     @State private var errorMessage: LocalizedStringKey?
     @State private var hasInitializedDraft = false
     @State private var showSaveScopePopover = false
-    @State private var showWakeCheckPermissionPrompt = false
-    @State private var showWakeCheckPermissionDenied = false
 
     init(route: AlarmEditorRoute) {
         self.route = route
@@ -67,13 +65,14 @@ struct AlarmEditorView: View {
                     timeSection
                     labelSection
                     deleteAfterUseSection
-                    wakeCheckSection
                     repeatDaysSection
                     useDefaultSharedSettingsSection
 
                     if !draft.useDefaultSharedSettings {
                         SharedAlarmSettingsEditor(
                             settings: $draft.customSharedSettings,
+                            wakeCheckEnabled: $draft.wakeUpCheckEnabled,
+                            wakeCheckDelayMinutes: $draft.wakeUpCheckDelayMinutes,
                             allowFiveSecondSnoozeOption: alarmStore.testingModeEnabled,
                             openSnoozeDurationOnAppearFromLaunchArg: true
                         )
@@ -166,6 +165,8 @@ struct AlarmEditorView: View {
                 draft.wakeUpCheckDelayMinutes = alarmStore.defaultWakeUpCheckDefaults.clampedDelayMinutes
             } else if draft.useDefaultSharedSettings {
                 draft.applyDefaultSharedSettings(alarmStore.defaultSharedSettings)
+                draft.wakeUpCheckEnabled = alarmStore.defaultWakeUpCheckDefaults.enabledByDefault
+                draft.wakeUpCheckDelayMinutes = alarmStore.defaultWakeUpCheckDefaults.clampedDelayMinutes
             }
 
 #if DEBUG
@@ -178,31 +179,6 @@ struct AlarmEditorView: View {
             if !newValue {
                 showSaveScopePopover = false
             }
-        }
-        .task {
-            await alarmStore.refreshNotificationPermissionStatus()
-        }
-        .alert(L10n.alarmEditorWakeCheckPermissionPromptTitle, isPresented: $showWakeCheckPermissionPrompt) {
-            Button(L10n.actionNext) {
-                requestWakeCheckPermissionAfterPrompt()
-            }
-            Button(L10n.actionCancel, role: .cancel) { }
-        } message: {
-            Text(L10n.alarmEditorWakeCheckPermissionPromptBody)
-        }
-        .alert(L10n.alarmEditorWakeCheckPermissionDeniedTitle, isPresented: $showWakeCheckPermissionDenied) {
-            Button(L10n.actionOpenSettings) {
-                alarmStore.openSettings()
-            }
-            Button(L10n.alarmEditorWakeCheckDisableFeatureAction, role: .destructive) {
-                alarmStore.disableWakeUpCheckFeatureGlobally()
-                draft.wakeUpCheckEnabled = false
-            }
-            Button(L10n.actionCancel, role: .cancel) {
-                draft.wakeUpCheckEnabled = false
-            }
-        } message: {
-            Text(L10n.alarmEditorWakeCheckPermissionDeniedBody)
         }
     }
 
@@ -261,59 +237,6 @@ struct AlarmEditorView: View {
         .tint(OAColor.actionCyan)
     }
 
-    private var wakeCheckSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Toggle(isOn: Binding(
-                get: { draft.wakeUpCheckEnabled },
-                set: { enabled in
-                    if enabled {
-                        attemptEnableWakeCheckInEditor()
-                    } else {
-                        draft.wakeUpCheckEnabled = false
-                    }
-                }
-            )) {
-                Text(L10n.alarmEditorWakeCheckToggle)
-                    .font(.headline)
-                    .foregroundStyle(OAColor.textPrimary)
-            }
-            .tint(OAColor.actionCyan)
-
-            if draft.wakeUpCheckEnabled {
-                Menu {
-                    ForEach([1, 3, 5, 10, 15, 20, 30, 45, 60], id: \.self) { minutes in
-                        Button {
-                            draft.wakeUpCheckDelayMinutes = minutes
-                        } label: {
-                            Text(wakeCheckDelayLabel(minutes))
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 10) {
-                        Text(L10n.alarmEditorWakeCheckDelayLabel)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(OAColor.textPrimary)
-
-                        Spacer(minLength: 0)
-
-                        Text(wakeCheckDelayLabel(draft.wakeUpCheckDelayMinutes))
-                            .font(.subheadline)
-                            .foregroundStyle(OAColor.textSecondary)
-
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(OAColor.textSecondary)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .frame(maxWidth: .infinity)
-                    .oaGlassButtonChrome()
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-
     private var repeatDaysSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(L10n.alarmEditorRepeatDaysTitle)
@@ -335,6 +258,10 @@ struct AlarmEditorView: View {
                 set: { useDefault in
                     draft.useDefaultSharedSettings = useDefault
                     draft.applyDefaultSharedSettings(alarmStore.defaultSharedSettings)
+                    if useDefault {
+                        draft.wakeUpCheckEnabled = alarmStore.defaultWakeUpCheckDefaults.enabledByDefault
+                        draft.wakeUpCheckDelayMinutes = alarmStore.defaultWakeUpCheckDefaults.clampedDelayMinutes
+                    }
                 }
             )) {
                 Text(L10n.alarmEditorUseDefaultSettingsToggle)
@@ -368,39 +295,6 @@ struct AlarmEditorView: View {
                 )
         }
         .buttonStyle(.plain)
-    }
-
-    private func wakeCheckDelayLabel(_ minutes: Int) -> String {
-        "\(minutes) \(String(localized: "alarm_editor_snooze_minutes_unit"))"
-    }
-
-    private func attemptEnableWakeCheckInEditor() {
-        Task {
-            let status = await alarmStore.refreshNotificationPermissionStatus()
-            switch status {
-            case .authorized:
-                draft.wakeUpCheckEnabled = true
-                draft.wakeUpCheckDelayMinutes = alarmStore.defaultWakeUpCheckDefaults.clampedDelayMinutes
-            case .notDetermined:
-                showWakeCheckPermissionPrompt = true
-            case .denied:
-                showWakeCheckPermissionDenied = true
-            }
-        }
-    }
-
-    private func requestWakeCheckPermissionAfterPrompt() {
-        Task {
-            let status = await alarmStore.requestNotificationPermissionIfNeeded()
-            switch status {
-            case .authorized:
-                draft.wakeUpCheckEnabled = true
-                draft.wakeUpCheckDelayMinutes = alarmStore.defaultWakeUpCheckDefaults.clampedDelayMinutes
-            case .notDetermined, .denied:
-                draft.wakeUpCheckEnabled = false
-                showWakeCheckPermissionDenied = true
-            }
-        }
     }
 
     private func saveScopeActionButton(title: LocalizedStringKey, action: @escaping () -> Void) -> some View {

@@ -17,6 +17,10 @@ struct SharedAlarmSettingsEditor: View {
 
     @Binding var settings: SharedAlarmSettings
 
+    var wakeCheckEnabled: Binding<Bool>? = nil
+    var wakeCheckDelayMinutes: Binding<Int>? = nil
+    var showWakeCheckPermissionStatus: Bool = false
+
     var allowFiveSecondSnoozeOption: Bool = false
     var openSnoozeDurationOnAppearFromLaunchArg: Bool = false
 
@@ -24,6 +28,8 @@ struct SharedAlarmSettingsEditor: View {
     @State private var isSchedulingTryOut = false
     @State private var showTryOutToast = false
     @State private var tryOutError: LocalizedStringKey?
+    @State private var showWakeCheckPermissionPrompt = false
+    @State private var showWakeCheckPermissionDenied = false
 
     private var snoozeDurationOptions: [Int] {
         if allowFiveSecondSnoozeOption {
@@ -33,6 +39,18 @@ struct SharedAlarmSettingsEditor: View {
     }
 
     private let maxSnoozeOptions: [Int?] = [nil, 1, 2, 3, 5, 10]
+    private let wakeCheckDelayOptions: [Int] = [1, 3, 5, 10, 15, 20, 30, 45, 60]
+
+    private var wakeCheckPermissionLabel: LocalizedStringKey {
+        switch alarmStore.notificationPermissionStatus {
+        case .authorized:
+            return L10n.settingsPermissionAuthorized
+        case .notDetermined:
+            return L10n.settingsPermissionNotDetermined
+        case .denied:
+            return L10n.settingsPermissionDenied
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -69,6 +87,73 @@ struct SharedAlarmSettingsEditor: View {
                 }
                 .frame(maxWidth: .infinity)
                 .oaGlassPanel()
+            }
+
+            if let wakeCheckEnabled, let wakeCheckDelayMinutes {
+                VStack(alignment: .leading, spacing: 10) {
+                    Toggle(isOn: Binding(
+                        get: { wakeCheckEnabled.wrappedValue },
+                        set: { enabled in
+                            if enabled {
+                                attemptEnableWakeCheck()
+                            } else {
+                                wakeCheckEnabled.wrappedValue = false
+                            }
+                        }
+                    )) {
+                        Text(L10n.alarmEditorWakeCheckToggle)
+                            .font(.headline)
+                            .foregroundStyle(OAColor.textPrimary)
+                    }
+                    .tint(OAColor.actionCyan)
+
+                    if wakeCheckEnabled.wrappedValue {
+                        Menu {
+                            ForEach(wakeCheckDelayOptions, id: \.self) { minutes in
+                                Button {
+                                    wakeCheckDelayMinutes.wrappedValue = minutes
+                                } label: {
+                                    Text(snoozeDurationLabel(for: minutes))
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 10) {
+                                Text(L10n.alarmEditorWakeCheckDelayLabel)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(OAColor.textPrimary)
+
+                                Spacer(minLength: 0)
+
+                                Text(snoozeDurationLabel(for: wakeCheckDelayMinutes.wrappedValue))
+                                    .font(.subheadline)
+                                    .foregroundStyle(OAColor.textSecondary)
+
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(OAColor.textSecondary)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity)
+                            .oaGlassButtonChrome()
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    if showWakeCheckPermissionStatus {
+                        HStack(spacing: 8) {
+                            Text(L10n.settingsWakeCheckPermissionTitle)
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(OAColor.textPrimary)
+
+                            Spacer(minLength: 0)
+
+                            Text(wakeCheckPermissionLabel)
+                                .font(.body.weight(.medium))
+                                .foregroundStyle(OAColor.textSecondary)
+                        }
+                    }
+                }
             }
 
             Button {
@@ -163,6 +248,35 @@ struct SharedAlarmSettingsEditor: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: showTryOutToast)
+        .task {
+            if wakeCheckEnabled != nil {
+                await alarmStore.refreshNotificationPermissionStatus()
+            }
+        }
+        .alert(L10n.alarmEditorWakeCheckPermissionPromptTitle, isPresented: $showWakeCheckPermissionPrompt) {
+            Button(L10n.actionNext) {
+                requestWakeCheckPermissionAfterPrompt()
+            }
+            Button(L10n.actionCancel, role: .cancel) {
+                wakeCheckEnabled?.wrappedValue = false
+            }
+        } message: {
+            Text(L10n.alarmEditorWakeCheckPermissionPromptBody)
+        }
+        .alert(L10n.alarmEditorWakeCheckPermissionDeniedTitle, isPresented: $showWakeCheckPermissionDenied) {
+            Button(L10n.actionOpenSettings) {
+                alarmStore.openSettings()
+            }
+            Button(L10n.alarmEditorWakeCheckDisableFeatureAction, role: .destructive) {
+                wakeCheckEnabled?.wrappedValue = false
+                alarmStore.disableWakeUpCheckFeatureGlobally()
+            }
+            Button(L10n.actionCancel, role: .cancel) {
+                wakeCheckEnabled?.wrappedValue = false
+            }
+        } message: {
+            Text(L10n.alarmEditorWakeCheckPermissionDeniedBody)
+        }
     }
 
     private func selectedOption(for item: SharedSettingsSelectionSheet) -> SharedSettingsSelectionOption {
@@ -203,6 +317,41 @@ struct SharedAlarmSettingsEditor: View {
             return String(localized: "alarm_editor_snooze_debug_5_seconds")
         }
         return "\(minutes) \(String(localized: "alarm_editor_snooze_minutes_unit"))"
+    }
+
+    private func attemptEnableWakeCheck() {
+        guard let wakeCheckEnabled else {
+            return
+        }
+
+        Task {
+            let status = await alarmStore.refreshNotificationPermissionStatus()
+            switch status {
+            case .authorized:
+                wakeCheckEnabled.wrappedValue = true
+            case .notDetermined:
+                showWakeCheckPermissionPrompt = true
+            case .denied:
+                showWakeCheckPermissionDenied = true
+            }
+        }
+    }
+
+    private func requestWakeCheckPermissionAfterPrompt() {
+        guard let wakeCheckEnabled else {
+            return
+        }
+
+        Task {
+            let status = await alarmStore.requestNotificationPermissionIfNeeded()
+            switch status {
+            case .authorized:
+                wakeCheckEnabled.wrappedValue = true
+            case .notDetermined, .denied:
+                wakeCheckEnabled.wrappedValue = false
+                showWakeCheckPermissionDenied = true
+            }
+        }
     }
 
     private func runTryOut(after seconds: TimeInterval) {
