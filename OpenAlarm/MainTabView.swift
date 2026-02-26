@@ -97,7 +97,7 @@ private struct AlarmHomeView: View {
                                 .font(.title2.weight(.bold))
                                 .foregroundStyle(OAColor.actionCyan)
                                 .frame(width: 40, height: 40)
-                                .glassEffect(.regular.tint(OAColor.actionCyan.opacity(0.28)).interactive(), in: Circle())
+                                .glassEffect(.regular.interactive(), in: Circle())
                                 .overlay(
                                     Circle()
                                         .stroke(OAColor.glassStroke.opacity(0.85), lineWidth: 0.9)

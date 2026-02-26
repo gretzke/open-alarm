@@ -119,9 +119,9 @@ struct AlarmEditorView: View {
                         } label: {
                             Image(systemName: "checkmark")
                                 .font(.headline.weight(.bold))
-                                .foregroundStyle(OAColor.background)
+                                .foregroundStyle(OAColor.actionCyan)
                                 .frame(width: 32, height: 32)
-                                .glassEffect(.regular.tint(OAColor.actionCyan).interactive(), in: Circle())
+                                .glassEffect(.regular.tint(OAColor.actionCyan.opacity(0.28)).interactive(), in: Circle())
                         }
                         .buttonStyle(.plain)
                         .popover(
