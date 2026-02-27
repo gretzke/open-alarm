@@ -1113,30 +1113,6 @@ final class AlarmStore: ObservableObject {
                 pendingSnoozeIDs.remove(alarmID)
             }
 
-            if updated[index].isRepeating,
-               let skipUntil = updated[index].skipNextUntilDate,
-               currentState == nil,
-               skipUntil <= .now {
-                updated[index].isEnabled = true
-                updated[index].skipNextUntilDate = nil
-                if let overrideDate = updated[index].nextTriggerOverrideDate, overrideDate <= skipUntil {
-                    updated[index].nextTriggerOverrideDate = nil
-                }
-                updated[index].updatedAt = .now
-                scheduleRepeatRestore(for: updated[index])
-                changed = true
-            }
-
-            if updated[index].isRepeating,
-               let overrideDate = updated[index].nextTriggerOverrideDate,
-               currentState == nil,
-               overrideDate <= .now {
-                updated[index].nextTriggerOverrideDate = nil
-                updated[index].updatedAt = .now
-                scheduleRepeatRestore(for: updated[index])
-                changed = true
-            }
-
             if previousState == .alerting, currentState != .alerting {
                 applyPostAlertTransition(
                     alarm: &updated[index],
@@ -1148,6 +1124,13 @@ final class AlarmStore: ObservableObject {
                 )
                 continue
             }
+
+            _ = applyRecurringScheduleReconciliation(
+                alarm: &updated[index],
+                previousState: previousState,
+                currentState: currentState,
+                changed: &changed
+            )
 
             guard let currentState else {
                 continue
@@ -1237,29 +1220,19 @@ final class AlarmStore: ObservableObject {
         }
 
         if alarm.isRepeating {
-            if !alarm.isEnabled,
-               let skipUntil = alarm.skipNextUntilDate,
-               skipUntil <= .now {
-                alarm.isEnabled = true
-                alarm.skipNextUntilDate = nil
-                alarm.updatedAt = .now
-                changed = true
-            }
+            let reconciliationOperations = applyRecurringScheduleReconciliation(
+                alarm: &alarm,
+                previousState: previousState,
+                currentState: currentState,
+                changed: &changed,
+                allowRecurringRestore: !wakeCheckEnabled
+            )
+            let scheduledRecurringRestore = reconciliationOperations.contains(.scheduleRecurringRestore)
 
-            if let overrideDate = alarm.nextTriggerOverrideDate {
-                let overrideConsumed =
-                    (previousState == .alerting && currentState != .alerting) ||
-                    (currentState == nil && overrideDate <= .now)
-
-                if overrideConsumed {
-                    alarm.nextTriggerOverrideDate = nil
-                    alarm.updatedAt = .now
-                    changed = true
-                    if alarm.isEnabled, !wakeCheckEnabled {
-                        scheduleRepeatRestore(for: alarm)
-                    }
-                }
-            } else if hadSnoozes, alarm.isEnabled, !wakeCheckEnabled {
+            if hadSnoozes,
+               alarm.isEnabled,
+               !wakeCheckEnabled,
+               !scheduledRecurringRestore {
                 scheduleRepeatRestore(for: alarm)
             }
 
@@ -1292,6 +1265,90 @@ final class AlarmStore: ObservableObject {
             alarm.skipNextUntilDate = nil
             alarm.updatedAt = .now
             changed = true
+        }
+    }
+
+    private func applyRecurringScheduleReconciliation(
+        alarm: inout UserAlarm,
+        previousState: Alarm.State?,
+        currentState: Alarm.State?,
+        changed: inout Bool,
+        allowRecurringRestore: Bool = true,
+        referenceDate: Date = .now
+    ) -> [AlarmScheduleOperation] {
+        let desiredPlan = AlarmScheduleDesiredPlan(
+            isRepeating: alarm.isRepeating,
+            mode: desiredScheduleMode(for: alarm),
+            nextTriggerOverrideDate: alarm.nextTriggerOverrideDate
+        )
+        let actualState = AlarmScheduleActualState(
+            previous: scheduleRemoteState(for: previousState),
+            current: scheduleRemoteState(for: currentState)
+        )
+
+        let operations = AlarmScheduleReconciler.reconcile(
+            desired: desiredPlan,
+            actual: actualState,
+            now: referenceDate
+        )
+
+        for operation in operations {
+            switch operation {
+            case .clearTemporarySkipAndEnableRecurring:
+                if !alarm.isEnabled || alarm.skipNextUntilDate != nil {
+                    alarm.isEnabled = true
+                    alarm.skipNextUntilDate = nil
+                    alarm.updatedAt = referenceDate
+                    changed = true
+                }
+
+            case .clearTemporaryOneShot:
+                if alarm.nextTriggerOverrideDate != nil {
+                    alarm.nextTriggerOverrideDate = nil
+                    alarm.updatedAt = referenceDate
+                    changed = true
+                }
+
+            case .scheduleRecurringRestore:
+                if allowRecurringRestore,
+                   alarm.isEnabled {
+                    scheduleRepeatRestore(for: alarm)
+                }
+            }
+        }
+
+        return operations
+    }
+
+    private func desiredScheduleMode(for alarm: UserAlarm) -> AlarmScheduleDesiredMode {
+        if !alarm.isEnabled,
+           let skipUntil = alarm.skipNextUntilDate {
+            return .temporarySkip(until: skipUntil)
+        }
+
+        if let overrideDate = alarm.nextTriggerOverrideDate {
+            return .temporaryOneShot(triggerDate: overrideDate)
+        }
+
+        return alarm.isEnabled ? .recurring : .disabled
+    }
+
+    private func scheduleRemoteState(for state: Alarm.State?) -> AlarmScheduleRemoteState {
+        guard let state else {
+            return .missing
+        }
+
+        switch state {
+        case .scheduled:
+            return .scheduled
+        case .countdown:
+            return .countdown
+        case .paused:
+            return .paused
+        case .alerting:
+            return .alerting
+        @unknown default:
+            return .missing
         }
     }
 
