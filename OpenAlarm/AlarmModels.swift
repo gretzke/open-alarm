@@ -177,10 +177,28 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
 
     var useDefaultSharedSettings: Bool
     var customSharedSettings: SharedAlarmSettings
+
+    /// Stable identifier used by temporary manual one-shots to reference alarm
+    /// configuration independently from runtime AlarmKit alarm IDs.
+    var scheduleConfigReferenceID: UUID
+
+    /// Legacy UI/display field (kept for compatibility): next modified one-shot
+    /// date chosen by "Apply next only".
     var nextTriggerOverrideDate: Date?
+
     var isEnabled: Bool
+
+    /// Legacy UI/display field (kept for compatibility): skipped canonical date
+    /// for disable-next banners.
     var skipNextUntilDate: Date?
+
     var snoozeCount: Int
+
+    /// Unified temporary override state used by scheduling planner/reconciler.
+    var temporaryScheduleOverride: AlarmTemporaryScheduleOverride?
+
+    /// Explicit manual AlarmKit one-shot queue used while override is active.
+    var manualScheduleQueue: [AlarmManualScheduleEntry]
 
     var lifecycleState: AlarmLifecycleState
     var createdAt: Date
@@ -195,10 +213,13 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         deleteAfterUse: Bool,
         useDefaultSharedSettings: Bool,
         customSharedSettings: SharedAlarmSettings,
+        scheduleConfigReferenceID: UUID,
         nextTriggerOverrideDate: Date?,
         isEnabled: Bool,
         skipNextUntilDate: Date?,
         snoozeCount: Int,
+        temporaryScheduleOverride: AlarmTemporaryScheduleOverride?,
+        manualScheduleQueue: [AlarmManualScheduleEntry],
         lifecycleState: AlarmLifecycleState,
         createdAt: Date,
         updatedAt: Date
@@ -211,10 +232,13 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         self.deleteAfterUse = deleteAfterUse
         self.useDefaultSharedSettings = useDefaultSharedSettings
         self.customSharedSettings = customSharedSettings
+        self.scheduleConfigReferenceID = scheduleConfigReferenceID
         self.nextTriggerOverrideDate = nextTriggerOverrideDate
         self.isEnabled = isEnabled
         self.skipNextUntilDate = skipNextUntilDate
         self.snoozeCount = snoozeCount
+        self.temporaryScheduleOverride = temporaryScheduleOverride
+        self.manualScheduleQueue = manualScheduleQueue.sorted { $0.triggerDate < $1.triggerDate }
         self.lifecycleState = lifecycleState
         self.createdAt = createdAt
         self.updatedAt = updatedAt
@@ -230,6 +254,15 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
 
     var isFullyDisabled: Bool {
         !isEnabled && skipNextUntilDate == nil
+    }
+
+    var canonicalScheduleSpec: AlarmCanonicalScheduleSpec {
+        AlarmCanonicalScheduleSpec(
+            weekdayNumbers: sortedRepeatDays.map(\.rawValue),
+            hour: hour,
+            minute: minute,
+            isEnabled: true
+        )
     }
 
     var triggerDateForDisplay: Date {
@@ -248,11 +281,9 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         repeatDays.sorted { $0.rawValue < $1.rawValue }
     }
 
+    /// Canonical schedule only. Temporary overrides are handled by manual queue
+    /// scheduling and must not mutate this payload.
     var schedule: Alarm.Schedule {
-        if let nextTriggerOverrideDate {
-            return .fixed(nextTriggerOverrideDate)
-        }
-
         let time = Alarm.Schedule.Relative.Time(hour: hour, minute: minute)
         if repeatDays.isEmpty {
             return .relative(.init(time: time, repeats: .never))
@@ -283,10 +314,13 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         case wakeUpCheckDelayMinutes // legacy migration key
         case useDefaultSharedSettings
         case customSharedSettings
+        case scheduleConfigReferenceID
         case nextTriggerOverrideDate
         case isEnabled
         case skipNextUntilDate
         case snoozeCount
+        case temporaryScheduleOverride
+        case manualScheduleQueue
         case lifecycleState
         case createdAt
         case updatedAt
@@ -314,11 +348,16 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
             customSharedSettings.wakeUpCheckDelayMinutes = WakeUpCheckTimingPolicy.clampCheckDelayMinutes(legacyWakeDelay)
         }
 
+        scheduleConfigReferenceID = try container.decodeIfPresent(UUID.self, forKey: .scheduleConfigReferenceID) ?? id
         nextTriggerOverrideDate = try container.decodeIfPresent(Date.self, forKey: .nextTriggerOverrideDate)
         isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
         skipNextUntilDate = try container.decodeIfPresent(Date.self, forKey: .skipNextUntilDate)
 
         snoozeCount = try container.decodeIfPresent(Int.self, forKey: .snoozeCount) ?? 0
+
+        temporaryScheduleOverride = try container.decodeIfPresent(AlarmTemporaryScheduleOverride.self, forKey: .temporaryScheduleOverride)
+        manualScheduleQueue = (try container.decodeIfPresent([AlarmManualScheduleEntry].self, forKey: .manualScheduleQueue) ?? [])
+            .sorted { $0.triggerDate < $1.triggerDate }
 
         lifecycleState = try container.decodeIfPresent(AlarmLifecycleState.self, forKey: .lifecycleState) ?? .scheduled
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? .now
@@ -335,10 +374,13 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         try container.encode(deleteAfterUse, forKey: .deleteAfterUse)
         try container.encode(useDefaultSharedSettings, forKey: .useDefaultSharedSettings)
         try container.encode(customSharedSettings, forKey: .customSharedSettings)
+        try container.encode(scheduleConfigReferenceID, forKey: .scheduleConfigReferenceID)
         try container.encodeIfPresent(nextTriggerOverrideDate, forKey: .nextTriggerOverrideDate)
         try container.encode(isEnabled, forKey: .isEnabled)
         try container.encodeIfPresent(skipNextUntilDate, forKey: .skipNextUntilDate)
         try container.encode(snoozeCount, forKey: .snoozeCount)
+        try container.encodeIfPresent(temporaryScheduleOverride, forKey: .temporaryScheduleOverride)
+        try container.encode(manualScheduleQueue, forKey: .manualScheduleQueue)
         try container.encode(lifecycleState, forKey: .lifecycleState)
         try container.encode(createdAt, forKey: .createdAt)
         try container.encode(updatedAt, forKey: .updatedAt)
@@ -469,10 +511,13 @@ struct AlarmDraft: Equatable {
         id: UUID,
         existingCreatedAt: Date?,
         defaultSharedSettings: SharedAlarmSettings,
+        existingScheduleConfigReferenceID: UUID? = nil,
         existingNextTriggerOverrideDate: Date? = nil,
         existingIsEnabled: Bool = true,
         existingSkipNextUntilDate: Date? = nil,
-        existingSnoozeCount: Int?
+        existingSnoozeCount: Int?,
+        existingTemporaryScheduleOverride: AlarmTemporaryScheduleOverride? = nil,
+        existingManualScheduleQueue: [AlarmManualScheduleEntry] = []
     ) -> UserAlarm {
         let timeComponents = Calendar.autoupdatingCurrent.dateComponents([.hour, .minute], from: time)
         let hour = timeComponents.hour ?? 7
@@ -488,10 +533,13 @@ struct AlarmDraft: Equatable {
             deleteAfterUse: deleteAfterUse,
             useDefaultSharedSettings: useDefaultSharedSettings,
             customSharedSettings: persistedCustomSharedSettings,
+            scheduleConfigReferenceID: existingScheduleConfigReferenceID ?? id,
             nextTriggerOverrideDate: existingNextTriggerOverrideDate,
             isEnabled: existingIsEnabled,
             skipNextUntilDate: existingSkipNextUntilDate,
             snoozeCount: existingSnoozeCount ?? 0,
+            temporaryScheduleOverride: existingTemporaryScheduleOverride,
+            manualScheduleQueue: existingManualScheduleQueue,
             lifecycleState: .scheduled,
             createdAt: existingCreatedAt ?? .now,
             updatedAt: .now

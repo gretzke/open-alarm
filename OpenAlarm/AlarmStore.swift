@@ -26,6 +26,10 @@ final class AlarmStore: ObservableObject {
     private var pendingRepeatRestores: Set<UUID> = []
     private var wakeUpCheckSessionsByAlarmID: [UUID: WakeUpCheckSession] = [:]
 
+    /// When temporary schedule override is active, we keep this many explicit
+    /// one-shot alarms queued as fallback bridges.
+    private let manualOverrideQueueDepth = AlarmSchedulePlanner.defaultManualQueueDepth
+
     init(
         alarmManager: AlarmManager = .shared,
         permissionService: AlarmPermissionService? = nil,
@@ -62,6 +66,7 @@ final class AlarmStore: ObservableObject {
         Task { @MainActor [weak self] in
             await self?.refreshNotificationPermissionStatus()
             await self?.reconcilePendingWakeUpCheckConfirmations()
+            await self?.reconcileAllAlarmSchedules()
         }
     }
 
@@ -75,6 +80,7 @@ final class AlarmStore: ObservableObject {
         Task { @MainActor [weak self] in
             await self?.refreshNotificationPermissionStatus()
             await self?.reconcilePendingWakeUpCheckConfirmations()
+            await self?.reconcileAllAlarmSchedules()
         }
     }
 
@@ -322,7 +328,9 @@ final class AlarmStore: ObservableObject {
             throw AlarmStoreError.scheduleFailed
         }
 
+        let now = Date.now
         var current = alarms[index]
+
         let timeComponents = Calendar.autoupdatingCurrent.dateComponents([.hour, .minute], from: draft.time)
         let overrideHour = timeComponents.hour ?? current.hour
         let overrideMinute = timeComponents.minute ?? current.minute
@@ -331,38 +339,45 @@ final class AlarmStore: ObservableObject {
             for: current,
             overrideHour: overrideHour,
             overrideMinute: overrideMinute,
-            after: .now
+            after: now
         ) else {
             throw AlarmStoreError.scheduleFailed
         }
 
-        current.nextTriggerOverrideDate = nextOverrideDate
-        current.isEnabled = true
-        current.skipNextUntilDate = nil
-        current.snoozeCount = 0
-        current.updatedAt = .now
-
-        do {
-            let config = makeConfiguration(for: current, schedule: current.schedule, isShadowTrial: false)
-            let remoteAlarm = try await scheduleAlarmWithUpdateFallback(
-                id: current.id,
-                configuration: config,
-                isUpdate: true
-            )
-            current.lifecycleState = remoteAlarm.state == .alerting ? .alerting : .scheduled
-            lastKnownAlarmState[current.id] = remoteAlarm.state
-            remoteStates[current.id] = remoteAlarm.state
-        } catch {
+        guard let activation = AlarmSchedulePlanner.activateTemporaryOverride(
+            canonicalSchedule: current.canonicalScheduleSpec,
+            intent: .modifyNext(triggerDate: nextOverrideDate),
+            now: now,
+            manualQueueDepth: manualOverrideQueueDepth
+        ) else {
             throw AlarmStoreError.scheduleFailed
         }
+
+        let staleManualIDs = Set(current.manualScheduleQueue.map(\.id))
+
+        current.isEnabled = true
+        current.skipNextUntilDate = nil
+        current.nextTriggerOverrideDate = nextOverrideDate
+        current.temporaryScheduleOverride = activation.overrideState
+        current.manualScheduleQueue = buildManualQueueEntries(
+            triggerDates: activation.manualTriggerDates,
+            restoreAnchorDate: activation.overrideState.restoreAnchorDate,
+            configReferenceID: current.scheduleConfigReferenceID,
+            overrideDate: activation.overrideState.overrideDate
+        )
+        current.snoozeCount = 0
+        current.updatedAt = now
 
         alarms[index] = current
         alarms = sortAlarms(alarms)
         save()
+
+        await cancelRuntimeAlarms(ids: staleManualIDs.subtracting(Set(current.manualScheduleQueue.map(\.id))))
+        await reconcileSchedulingForAlarm(current.id)
     }
 
     func setAlarmEnabled(_ alarm: UserAlarm, enabled: Bool, skipNext: Bool?) async throws {
-        if enabled {
+        if enabled || skipNext == true {
             try await ensureAuthorizedForScheduling()
         }
 
@@ -370,45 +385,49 @@ final class AlarmStore: ObservableObject {
             return
         }
 
+        let now = Date.now
         var updatedAlarm = alarms[index]
+        let staleManualIDs = Set(updatedAlarm.manualScheduleQueue.map(\.id))
 
         if enabled {
             updatedAlarm.isEnabled = true
             updatedAlarm.skipNextUntilDate = nil
-            updatedAlarm.updatedAt = .now
-
-            do {
-                let config = makeConfiguration(for: updatedAlarm, schedule: updatedAlarm.schedule, isShadowTrial: false)
-                let remoteAlarm = try await scheduleAlarmWithUpdateFallback(
-                    id: updatedAlarm.id,
-                    configuration: config,
-                    isUpdate: true
-                )
-                updatedAlarm.lifecycleState = remoteAlarm.state == .alerting ? .alerting : .scheduled
-                lastKnownAlarmState[updatedAlarm.id] = remoteAlarm.state
-                remoteStates[updatedAlarm.id] = remoteAlarm.state
-            } catch {
+            updatedAlarm.nextTriggerOverrideDate = nil
+            updatedAlarm.temporaryScheduleOverride = nil
+            updatedAlarm.manualScheduleQueue.removeAll()
+            updatedAlarm.updatedAt = now
+        } else if updatedAlarm.isRepeating,
+                  skipNext == true {
+            guard let activation = AlarmSchedulePlanner.activateTemporaryOverride(
+                canonicalSchedule: updatedAlarm.canonicalScheduleSpec,
+                intent: .disableNext,
+                now: now,
+                manualQueueDepth: manualOverrideQueueDepth
+            ) else {
                 throw AlarmStoreError.scheduleFailed
             }
-        } else {
+
+            // Disable-next and modify-next are mutually exclusive by construction:
+            // this assignment replaces any previous temporary override mode.
             updatedAlarm.isEnabled = false
-            updatedAlarm.updatedAt = .now
-
-            if updatedAlarm.isRepeating, skipNext == true,
-               let skipUntil = nextPlannedTriggerDate(for: updatedAlarm, after: .now) {
-                updatedAlarm.skipNextUntilDate = skipUntil
-                updatedAlarm.nextTriggerOverrideDate = nil
-            } else {
-                updatedAlarm.skipNextUntilDate = nil
-                updatedAlarm.nextTriggerOverrideDate = nil
-            }
-
-            try? alarmManager.stop(id: updatedAlarm.id)
-            try? alarmManager.cancel(id: updatedAlarm.id)
-
-            updatedAlarm.lifecycleState = .scheduled
-            lastKnownAlarmState.removeValue(forKey: updatedAlarm.id)
-            remoteStates.removeValue(forKey: updatedAlarm.id)
+            updatedAlarm.skipNextUntilDate = activation.overrideState.skippedCanonicalDate
+            updatedAlarm.nextTriggerOverrideDate = nil
+            updatedAlarm.temporaryScheduleOverride = activation.overrideState
+            updatedAlarm.manualScheduleQueue = buildManualQueueEntries(
+                triggerDates: activation.manualTriggerDates,
+                restoreAnchorDate: activation.overrideState.restoreAnchorDate,
+                configReferenceID: updatedAlarm.scheduleConfigReferenceID,
+                overrideDate: activation.overrideState.overrideDate
+            )
+            updatedAlarm.updatedAt = now
+        } else {
+            // Full disable clears all temporary scheduling state.
+            updatedAlarm.isEnabled = false
+            updatedAlarm.skipNextUntilDate = nil
+            updatedAlarm.nextTriggerOverrideDate = nil
+            updatedAlarm.temporaryScheduleOverride = nil
+            updatedAlarm.manualScheduleQueue.removeAll()
+            updatedAlarm.updatedAt = now
 
             if let session = wakeUpCheckSessionsByAlarmID.removeValue(forKey: updatedAlarm.id) {
                 wakeUpCheckNotificationService.cancel(notificationID: session.notificationID)
@@ -421,13 +440,26 @@ final class AlarmStore: ObservableObject {
             }
         }
 
+        updatedAlarm.lifecycleState = .scheduled
+
         alarms[index] = updatedAlarm
         alarms = sortAlarms(alarms)
         save()
+
+        await cancelRuntimeAlarms(ids: staleManualIDs.subtracting(Set(updatedAlarm.manualScheduleQueue.map(\.id))))
+        await reconcileSchedulingForAlarm(updatedAlarm.id)
     }
 
     func deleteAlarm(_ alarm: UserAlarm) {
         try? alarmManager.cancel(id: alarm.id)
+
+        for manual in alarm.manualScheduleQueue {
+            try? alarmManager.stop(id: manual.id)
+            try? alarmManager.cancel(id: manual.id)
+            lastKnownAlarmState.removeValue(forKey: manual.id)
+            remoteStates.removeValue(forKey: manual.id)
+        }
+
         alarms.removeAll { $0.id == alarm.id }
         remoteStates.removeValue(forKey: alarm.id)
         lastKnownAlarmState.removeValue(forKey: alarm.id)
@@ -684,42 +716,47 @@ final class AlarmStore: ObservableObject {
     private func upsertAlarm(existingAlarm: UserAlarm?, draft: AlarmDraft, clearNextOverride: Bool = false) async throws {
         try await ensureAuthorizedForScheduling()
 
+        let now = Date.now
         let id = existingAlarm?.id ?? UUID()
-        let preservedOverride = clearNextOverride ? nil : existingAlarm?.nextTriggerOverrideDate
 
         var nextAlarm = draft.toUserAlarm(
             id: id,
             existingCreatedAt: existingAlarm?.createdAt,
             defaultSharedSettings: defaultSharedSettings,
-            existingNextTriggerOverrideDate: preservedOverride,
+            existingScheduleConfigReferenceID: existingAlarm?.scheduleConfigReferenceID,
+            existingNextTriggerOverrideDate: existingAlarm?.nextTriggerOverrideDate,
             existingIsEnabled: existingAlarm?.isEnabled ?? true,
             existingSkipNextUntilDate: existingAlarm?.skipNextUntilDate,
-            existingSnoozeCount: existingAlarm?.snoozeCount
+            existingSnoozeCount: existingAlarm?.snoozeCount,
+            existingTemporaryScheduleOverride: existingAlarm?.temporaryScheduleOverride,
+            existingManualScheduleQueue: existingAlarm?.manualScheduleQueue ?? []
         )
 
-        if nextAlarm.isEnabled {
-            do {
-                let config = makeConfiguration(for: nextAlarm, schedule: nextAlarm.schedule, isShadowTrial: false)
-                let remoteAlarm = try await scheduleAlarmWithUpdateFallback(
-                    id: id,
-                    configuration: config,
-                    isUpdate: existingAlarm != nil
-                )
-                nextAlarm.lifecycleState = remoteAlarm.state == .alerting ? .alerting : .scheduled
-                nextAlarm.snoozeCount = 0
-                lastKnownAlarmState[id] = remoteAlarm.state
-                remoteStates[id] = remoteAlarm.state
-            } catch {
-                throw AlarmStoreError.scheduleFailed
-            }
+        let staleManualIDs = Set(existingAlarm?.manualScheduleQueue.map(\.id) ?? [])
+
+        let canonicalScheduleChanged: Bool = if let existingAlarm {
+            existingAlarm.hour != nextAlarm.hour ||
+                existingAlarm.minute != nextAlarm.minute ||
+                Set(existingAlarm.repeatDays) != Set(nextAlarm.repeatDays)
         } else {
-            try? alarmManager.stop(id: id)
-            try? alarmManager.cancel(id: id)
-            nextAlarm.lifecycleState = .scheduled
-            nextAlarm.snoozeCount = 0
-            lastKnownAlarmState.removeValue(forKey: id)
-            remoteStates.removeValue(forKey: id)
+            false
         }
+
+        let shouldClearOverride = clearNextOverride || canonicalScheduleChanged || !nextAlarm.isRepeating
+
+        if shouldClearOverride {
+            if existingAlarm?.temporaryScheduleOverride?.kind == .disableNext {
+                // Schedule edits must restore canonical recurring intent.
+                nextAlarm.isEnabled = true
+            }
+
+            nextAlarm.temporaryScheduleOverride = nil
+            nextAlarm.manualScheduleQueue.removeAll()
+            nextAlarm.nextTriggerOverrideDate = nil
+            nextAlarm.skipNextUntilDate = nil
+        }
+
+        nextAlarm.updatedAt = now
 
         let wakeCheckEnabled = nextAlarm.resolvedSharedSettings(defaults: defaultSharedSettings).wakeUpCheckEnabled
         if !wakeCheckEnabled,
@@ -736,6 +773,9 @@ final class AlarmStore: ObservableObject {
 
         alarms = sortAlarms(alarms)
         save()
+
+        await cancelRuntimeAlarms(ids: staleManualIDs.subtracting(Set(nextAlarm.manualScheduleQueue.map(\.id))))
+        await reconcileSchedulingForAlarm(id)
     }
 
     private func ensureAuthorizedForScheduling() async throws {
@@ -747,18 +787,7 @@ final class AlarmStore: ObservableObject {
 
     private func rescheduleAlarmsUsingDefaultSharedSettings() async {
         for alarm in alarms where alarm.useDefaultSharedSettings {
-            guard alarm.isEnabled else {
-                continue
-            }
-
-            do {
-                let config = makeConfiguration(for: alarm, schedule: alarm.schedule, isShadowTrial: false)
-                let remote = try await alarmManager.schedule(id: alarm.id, configuration: config)
-                lastKnownAlarmState[alarm.id] = remote.state
-                remoteStates[alarm.id] = remote.state
-            } catch {
-                // Best effort only; next refresh can reconcile state.
-            }
+            await reconcileSchedulingForAlarm(alarm.id)
         }
     }
 
@@ -777,16 +806,194 @@ final class AlarmStore: ObservableObject {
         }
     }
 
+    private func buildManualQueueEntries(
+        triggerDates: [Date],
+        restoreAnchorDate: Date,
+        configReferenceID: UUID,
+        overrideDate: Date?
+    ) -> [AlarmManualScheduleEntry] {
+        triggerDates
+            .sorted()
+            .map { triggerDate in
+                AlarmManualScheduleEntry(
+                    id: UUID(),
+                    triggerDate: triggerDate,
+                    restoreAnchorDate: restoreAnchorDate,
+                    configReferenceID: configReferenceID,
+                    role: (overrideDate != nil && triggerDate == overrideDate) ? .overrideTrigger : .canonicalBridge
+                )
+            }
+    }
+
+    private func cancelRuntimeAlarms(ids: Set<UUID>) async {
+        guard !ids.isEmpty else {
+            return
+        }
+
+        for id in ids {
+            try? alarmManager.stop(id: id)
+            try? alarmManager.cancel(id: id)
+            lastKnownAlarmState.removeValue(forKey: id)
+            remoteStates.removeValue(forKey: id)
+        }
+    }
+
+    /// Reconciles every user alarm against its canonical + temporary override
+    /// scheduling state. This is intentionally called at every lifecycle
+    /// opportunity (app open, callback stream, refresh) to keep scheduling
+    /// deterministic even after missed callbacks or device restarts.
+    private func reconcileAllAlarmSchedules(referenceDate: Date = .now) async {
+        let alarmIDs = alarms.map(\.id)
+        for alarmID in alarmIDs {
+            await reconcileSchedulingForAlarm(alarmID, referenceDate: referenceDate)
+        }
+    }
+
+    /// Applies scheduling state for a single alarm without consulting wake-check
+    /// or snooze configuration gates.
+    private func reconcileSchedulingForAlarm(_ alarmID: UUID, referenceDate: Date = .now) async {
+        guard let index = alarms.firstIndex(where: { $0.id == alarmID }) else {
+            return
+        }
+
+        var alarm = alarms[index]
+        var changed = false
+
+        if let overrideState = alarm.temporaryScheduleOverride,
+           alarm.isRepeating {
+            let desiredDates = AlarmSchedulePlanner.desiredManualTriggerDates(
+                canonicalSchedule: alarm.canonicalScheduleSpec,
+                overrideState: overrideState,
+                now: referenceDate,
+                manualQueueDepth: manualOverrideQueueDepth
+            )
+
+            if desiredDates.isEmpty {
+                if overrideState.kind == .disableNext {
+                    alarm.isEnabled = true
+                }
+                alarm.temporaryScheduleOverride = nil
+                alarm.manualScheduleQueue.removeAll()
+                alarm.skipNextUntilDate = nil
+                alarm.nextTriggerOverrideDate = nil
+                alarm.updatedAt = referenceDate
+                changed = true
+            } else {
+                var existingByDate: [Date: AlarmManualScheduleEntry] = [:]
+                for entry in alarm.manualScheduleQueue where existingByDate[entry.triggerDate] == nil {
+                    existingByDate[entry.triggerDate] = entry
+                }
+
+                let rebuiltQueue: [AlarmManualScheduleEntry] = desiredDates.map { date in
+                    if let existing = existingByDate[date] {
+                        return existing
+                    }
+
+                    return AlarmManualScheduleEntry(
+                        id: UUID(),
+                        triggerDate: date,
+                        restoreAnchorDate: overrideState.restoreAnchorDate,
+                        configReferenceID: alarm.scheduleConfigReferenceID,
+                        role: (overrideState.overrideDate != nil && date == overrideState.overrideDate) ? .overrideTrigger : .canonicalBridge
+                    )
+                }
+
+                let staleManualIDs = Set(alarm.manualScheduleQueue.map(\.id))
+                    .subtracting(Set(rebuiltQueue.map(\.id)))
+
+                if !staleManualIDs.isEmpty {
+                    await cancelRuntimeAlarms(ids: staleManualIDs)
+                }
+
+                if rebuiltQueue != alarm.manualScheduleQueue {
+                    alarm.manualScheduleQueue = rebuiltQueue
+                    alarm.updatedAt = referenceDate
+                    changed = true
+                }
+
+                // While override is active, recurring schedule must be removed.
+                try? alarmManager.stop(id: alarm.id)
+                try? alarmManager.cancel(id: alarm.id)
+                lastKnownAlarmState.removeValue(forKey: alarm.id)
+
+                for manual in alarm.manualScheduleQueue {
+                    guard manual.triggerDate > referenceDate.addingTimeInterval(-1) else {
+                        continue
+                    }
+
+                    do {
+                        let config = makeConfiguration(
+                            for: alarm,
+                            schedule: .fixed(manual.triggerDate),
+                            isShadowTrial: false,
+                            forceDisableSnooze: true,
+                            runtimeAlarmID: manual.id,
+                            configReferenceID: manual.configReferenceID
+                        )
+                        let remote = try await scheduleAlarmWithUpdateFallback(
+                            id: manual.id,
+                            configuration: config,
+                            isUpdate: true
+                        )
+                        lastKnownAlarmState[manual.id] = remote.state
+                    } catch {
+                        // Best effort. Next reconciliation opportunity can recover.
+                    }
+                }
+
+                remoteStates[alarm.id] = alarm.manualScheduleQueue.isEmpty ? nil : .scheduled
+            }
+        }
+
+        if alarm.temporaryScheduleOverride == nil {
+            if !alarm.manualScheduleQueue.isEmpty {
+                let staleManualIDs = Set(alarm.manualScheduleQueue.map(\.id))
+                await cancelRuntimeAlarms(ids: staleManualIDs)
+                alarm.manualScheduleQueue.removeAll()
+                changed = true
+            }
+
+            if alarm.isEnabled {
+                do {
+                    let config = makeConfiguration(for: alarm, schedule: alarm.schedule, isShadowTrial: false)
+                    let remote = try await scheduleAlarmWithUpdateFallback(
+                        id: alarm.id,
+                        configuration: config,
+                        isUpdate: true
+                    )
+                    lastKnownAlarmState[alarm.id] = remote.state
+                    remoteStates[alarm.id] = remote.state
+                } catch {
+                    // Best effort. Foreground refresh can recover.
+                }
+            } else {
+                try? alarmManager.stop(id: alarm.id)
+                try? alarmManager.cancel(id: alarm.id)
+                lastKnownAlarmState.removeValue(forKey: alarm.id)
+                remoteStates.removeValue(forKey: alarm.id)
+            }
+        }
+
+        if changed {
+            alarms[index] = alarm
+            alarms = sortAlarms(alarms)
+            save()
+        }
+    }
+
     private func makeConfiguration(
         for alarm: UserAlarm,
         schedule: Alarm.Schedule,
         isShadowTrial: Bool,
-        forceDisableSnooze: Bool = false
+        forceDisableSnooze: Bool = false,
+        runtimeAlarmID: UUID? = nil,
+        configReferenceID: UUID? = nil
     ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
         let sharedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
 
         return makeConfiguration(
-            alarmID: alarm.id,
+            runtimeAlarmID: runtimeAlarmID ?? alarm.id,
+            configReferenceID: configReferenceID ?? alarm.scheduleConfigReferenceID,
             title: resolvedAlarmTitle(from: alarm.name),
             schedule: schedule,
             sharedSettings: sharedSettings,
@@ -803,7 +1010,8 @@ final class AlarmStore: ObservableObject {
         let sharedSettings = nap.resolvedSharedSettings(defaults: defaultSharedSettings)
 
         return makeConfiguration(
-            alarmID: nap.id,
+            runtimeAlarmID: nap.id,
+            configReferenceID: nap.id,
             title: String(localized: "nap_default_alarm_label"),
             schedule: schedule,
             sharedSettings: sharedSettings,
@@ -814,7 +1022,8 @@ final class AlarmStore: ObservableObject {
     }
 
     private func makeConfiguration(
-        alarmID: UUID,
+        runtimeAlarmID: UUID,
+        configReferenceID: UUID,
         title: String,
         schedule: Alarm.Schedule,
         sharedSettings: SharedAlarmSettings,
@@ -835,12 +1044,12 @@ final class AlarmStore: ObservableObject {
 
         let attributes = AlarmAttributes(
             presentation: presentation,
-            metadata: OpenAlarmMetadata(source: alarmID.uuidString, isShadowTrial: isShadowTrial),
+            metadata: OpenAlarmMetadata(source: configReferenceID.uuidString, isShadowTrial: isShadowTrial),
             tintColor: OAColor.actionCyan
         )
 
         let secondaryIntent: (any LiveActivityIntent)? = if showSnoozeButton {
-            SnoozeIntent(alarmID: alarmID.uuidString)
+            SnoozeIntent(alarmID: runtimeAlarmID.uuidString)
         } else {
             nil
         }
@@ -874,6 +1083,7 @@ final class AlarmStore: ObservableObject {
 
                 await reconcilePendingWakeUpCheckConfirmations()
                 applyRemoteAlarms(incoming)
+                await reconcileAllAlarmSchedules()
             }
         }
     }
@@ -885,6 +1095,10 @@ final class AlarmStore: ObservableObject {
             applyRemoteAlarms(remote)
         } catch {
             remoteStates = [:]
+        }
+
+        Task { @MainActor [weak self] in
+            await self?.reconcileAllAlarmSchedules()
         }
     }
 
@@ -906,10 +1120,9 @@ final class AlarmStore: ObservableObject {
 
         if restoreSchedules {
             for alarmID in affectedAlarmIDs {
-                guard let alarm = alarms.first(where: { $0.id == alarmID }), alarm.isEnabled else {
-                    continue
+                Task { @MainActor [weak self] in
+                    await self?.reconcileSchedulingForAlarm(alarmID)
                 }
-                scheduleRepeatRestore(for: alarm)
             }
         }
 
@@ -1081,6 +1294,7 @@ final class AlarmStore: ObservableObject {
 
     private func applyRemoteAlarms(_ incoming: [Alarm]) {
         let remoteByID = Dictionary(uniqueKeysWithValues: incoming.map { ($0.id, $0) })
+        let referenceDate = Date.now
 
         var pendingSnoozeIDs = AlarmPersistence.loadPendingSnoozeIDs(from: userDefaults)
         let originalPending = pendingSnoozeIDs
@@ -1090,26 +1304,113 @@ final class AlarmStore: ObservableObject {
 
         handleShadowTrials(remoteByID: remoteByID, pendingSnoozeIDs: &pendingSnoozeIDs)
 
-        remoteStates = Dictionary(
-            uniqueKeysWithValues: updated.compactMap { alarm in
-                guard let state = remoteByID[alarm.id]?.state else {
-                    return nil
-                }
-                return (alarm.id, state)
-            }
-        )
-
         var idsToAutoDelete: Set<UUID> = []
 
         for index in updated.indices {
-            let alarmID = updated[index].id
+            var alarm = updated[index]
+
+            // Temporary override mode is tracked via explicit manual one-shots.
+            // Their callback transitions drive deterministic recurring restore.
+            if let overrideState = alarm.temporaryScheduleOverride {
+                guard !alarm.manualScheduleQueue.isEmpty else {
+                    alarm.temporaryScheduleOverride = nil
+                    alarm.nextTriggerOverrideDate = nil
+                    alarm.skipNextUntilDate = nil
+                    alarm.isEnabled = true
+                    alarm.lifecycleState = .scheduled
+                    alarm.updatedAt = referenceDate
+                    updated[index] = alarm
+                    changed = true
+                    continue
+                }
+
+                var shouldRestoreRecurring = false
+                var hasManualAlertingState = false
+
+                for manual in alarm.manualScheduleQueue {
+                    let previousState = lastKnownAlarmState[manual.id]
+                    let currentState = remoteByID[manual.id]?.state
+
+                    if let currentState {
+                        lastKnownAlarmState[manual.id] = currentState
+                    } else {
+                        lastKnownAlarmState.removeValue(forKey: manual.id)
+                    }
+
+                    if isSnoozeTransitionState(currentState) {
+                        pendingSnoozeIDs.remove(manual.id)
+                    }
+
+                    if currentState == .alerting {
+                        hasManualAlertingState = true
+                    }
+
+                    let completedFromFireTransition = previousState == .alerting && currentState != .alerting
+                    let completedWhileColdStart = currentState == nil && manual.triggerDate <= referenceDate
+
+                    if completedFromFireTransition || completedWhileColdStart {
+                        if AlarmSchedulePlanner.shouldRestoreRecurringSchedule(
+                            afterManualAlarmFiredAt: manual.triggerDate,
+                            overrideState: overrideState
+                        ) {
+                            shouldRestoreRecurring = true
+                        }
+                    }
+                }
+
+                // Base recurring runtime alarm must stay absent while override is active.
+                try? alarmManager.stop(id: alarm.id)
+                try? alarmManager.cancel(id: alarm.id)
+                lastKnownAlarmState.removeValue(forKey: alarm.id)
+
+                if shouldRestoreRecurring {
+                    let staleManualIDs = Set(alarm.manualScheduleQueue.map(\.id))
+                    for id in staleManualIDs {
+                        try? alarmManager.stop(id: id)
+                        try? alarmManager.cancel(id: id)
+                        lastKnownAlarmState.removeValue(forKey: id)
+                        pendingSnoozeIDs.remove(id)
+                    }
+
+                    alarm.temporaryScheduleOverride = nil
+                    alarm.manualScheduleQueue.removeAll()
+                    alarm.nextTriggerOverrideDate = nil
+                    alarm.skipNextUntilDate = nil
+                    alarm.isEnabled = true
+                    alarm.lifecycleState = .scheduled
+                    alarm.updatedAt = referenceDate
+                    remoteStates.removeValue(forKey: alarm.id)
+                    changed = true
+                } else {
+                    if hasManualAlertingState {
+                        if alarm.lifecycleState != .alerting {
+                            alarm.lifecycleState = .alerting
+                            changed = true
+                        }
+                        remoteStates[alarm.id] = .alerting
+                    } else {
+                        if alarm.lifecycleState != .scheduled {
+                            alarm.lifecycleState = .scheduled
+                            changed = true
+                        }
+                        remoteStates[alarm.id] = .scheduled
+                    }
+                }
+
+                updated[index] = alarm
+                continue
+            }
+
+            let alarmID = alarm.id
             let previousState = lastKnownAlarmState[alarmID]
             let currentState = remoteByID[alarmID]?.state
 
             if let currentState {
                 lastKnownAlarmState[alarmID] = currentState
+                remoteStates[alarmID] = currentState
             } else {
                 lastKnownAlarmState.removeValue(forKey: alarmID)
+                remoteStates.removeValue(forKey: alarmID)
             }
 
             if isSnoozeTransitionState(currentState) {
@@ -1118,41 +1419,45 @@ final class AlarmStore: ObservableObject {
 
             if previousState == .alerting, currentState != .alerting {
                 applyPostAlertTransition(
-                    alarm: &updated[index],
+                    alarm: &alarm,
                     previousState: previousState,
                     currentState: currentState,
                     pendingSnoozeIDs: &pendingSnoozeIDs,
                     idsToAutoDelete: &idsToAutoDelete,
                     changed: &changed
                 )
+                updated[index] = alarm
                 continue
             }
 
             _ = applyRecurringScheduleReconciliation(
-                alarm: &updated[index],
+                alarm: &alarm,
                 previousState: previousState,
                 currentState: currentState,
                 changed: &changed
             )
 
             guard let currentState else {
+                updated[index] = alarm
                 continue
             }
 
             switch currentState {
             case .alerting:
-                if updated[index].lifecycleState != .alerting {
-                    updated[index].lifecycleState = .alerting
+                if alarm.lifecycleState != .alerting {
+                    alarm.lifecycleState = .alerting
                     changed = true
                 }
             case .scheduled, .countdown, .paused:
-                if updated[index].lifecycleState != .scheduled {
-                    updated[index].lifecycleState = .scheduled
+                if alarm.lifecycleState != .scheduled {
+                    alarm.lifecycleState = .scheduled
                     changed = true
                 }
             @unknown default:
                 break
             }
+
+            updated[index] = alarm
         }
 
         if !idsToAutoDelete.isEmpty {
@@ -1223,6 +1528,14 @@ final class AlarmStore: ObservableObject {
         }
 
         if alarm.isRepeating {
+            if alarm.temporaryScheduleOverride != nil {
+                if alarm.lifecycleState != .scheduled {
+                    alarm.lifecycleState = .scheduled
+                    changed = true
+                }
+                return
+            }
+
             let reconciliationOperations = applyRecurringScheduleReconciliation(
                 alarm: &alarm,
                 previousState: previousState,
@@ -1356,6 +1669,10 @@ final class AlarmStore: ObservableObject {
     }
 
     private func scheduleRepeatRestore(for alarm: UserAlarm) {
+        guard alarm.temporaryScheduleOverride == nil else {
+            return
+        }
+
         guard !pendingRepeatRestores.contains(alarm.id) else {
             return
         }
