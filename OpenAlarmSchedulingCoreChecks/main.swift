@@ -29,7 +29,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
     static func main() {
         do {
             try runChecks()
-            print("✅ Deterministic scheduling checks passed (12/12)")
+            print("✅ Deterministic scheduling checks passed (18/18)")
         } catch {
             if let failure = error as? CheckFailure {
                 fputs("❌ \(failure.message)\n", stderr)
@@ -152,7 +152,217 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 5) wake-check delay options include required user-facing choices
+        // 5) disable-next activation builds N=5 manual queue anchored to second canonical occurrence
+        do {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+            let now = DateComponents(
+                calendar: calendar,
+                timeZone: calendar.timeZone,
+                year: 2026,
+                month: 2,
+                day: 28,
+                hour: 6,
+                minute: 0,
+                second: 0
+            ).date!
+
+            let schedule = AlarmCanonicalScheduleSpec(
+                weekdayNumbers: [1, 2, 3, 4, 5, 6, 7],
+                hour: 7,
+                minute: 0,
+                isEnabled: true
+            )
+
+            let activation = AlarmSchedulePlanner.activateTemporaryOverride(
+                canonicalSchedule: schedule,
+                intent: .disableNext,
+                now: now,
+                manualQueueDepth: 5,
+                calendar: calendar
+            )
+
+            try expectTrue(activation != nil, "disable-next activation should succeed")
+            try expectEqual(activation?.overrideState.kind, .disableNext, "override mode should be disable-next")
+            try expectEqual(activation?.manualTriggerDates.count, 5, "disable-next should enqueue 5 manual bridge alarms")
+
+            let expectedAnchor = DateComponents(
+                calendar: calendar,
+                timeZone: calendar.timeZone,
+                year: 2026,
+                month: 3,
+                day: 1,
+                hour: 7,
+                minute: 0,
+                second: 0
+            ).date!
+            try expectEqual(
+                activation?.overrideState.restoreAnchorDate,
+                expectedAnchor,
+                "disable-next restore anchor should be second canonical occurrence"
+            )
+        }
+
+        // 6) modify-next-earlier does not restore on first ring, restores on anchor ring
+        do {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+            let now = DateComponents(
+                calendar: calendar,
+                timeZone: calendar.timeZone,
+                year: 2026,
+                month: 2,
+                day: 28,
+                hour: 6,
+                minute: 0,
+                second: 0
+            ).date!
+            let overrideDate = DateComponents(
+                calendar: calendar,
+                timeZone: calendar.timeZone,
+                year: 2026,
+                month: 2,
+                day: 28,
+                hour: 7,
+                minute: 0,
+                second: 0
+            ).date!
+            let anchorDate = DateComponents(
+                calendar: calendar,
+                timeZone: calendar.timeZone,
+                year: 2026,
+                month: 2,
+                day: 28,
+                hour: 8,
+                minute: 0,
+                second: 0
+            ).date!
+
+            let schedule = AlarmCanonicalScheduleSpec(
+                weekdayNumbers: [1, 2, 3, 4, 5, 6, 7],
+                hour: 8,
+                minute: 0,
+                isEnabled: true
+            )
+
+            let activation = AlarmSchedulePlanner.activateTemporaryOverride(
+                canonicalSchedule: schedule,
+                intent: .modifyNext(triggerDate: overrideDate),
+                now: now,
+                manualQueueDepth: 5,
+                calendar: calendar
+            )
+
+            try expectTrue(activation != nil, "modify-next-earlier activation should succeed")
+            try expectEqual(activation?.manualTriggerDates.prefix(2), [overrideDate, anchorDate], "earlier flow should keep override + canonical anchor")
+            try expectTrue(
+                !AlarmSchedulePlanner.shouldRestoreRecurringSchedule(
+                    afterManualAlarmFiredAt: overrideDate,
+                    overrideState: activation!.overrideState
+                ),
+                "earlier first ring should not restore recurring"
+            )
+            try expectTrue(
+                AlarmSchedulePlanner.shouldRestoreRecurringSchedule(
+                    afterManualAlarmFiredAt: anchorDate,
+                    overrideState: activation!.overrideState
+                ),
+                "earlier second ring (anchor) should restore recurring"
+            )
+        }
+
+        // 7) modify-next-later restores at overridden ring
+        do {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+            let now = DateComponents(
+                calendar: calendar,
+                timeZone: calendar.timeZone,
+                year: 2026,
+                month: 2,
+                day: 28,
+                hour: 6,
+                minute: 0,
+                second: 0
+            ).date!
+            let overrideDate = DateComponents(
+                calendar: calendar,
+                timeZone: calendar.timeZone,
+                year: 2026,
+                month: 2,
+                day: 28,
+                hour: 9,
+                minute: 0,
+                second: 0
+            ).date!
+
+            let schedule = AlarmCanonicalScheduleSpec(
+                weekdayNumbers: [1, 2, 3, 4, 5, 6, 7],
+                hour: 8,
+                minute: 0,
+                isEnabled: true
+            )
+
+            let activation = AlarmSchedulePlanner.activateTemporaryOverride(
+                canonicalSchedule: schedule,
+                intent: .modifyNext(triggerDate: overrideDate),
+                now: now,
+                manualQueueDepth: 5,
+                calendar: calendar
+            )
+
+            try expectTrue(activation != nil, "modify-next-later activation should succeed")
+            try expectTrue(
+                AlarmSchedulePlanner.shouldRestoreRecurringSchedule(
+                    afterManualAlarmFiredAt: overrideDate,
+                    overrideState: activation!.overrideState
+                ),
+                "later override ring should restore recurring"
+            )
+        }
+
+        // 8) schedule signature changes clear temporary override state
+        do {
+            let previous = AlarmCanonicalScheduleSignature(
+                spec: AlarmCanonicalScheduleSpec(
+                    weekdayNumbers: [2, 4, 6],
+                    hour: 8,
+                    minute: 15,
+                    isEnabled: true
+                )
+            )
+
+            let same = AlarmCanonicalScheduleSignature(
+                spec: AlarmCanonicalScheduleSpec(
+                    weekdayNumbers: [2, 4, 6],
+                    hour: 8,
+                    minute: 15,
+                    isEnabled: true
+                )
+            )
+            let changed = AlarmCanonicalScheduleSignature(
+                spec: AlarmCanonicalScheduleSpec(
+                    weekdayNumbers: [2, 4],
+                    hour: 8,
+                    minute: 45,
+                    isEnabled: true
+                )
+            )
+
+            try expectTrue(
+                !AlarmSchedulePlanner.shouldClearTemporaryOverride(previous: previous, next: same),
+                "identical schedule signatures should not clear override"
+            )
+            try expectTrue(
+                AlarmSchedulePlanner.shouldClearTemporaryOverride(previous: previous, next: changed),
+                "schedule edits should clear temporary override"
+            )
+        }
+
+        // 9) wake-check delay options include required user-facing choices
         do {
             try expectEqual(
                 WakeUpCheckTimingPolicy.checkDelayOptionsMinutes,
@@ -161,7 +371,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 6) wake-check delay debug sentinel uses 5-second delay
+        // 10) wake-check delay debug sentinel uses 5-second delay
         do {
             try expectEqual(
                 WakeUpCheckTimingPolicy.checkDelayInterval(
@@ -172,7 +382,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 7) wake-check normal delay values stay minute-based
+        // 11) wake-check normal delay values stay minute-based
         do {
             try expectEqual(
                 WakeUpCheckTimingPolicy.checkDelayInterval(for: 5),
@@ -181,7 +391,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 8) wake-check delay clamping preserves debug sentinel and clamps invalid values
+        // 12) wake-check delay clamping preserves debug sentinel and clamps invalid values
         do {
             try expectEqual(
                 WakeUpCheckTimingPolicy.clampCheckDelayMinutes(
@@ -202,7 +412,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 9) wake-check timeout options include required user-facing choices
+        // 13) wake-check timeout options include required user-facing choices
         do {
             try expectEqual(
                 WakeUpCheckTimingPolicy.responseTimeoutOptionsMinutes,
@@ -211,7 +421,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 10) wake-check timeout debug sentinel uses 5-second timeout
+        // 14) wake-check timeout debug sentinel uses 5-second timeout
         do {
             try expectEqual(
                 WakeUpCheckTimingPolicy.responseTimeoutInterval(
@@ -222,7 +432,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 11) wake-check normal timeout values stay minute-based
+        // 15) wake-check normal timeout values stay minute-based
         do {
             try expectEqual(
                 WakeUpCheckTimingPolicy.responseTimeoutInterval(for: 3),
@@ -231,7 +441,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 12) wake-check timeout normalization preserves debug sentinel and clamps invalid values
+        // 16) wake-check timeout normalization preserves debug sentinel and clamps invalid values
         do {
             try expectEqual(
                 WakeUpCheckTimingPolicy.normalizeResponseTimeoutMinutes(
@@ -244,6 +454,104 @@ struct AlarmScheduleReconcilerDeterministicChecks {
                 WakeUpCheckTimingPolicy.normalizeResponseTimeoutMinutes(-2),
                 1,
                 "invalid timeout values should clamp to 1 minute"
+            )
+        }
+
+        // 17) disable-next vs modify-next are mutually exclusive modes
+        do {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+            let now = DateComponents(
+                calendar: calendar,
+                timeZone: calendar.timeZone,
+                year: 2026,
+                month: 2,
+                day: 28,
+                hour: 6,
+                minute: 0,
+                second: 0
+            ).date!
+            let schedule = AlarmCanonicalScheduleSpec(
+                weekdayNumbers: [1, 2, 3, 4, 5, 6, 7],
+                hour: 8,
+                minute: 0,
+                isEnabled: true
+            )
+
+            let disable = AlarmSchedulePlanner.activateTemporaryOverride(
+                canonicalSchedule: schedule,
+                intent: .disableNext,
+                now: now,
+                manualQueueDepth: 5,
+                calendar: calendar
+            )
+            let modify = AlarmSchedulePlanner.activateTemporaryOverride(
+                canonicalSchedule: schedule,
+                intent: .modifyNext(triggerDate: now.addingTimeInterval(3600)),
+                now: now,
+                manualQueueDepth: 5,
+                calendar: calendar
+            )
+
+            try expectEqual(disable?.overrideState.kind, .disableNext, "disable-next intent should set disable-next mode")
+            try expectEqual(modify?.overrideState.kind, .modifyNext, "modify intent should set modify-next mode")
+        }
+
+        // 18) fallback queue rebuild after missed anchor still emits future bridges
+        do {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+            let now = DateComponents(
+                calendar: calendar,
+                timeZone: calendar.timeZone,
+                year: 2026,
+                month: 2,
+                day: 28,
+                hour: 6,
+                minute: 0,
+                second: 0
+            ).date!
+            let afterMissedAnchor = DateComponents(
+                calendar: calendar,
+                timeZone: calendar.timeZone,
+                year: 2026,
+                month: 3,
+                day: 1,
+                hour: 8,
+                minute: 0,
+                second: 0
+            ).date!
+
+            let schedule = AlarmCanonicalScheduleSpec(
+                weekdayNumbers: [1, 2, 3, 4, 5, 6, 7],
+                hour: 7,
+                minute: 0,
+                isEnabled: true
+            )
+
+            let activation = AlarmSchedulePlanner.activateTemporaryOverride(
+                canonicalSchedule: schedule,
+                intent: .disableNext,
+                now: now,
+                manualQueueDepth: 5,
+                calendar: calendar
+            )
+
+            try expectTrue(activation != nil, "disable-next activation should succeed")
+
+            let rebuilt = AlarmSchedulePlanner.desiredManualTriggerDates(
+                canonicalSchedule: schedule,
+                overrideState: activation!.overrideState,
+                now: afterMissedAnchor,
+                manualQueueDepth: 5,
+                calendar: calendar
+            )
+
+            try expectEqual(rebuilt.count, 5, "fallback queue should keep depth=5")
+            try expectTrue(
+                rebuilt.allSatisfy { $0 > afterMissedAnchor },
+                "fallback queue after missed anchor should contain only future bridges"
             )
         }
     }
