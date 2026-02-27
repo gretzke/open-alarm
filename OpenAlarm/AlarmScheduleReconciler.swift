@@ -50,6 +50,32 @@ public enum AlarmScheduleOperation: Equatable, Sendable {
     case scheduleRecurringRestore
 }
 
+public enum WakeUpCheckTimingPolicy {
+    public static let debugFiveSecondSentinelMinutes = 0
+    public static let defaultCheckDelayMinutes = 5
+    public static let defaultResponseTimeoutMinutes = 3
+    public static let responseTimeoutOptionsMinutes: [Int] = [1, 2, 3, 5, 10, 20]
+
+    public static func clampCheckDelayMinutes(_ minutes: Int) -> Int {
+        min(60, max(1, minutes))
+    }
+
+    public static func normalizeResponseTimeoutMinutes(_ minutes: Int) -> Int {
+        if minutes == debugFiveSecondSentinelMinutes {
+            return debugFiveSecondSentinelMinutes
+        }
+        return max(1, minutes)
+    }
+
+    public static func responseTimeoutInterval(for minutes: Int) -> TimeInterval {
+        let normalizedMinutes = normalizeResponseTimeoutMinutes(minutes)
+        if normalizedMinutes == debugFiveSecondSentinelMinutes {
+            return 5
+        }
+        return TimeInterval(normalizedMinutes * 60)
+    }
+}
+
 public enum AlarmScheduleReconciler {
     public static func reconcile(
         desired: AlarmScheduleDesiredPlan,

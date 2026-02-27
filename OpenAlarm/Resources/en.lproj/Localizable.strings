@@ -53,6 +53,7 @@
 "alarm_editor_use_default_settings_hint" = "Shared settings are managed in Settings.";
 "alarm_editor_wake_check_toggle" = "Wake-up check";
 "alarm_editor_wake_check_delay_label" = "Check delay";
+"alarm_editor_wake_check_response_timeout_label" = "Response timeout";
 "alarm_editor_wake_check_permission_prompt_title" = "Enable wake-up checks";
 "alarm_editor_wake_check_permission_prompt_body" = "OpenAlarm needs notification permission to send wake-up check confirmations.";
 "alarm_editor_wake_check_permission_denied_title" = "Notifications are off";
@@ -86,7 +87,7 @@
 "settings_nap_defaults_manage_button" = "Configure default nap";
 "settings_nap_defaults_page_body" = "Changes are saved immediately.";
 "settings_testing_mode_title" = "Testing mode";
-"settings_testing_mode_body" = "Enable development-only alarm options like 5-second snooze.";
+"settings_testing_mode_body" = "Enable development-only alarm options like 5-second snooze and wake-check timeout.";
 "settings_testing_mode_toggle" = "Enable testing mode";
 "settings_wake_check_title" = "Wake-up check defaults";
 "settings_wake_check_body" = "If enabled, alarms require confirmation after dismissal and can re-ring until confirmed awake.";

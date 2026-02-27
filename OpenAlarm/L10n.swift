@@ -48,6 +48,7 @@ enum L10n {
     static let alarmEditorUseDefaultSettingsHint: LocalizedStringKey = "alarm_editor_use_default_settings_hint"
     static let alarmEditorWakeCheckToggle: LocalizedStringKey = "alarm_editor_wake_check_toggle"
     static let alarmEditorWakeCheckDelayLabel: LocalizedStringKey = "alarm_editor_wake_check_delay_label"
+    static let alarmEditorWakeCheckResponseTimeoutLabel: LocalizedStringKey = "alarm_editor_wake_check_response_timeout_label"
     static let alarmEditorWakeCheckPermissionPromptTitle: LocalizedStringKey = "alarm_editor_wake_check_permission_prompt_title"
     static let alarmEditorWakeCheckPermissionPromptBody: LocalizedStringKey = "alarm_editor_wake_check_permission_prompt_body"
     static let alarmEditorWakeCheckPermissionDeniedTitle: LocalizedStringKey = "alarm_editor_wake_check_permission_denied_title"

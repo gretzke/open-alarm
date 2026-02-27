@@ -43,6 +43,14 @@ struct SharedAlarmSettingsEditor: View {
     private let maxSnoozeOptions: [Int?] = [nil, 1, 2, 3, 5, 10]
     private let wakeCheckDelayOptions: [Int] = [1, 3, 5, 10, 15, 20, 30, 45, 60]
 
+    private var wakeCheckResponseTimeoutOptions: [Int] {
+        var options = WakeUpCheckTimingPolicy.responseTimeoutOptionsMinutes
+        if allowFiveSecondSnoozeOption {
+            options.insert(WakeUpCheckTimingPolicy.debugFiveSecondSentinelMinutes, at: 0)
+        }
+        return options
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -106,36 +114,69 @@ struct SharedAlarmSettingsEditor: View {
                 .tint(OAColor.actionCyan)
 
                 if settings.wakeUpCheckEnabled {
-                    Menu {
-                        ForEach(wakeCheckDelayOptions, id: \.self) { minutes in
-                            Button {
-                                settings.wakeUpCheckDelayMinutes = minutes
-                            } label: {
-                                Text(snoozeDurationLabel(for: minutes))
+                    VStack(spacing: 8) {
+                        Menu {
+                            ForEach(wakeCheckDelayOptions, id: \.self) { minutes in
+                                Button {
+                                    settings.wakeUpCheckDelayMinutes = minutes
+                                } label: {
+                                    Text(snoozeDurationLabel(for: minutes))
+                                }
                             }
+                        } label: {
+                            HStack(spacing: 10) {
+                                Text(L10n.alarmEditorWakeCheckDelayLabel)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(OAColor.textPrimary)
+
+                                Spacer(minLength: 0)
+
+                                Text(snoozeDurationLabel(for: settings.wakeUpCheckDelayMinutes))
+                                    .font(.subheadline)
+                                    .foregroundStyle(OAColor.textSecondary)
+
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(OAColor.textSecondary)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity)
+                            .oaGlassButtonChrome()
                         }
-                    } label: {
-                        HStack(spacing: 10) {
-                            Text(L10n.alarmEditorWakeCheckDelayLabel)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(OAColor.textPrimary)
+                        .buttonStyle(.plain)
 
-                            Spacer(minLength: 0)
+                        Menu {
+                            ForEach(wakeCheckResponseTimeoutOptions, id: \.self) { minutes in
+                                Button {
+                                    settings.wakeUpCheckResponseTimeoutMinutes = minutes
+                                } label: {
+                                    Text(snoozeDurationLabel(for: minutes))
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 10) {
+                                Text(L10n.alarmEditorWakeCheckResponseTimeoutLabel)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(OAColor.textPrimary)
 
-                            Text(snoozeDurationLabel(for: settings.wakeUpCheckDelayMinutes))
-                                .font(.subheadline)
-                                .foregroundStyle(OAColor.textSecondary)
+                                Spacer(minLength: 0)
 
-                            Image(systemName: "chevron.up.chevron.down")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(OAColor.textSecondary)
+                                Text(snoozeDurationLabel(for: settings.wakeUpCheckResponseTimeoutMinutes))
+                                    .font(.subheadline)
+                                    .foregroundStyle(OAColor.textSecondary)
+
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(OAColor.textSecondary)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity)
+                            .oaGlassButtonChrome()
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .frame(maxWidth: .infinity)
-                        .oaGlassButtonChrome()
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
             }
 

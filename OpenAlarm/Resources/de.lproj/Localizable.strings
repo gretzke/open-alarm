@@ -53,6 +53,7 @@
 "alarm_editor_use_default_settings_hint" = "Geteilte Einstellungen werden in den Einstellungen verwaltet.";
 "alarm_editor_wake_check_toggle" = "Aufwach-Check";
 "alarm_editor_wake_check_delay_label" = "Check-Verzögerung";
+"alarm_editor_wake_check_response_timeout_label" = "Antwort-Timeout";
 "alarm_editor_wake_check_permission_prompt_title" = "Aufwach-Check aktivieren";
 "alarm_editor_wake_check_permission_prompt_body" = "OpenAlarm benötigt Mitteilungen, um Aufwach-Checks zu senden.";
 "alarm_editor_wake_check_permission_denied_title" = "Mitteilungen sind deaktiviert";
@@ -86,7 +87,7 @@
 "settings_nap_defaults_manage_button" = "Standard-Schläfchen konfigurieren";
 "settings_nap_defaults_page_body" = "Änderungen werden sofort gespeichert.";
 "settings_testing_mode_title" = "Testmodus";
-"settings_testing_mode_body" = "Aktiviert entwicklungsbezogene Alarmoptionen wie 5-Sekunden-Snooze.";
+"settings_testing_mode_body" = "Aktiviert entwicklungsbezogene Alarmoptionen wie 5-Sekunden-Snooze und 5-Sekunden-Aufwach-Timeout.";
 "settings_testing_mode_toggle" = "Testmodus aktivieren";
 "settings_wake_check_title" = "Aufwach-Check-Standards";
 "settings_wake_check_body" = "Wenn aktiviert, muss nach dem Ausschalten bestätigt werden, dass du wach bist; sonst klingelt es erneut.";

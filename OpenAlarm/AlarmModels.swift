@@ -90,13 +90,15 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
     var maxSnoozes: Int?
     var wakeUpCheckEnabled: Bool
     var wakeUpCheckDelayMinutes: Int
+    var wakeUpCheckResponseTimeoutMinutes: Int
 
     static let featureDefaults = SharedAlarmSettings(
         snoozeEnabled: false,
         snoozeDurationMinutes: 5,
         maxSnoozes: 3,
         wakeUpCheckEnabled: false,
-        wakeUpCheckDelayMinutes: 5
+        wakeUpCheckDelayMinutes: WakeUpCheckTimingPolicy.defaultCheckDelayMinutes,
+        wakeUpCheckResponseTimeoutMinutes: WakeUpCheckTimingPolicy.defaultResponseTimeoutMinutes
     )
 
     func canSnoozeAgain(currentCount: Int) -> Bool {
@@ -131,6 +133,7 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         case maxSnoozes
         case wakeUpCheckEnabled
         case wakeUpCheckDelayMinutes
+        case wakeUpCheckResponseTimeoutMinutes
     }
 
     init(
@@ -138,13 +141,15 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         snoozeDurationMinutes: Int,
         maxSnoozes: Int?,
         wakeUpCheckEnabled: Bool,
-        wakeUpCheckDelayMinutes: Int
+        wakeUpCheckDelayMinutes: Int,
+        wakeUpCheckResponseTimeoutMinutes: Int
     ) {
         self.snoozeEnabled = snoozeEnabled
         self.snoozeDurationMinutes = snoozeDurationMinutes
         self.maxSnoozes = maxSnoozes
         self.wakeUpCheckEnabled = wakeUpCheckEnabled
-        self.wakeUpCheckDelayMinutes = max(1, wakeUpCheckDelayMinutes)
+        self.wakeUpCheckDelayMinutes = WakeUpCheckTimingPolicy.clampCheckDelayMinutes(wakeUpCheckDelayMinutes)
+        self.wakeUpCheckResponseTimeoutMinutes = WakeUpCheckTimingPolicy.normalizeResponseTimeoutMinutes(wakeUpCheckResponseTimeoutMinutes)
     }
 
     init(from decoder: Decoder) throws {
@@ -153,7 +158,12 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         snoozeDurationMinutes = try container.decodeIfPresent(Int.self, forKey: .snoozeDurationMinutes) ?? SharedAlarmSettings.featureDefaults.snoozeDurationMinutes
         maxSnoozes = try container.decodeIfPresent(Int.self, forKey: .maxSnoozes) ?? SharedAlarmSettings.featureDefaults.maxSnoozes
         wakeUpCheckEnabled = try container.decodeIfPresent(Bool.self, forKey: .wakeUpCheckEnabled) ?? SharedAlarmSettings.featureDefaults.wakeUpCheckEnabled
-        wakeUpCheckDelayMinutes = max(1, try container.decodeIfPresent(Int.self, forKey: .wakeUpCheckDelayMinutes) ?? SharedAlarmSettings.featureDefaults.wakeUpCheckDelayMinutes)
+        wakeUpCheckDelayMinutes = WakeUpCheckTimingPolicy.clampCheckDelayMinutes(
+            try container.decodeIfPresent(Int.self, forKey: .wakeUpCheckDelayMinutes) ?? SharedAlarmSettings.featureDefaults.wakeUpCheckDelayMinutes
+        )
+        wakeUpCheckResponseTimeoutMinutes = WakeUpCheckTimingPolicy.normalizeResponseTimeoutMinutes(
+            try container.decodeIfPresent(Int.self, forKey: .wakeUpCheckResponseTimeoutMinutes) ?? SharedAlarmSettings.featureDefaults.wakeUpCheckResponseTimeoutMinutes
+        )
     }
 }
 
@@ -301,7 +311,7 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
             customSharedSettings.wakeUpCheckEnabled = legacyWakeEnabled
         }
         if let legacyWakeDelay = try container.decodeIfPresent(Int.self, forKey: .wakeUpCheckDelayMinutes) {
-            customSharedSettings.wakeUpCheckDelayMinutes = max(1, legacyWakeDelay)
+            customSharedSettings.wakeUpCheckDelayMinutes = WakeUpCheckTimingPolicy.clampCheckDelayMinutes(legacyWakeDelay)
         }
 
         nextTriggerOverrideDate = try container.decodeIfPresent(Date.self, forKey: .nextTriggerOverrideDate)
