@@ -292,12 +292,11 @@ struct AlarmEditorView: View {
             Text(title)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(OAColor.textPrimary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .oaGlassProminentButtonChrome()
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GlassProminentButtonStyle())
+        .tint(OAColor.actionCyan)
     }
 
     // Save actions are handled directly in the toolbar button/menu.

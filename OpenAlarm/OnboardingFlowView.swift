@@ -89,13 +89,11 @@ private struct WelcomeStepView: View {
 
             Button(action: onNext) {
                 Text(L10n.actionNext)
-                    .font(.headline.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .foregroundStyle(OAColor.textPrimary)
-                    .oaGlassProminentButtonChrome()
+        .font(.headline.weight(.semibold))
+        .frame(maxWidth: .infinity, minHeight: 52)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(GlassProminentButtonStyle())
+            .tint(OAColor.actionCyan)
             .accessibilityIdentifier("onboarding_welcome_next")
         }
         .padding(24)
@@ -134,24 +132,19 @@ private struct DefaultSharedSettingsStepView: View {
                     Button(action: onSkip) {
                         Text(L10n.actionSkip)
                             .font(.headline.weight(.semibold))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .foregroundStyle(OAColor.textPrimary)
-                            .oaGlassButtonChrome()
+                            .frame(maxWidth: .infinity, minHeight: 46)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(GlassButtonStyle())
 
                     Button {
                         onSave(settings)
                     } label: {
                         Text(L10n.actionNext)
                             .font(.headline.weight(.semibold))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .foregroundStyle(OAColor.textPrimary)
-                            .oaGlassProminentButtonChrome()
+                            .frame(maxWidth: .infinity, minHeight: 52)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(GlassProminentButtonStyle())
+                    .tint(OAColor.actionCyan)
                 }
 
                 SharedAlarmSettingsEditor(
@@ -214,12 +207,10 @@ private struct AlarmPermissionPrePromptStepView: View {
                     Text(isRequesting ? L10n.actionRequesting : L10n.actionNext)
                         .font(.headline.weight(.semibold))
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .foregroundStyle(OAColor.textPrimary)
-                .oaGlassProminentButtonChrome()
+                .frame(maxWidth: .infinity, minHeight: 52)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(GlassProminentButtonStyle())
+            .tint(OAColor.actionCyan)
             .disabled(isRequesting)
             .accessibilityIdentifier("onboarding_permission_request_next")
         }
@@ -255,12 +246,10 @@ private struct AlarmPermissionDeniedStepView: View {
             Button(action: onOpenSettings) {
                 Text(L10n.actionOpenSettings)
                     .font(.headline.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .foregroundStyle(OAColor.textPrimary)
-                    .oaGlassProminentButtonChrome()
+                    .frame(maxWidth: .infinity, minHeight: 52)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(GlassProminentButtonStyle())
+            .tint(OAColor.actionCyan)
             .accessibilityIdentifier("onboarding_permission_denied_open_settings")
         }
         .padding(24)

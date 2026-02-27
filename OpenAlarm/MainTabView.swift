@@ -299,22 +299,18 @@ private struct ActiveNapRowView: View {
                 } label: {
                     Label(nap.isPaused ? L10n.actionContinue : L10n.actionPause, systemImage: nap.isPaused ? "play.fill" : "pause.fill")
                         .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .foregroundStyle(OAColor.actionCyan)
-                        .oaGlassProminentButtonChrome()
+                        .frame(maxWidth: .infinity, minHeight: 48)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(GlassProminentButtonStyle())
+                .tint(OAColor.actionCyan)
 
                 Button(role: .destructive, action: onDelete) {
                     Label(L10n.actionDelete, systemImage: "trash")
                         .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .foregroundStyle(OAColor.danger)
-                        .oaGlassButtonChrome()
+                        .frame(maxWidth: .infinity, minHeight: 48)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(GlassButtonStyle())
+                .tint(OAColor.danger)
             }
         }
         .padding(18)
@@ -452,12 +448,11 @@ private struct AlarmRowView: View {
             Text(title)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(OAColor.textPrimary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .oaGlassProminentButtonChrome()
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GlassProminentButtonStyle())
+        .tint(OAColor.actionCyan)
     }
 
     private func nextRepeatingDate(after referenceDate: Date) -> Date? {
@@ -693,25 +688,23 @@ private struct SettingsHomeView: View {
                         .tint(OAColor.actionCyan)
 
                         Button {
-                            alarmStore.openSettings()
-                        } label: {
-                            HStack(spacing: 10) {
-                                Text(L10n.actionOpenSettings)
-                                    .font(.body.weight(.semibold))
-                                    .foregroundStyle(OAColor.textPrimary)
+                alarmStore.openSettings()
+            } label: {
+                HStack(spacing: 10) {
+                    Text(L10n.actionOpenSettings)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(OAColor.textPrimary)
 
-                                Spacer(minLength: 0)
+                    Spacer(minLength: 0)
 
-                                Image(systemName: "arrow.up.right.square")
-                                    .font(.footnote.weight(.semibold))
-                                    .foregroundStyle(OAColor.textSecondary)
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
-                            .frame(maxWidth: .infinity)
-                            .oaGlassButtonChrome()
-                        }
-                        .buttonStyle(.plain)
+                    Image(systemName: "arrow.up.right.square")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(OAColor.textSecondary)
+                }
+                .padding(.horizontal, 16)
+                .frame(maxWidth: .infinity, minHeight: 48)
+            }
+            .buttonStyle(GlassButtonStyle())
                     }
                     .padding(20)
                     .oaGlassCard()

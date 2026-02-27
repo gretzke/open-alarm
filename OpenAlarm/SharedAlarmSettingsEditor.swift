@@ -143,14 +143,12 @@ struct SharedAlarmSettingsEditor: View {
                 runTryOut(after: 5)
             } label: {
                 Text(L10n.alarmEditorTryOut)
-                    .font(.headline.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .foregroundStyle(OAColor.actionCyan)
-                    .oaGlassProminentButtonChrome()
+                        .font(.headline.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 52)
             }
-            .buttonStyle(.plain)
-            .disabled(isSchedulingTryOut)
+            .buttonStyle(GlassProminentButtonStyle())
+                    .tint(OAColor.actionCyan)
+                    .disabled(isSchedulingTryOut)
 
             if let tryOutError {
                 Text(tryOutError)
@@ -377,13 +375,11 @@ private struct WakeCheckPermissionPrePromptView: View {
             Button(action: onRequestPermission) {
                 Text(L10n.actionNext)
                     .font(.headline.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .foregroundStyle(OAColor.textPrimary)
-                    .oaGlassProminentButtonChrome()
+                    .frame(maxWidth: .infinity, minHeight: 52)
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("wake_check_permission_next")
+            .buttonStyle(GlassProminentButtonStyle())
+                .tint(OAColor.actionCyan)
+                .accessibilityIdentifier("wake_check_permission_next")
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -418,24 +414,20 @@ struct WakeCheckPermissionDeniedView: View {
             VStack(spacing: 12) {
                 Button(action: onOpenSettings) {
                     Text(L10n.actionOpenSettings)
-                        .font(.headline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .foregroundStyle(OAColor.textPrimary)
-                        .oaGlassProminentButtonChrome()
+                    .font(.headline.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 52)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(GlassProminentButtonStyle())
+                .tint(OAColor.actionCyan)
                 .accessibilityIdentifier("wake_check_permission_open_settings")
 
                 Button(action: onDisableFeature) {
                     Text(L10n.alarmEditorWakeCheckDisableFeatureAction)
-                        .font(.headline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
+                    .font(.headline.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 52)
                 }
+                .buttonStyle(GlassButtonStyle())
                 .foregroundStyle(OAColor.textPrimary)
-                .oaGlassButtonChrome()
-                .buttonStyle(.plain)
                 .accessibilityIdentifier("wake_check_permission_disable_feature")
             }
         }
@@ -471,13 +463,11 @@ private struct SharedSettingsSelectionSheetView: View {
                                     }
                                 }
                                 .padding(.horizontal, 16)
-                                .padding(.vertical, 14)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
                                 .contentShape(Rectangle())
-                                .oaGlassButtonChrome()
                             }
                             .frame(maxWidth: .infinity)
-                            .buttonStyle(.plain)
+                            .buttonStyle(GlassButtonStyle())
                         }
                     }
                 }
