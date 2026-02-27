@@ -357,7 +357,7 @@ def find_build_id(deadline_epoch):
             "sort": "-uploadedDate",
             "limit": "200",
             "include": "preReleaseVersion",
-            "fields[builds]": "version,buildNumber,uploadedDate",
+            "fields[builds]": "version,uploadedDate",
             "fields[preReleaseVersions]": "version",
         }
         if include_version_filter:
