@@ -327,10 +327,10 @@ final class AlarmStore: ObservableObject {
         let overrideHour = timeComponents.hour ?? current.hour
         let overrideMinute = timeComponents.minute ?? current.minute
 
-        guard let nextOverrideDate = nextOccurrenceDate(
-            in: current.sortedRepeatDays,
-            hour: overrideHour,
-            minute: overrideMinute,
+        guard let nextOverrideDate = nextOverrideOccurrenceDate(
+            for: current,
+            overrideHour: overrideHour,
+            overrideMinute: overrideMinute,
             after: .now
         ) else {
             throw AlarmStoreError.scheduleFailed
@@ -610,6 +610,44 @@ final class AlarmStore: ObservableObject {
         }
 
         return candidates.min()
+    }
+
+    private func nextOverrideOccurrenceDate(
+        for alarm: UserAlarm,
+        overrideHour: Int,
+        overrideMinute: Int,
+        after referenceDate: Date
+    ) -> Date? {
+        let calendar = Calendar.autoupdatingCurrent
+
+        guard let baselineNext = nextOccurrenceDate(
+            in: alarm.sortedRepeatDays,
+            hour: alarm.hour,
+            minute: alarm.minute,
+            after: referenceDate
+        ) else {
+            return nil
+        }
+
+        var dayComponents = calendar.dateComponents([.year, .month, .day], from: baselineNext)
+        dayComponents.hour = overrideHour
+        dayComponents.minute = overrideMinute
+        dayComponents.second = 0
+
+        guard let candidateOnBaselineDay = calendar.date(from: dayComponents) else {
+            return nil
+        }
+
+        if candidateOnBaselineDay > referenceDate {
+            return candidateOnBaselineDay
+        }
+
+        return nextOccurrenceDate(
+            in: alarm.sortedRepeatDays,
+            hour: overrideHour,
+            minute: overrideMinute,
+            after: baselineNext
+        )
     }
 
     private func nextPlannedTriggerDate(for alarm: UserAlarm, after referenceDate: Date) -> Date? {
