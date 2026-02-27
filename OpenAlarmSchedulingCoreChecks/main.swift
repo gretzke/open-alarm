@@ -29,7 +29,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
     static func main() {
         do {
             try runChecks()
-            print("✅ Deterministic reconciler checks passed (4/4)")
+            print("✅ Deterministic scheduling checks passed (8/8)")
         } catch {
             if let failure = error as? CheckFailure {
                 fputs("❌ \(failure.message)\n", stderr)
@@ -149,6 +149,51 @@ struct AlarmScheduleReconcilerDeterministicChecks {
                 operations,
                 [.clearTemporaryOneShot, .scheduleRecurringRestore],
                 "cold-start recovery should restore recurring schedule from persisted one-shot mode"
+            )
+        }
+
+        // 5) wake-check timeout options include required user-facing choices
+        do {
+            try expectEqual(
+                WakeUpCheckTimingPolicy.responseTimeoutOptionsMinutes,
+                [1, 2, 3, 5, 10, 20],
+                "wake-check response timeout options should match UX requirements"
+            )
+        }
+
+        // 6) wake-check debug sentinel uses 5-second timeout
+        do {
+            try expectEqual(
+                WakeUpCheckTimingPolicy.responseTimeoutInterval(
+                    for: WakeUpCheckTimingPolicy.debugFiveSecondSentinelMinutes
+                ),
+                5,
+                "wake-check debug timeout should be 5 seconds"
+            )
+        }
+
+        // 7) wake-check normal timeout values stay minute-based
+        do {
+            try expectEqual(
+                WakeUpCheckTimingPolicy.responseTimeoutInterval(for: 3),
+                180,
+                "wake-check 3-minute timeout should map to 180 seconds"
+            )
+        }
+
+        // 8) wake-check normalization preserves debug sentinel and clamps invalid values
+        do {
+            try expectEqual(
+                WakeUpCheckTimingPolicy.normalizeResponseTimeoutMinutes(
+                    WakeUpCheckTimingPolicy.debugFiveSecondSentinelMinutes
+                ),
+                0,
+                "debug sentinel should remain 0"
+            )
+            try expectEqual(
+                WakeUpCheckTimingPolicy.normalizeResponseTimeoutMinutes(-2),
+                1,
+                "invalid timeout values should clamp to 1 minute"
             )
         }
     }
