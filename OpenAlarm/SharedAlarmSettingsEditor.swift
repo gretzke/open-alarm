@@ -48,7 +48,7 @@ struct SharedAlarmSettingsEditor: View {
             HStack {
                 Text(L10n.alarmEditorSnoozeTitle)
                     .font(.headline)
-                    .foregroundStyle(OAColor.textSecondary)
+                    .foregroundStyle(OAColor.textPrimary)
 
                 Spacer(minLength: 0)
 
@@ -379,9 +379,10 @@ private struct WakeCheckPermissionPrePromptView: View {
                     .font(.headline.weight(.semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
+                    .foregroundStyle(OAColor.textPrimary)
+                    .oaGlassProminentButtonChrome()
             }
-            .tint(OAColor.actionCyan)
-            .buttonStyle(.glassProminent)
+            .buttonStyle(.plain)
             .accessibilityIdentifier("wake_check_permission_next")
         }
         .padding(24)
@@ -390,7 +391,7 @@ private struct WakeCheckPermissionPrePromptView: View {
     }
 }
 
-private struct WakeCheckPermissionDeniedView: View {
+struct WakeCheckPermissionDeniedView: View {
     let onOpenSettings: () -> Void
     let onDisableFeature: () -> Void
 
@@ -420,9 +421,10 @@ private struct WakeCheckPermissionDeniedView: View {
                         .font(.headline.weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
+                        .foregroundStyle(OAColor.textPrimary)
+                        .oaGlassProminentButtonChrome()
                 }
-                .tint(OAColor.actionCyan)
-                .buttonStyle(.glassProminent)
+                .buttonStyle(.plain)
                 .accessibilityIdentifier("wake_check_permission_open_settings")
 
                 Button(action: onDisableFeature) {

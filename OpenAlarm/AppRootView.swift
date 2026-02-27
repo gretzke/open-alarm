@@ -4,6 +4,7 @@ struct AppRootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var onboardingEngine = OnboardingEngine()
     @StateObject private var alarmStore = AlarmStore()
+    @State private var showWakeCheckPermissionDeniedPrompt = false
 
     var body: some View {
         Group {
@@ -20,6 +21,7 @@ struct AppRootView: View {
         .onAppear {
             onboardingEngine.handleAppOpened()
             alarmStore.handleAppOpened()
+            evaluateWakeCheckPermissionGuard()
         }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else {
@@ -27,6 +29,25 @@ struct AppRootView: View {
             }
             onboardingEngine.handleAppOpened()
             alarmStore.handleAppOpened()
+            evaluateWakeCheckPermissionGuard()
+        }
+        .fullScreenCover(isPresented: $showWakeCheckPermissionDeniedPrompt) {
+            WakeCheckPermissionDeniedView(
+                onOpenSettings: {
+                    showWakeCheckPermissionDeniedPrompt = false
+                    alarmStore.openSettings()
+                },
+                onDisableFeature: {
+                    alarmStore.disableWakeUpCheckFeatureGlobally()
+                    showWakeCheckPermissionDeniedPrompt = false
+                }
+            )
+        }
+    }
+
+    private func evaluateWakeCheckPermissionGuard() {
+        Task { @MainActor in
+            showWakeCheckPermissionDeniedPrompt = await alarmStore.shouldPresentWakeCheckPermissionDeniedPromptOnLaunch()
         }
     }
 }

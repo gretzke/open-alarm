@@ -92,9 +92,10 @@ private struct WelcomeStepView: View {
                     .font(.headline.weight(.semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
+                    .foregroundStyle(OAColor.textPrimary)
+                    .oaGlassProminentButtonChrome()
             }
-            .tint(OAColor.actionCyan)
-            .buttonStyle(.glassProminent)
+            .buttonStyle(.plain)
             .accessibilityIdentifier("onboarding_welcome_next")
         }
         .padding(24)
@@ -147,9 +148,10 @@ private struct DefaultSharedSettingsStepView: View {
                             .font(.headline.weight(.semibold))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
+                            .foregroundStyle(OAColor.textPrimary)
+                            .oaGlassProminentButtonChrome()
                     }
-                    .tint(OAColor.actionCyan)
-                    .buttonStyle(.glassProminent)
+                    .buttonStyle(.plain)
                 }
 
                 SharedAlarmSettingsEditor(
@@ -214,9 +216,10 @@ private struct AlarmPermissionPrePromptStepView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
+                .foregroundStyle(OAColor.textPrimary)
+                .oaGlassProminentButtonChrome()
             }
-            .tint(OAColor.actionCyan)
-            .buttonStyle(.glassProminent)
+            .buttonStyle(.plain)
             .disabled(isRequesting)
             .accessibilityIdentifier("onboarding_permission_request_next")
         }
@@ -254,9 +257,10 @@ private struct AlarmPermissionDeniedStepView: View {
                     .font(.headline.weight(.semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
+                    .foregroundStyle(OAColor.textPrimary)
+                    .oaGlassProminentButtonChrome()
             }
-            .tint(OAColor.actionCyan)
-            .buttonStyle(.glassProminent)
+            .buttonStyle(.plain)
             .accessibilityIdentifier("onboarding_permission_denied_open_settings")
         }
         .padding(24)

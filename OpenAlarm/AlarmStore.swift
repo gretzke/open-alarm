@@ -109,6 +109,15 @@ final class AlarmStore: ObservableObject {
         return notificationPermissionStatus
     }
 
+    func shouldPresentWakeCheckPermissionDeniedPromptOnLaunch() async -> Bool {
+        let status = await refreshNotificationPermissionStatus()
+        guard status == .denied else {
+            return false
+        }
+
+        return hasWakeUpCheckEnabledConfigurationWithNotificationRequirement
+    }
+
     func openSettings() {
         guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else {
             return
@@ -544,6 +553,16 @@ final class AlarmStore: ObservableObject {
             return L10n.alarmEditorErrorPermissionDenied
         case .scheduleFailed:
             return L10n.alarmEditorErrorGeneric
+        }
+    }
+
+    private var hasWakeUpCheckEnabledConfigurationWithNotificationRequirement: Bool {
+        if defaultSharedSettings.wakeUpCheckEnabled {
+            return true
+        }
+
+        return alarms.contains { alarm in
+            !alarm.useDefaultSharedSettings && alarm.customSharedSettings.wakeUpCheckEnabled
         }
     }
 
