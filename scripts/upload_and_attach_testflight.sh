@@ -217,7 +217,6 @@ xcodebuild -quiet \
 ok "Upload complete; polling App Store Connect"
 
 python3 - "$APP_ID" "$BETA_GROUP_ID" "$MARKETING_VERSION" "$NEXT_BUILD" "$POLL_SECONDS" "$POLL_TIMEOUT_SECONDS" <<'PY'
-import base64
 import json
 import os
 import subprocess
@@ -254,28 +253,36 @@ def fail(message, exit_code=1):
     raise SystemExit(exit_code)
 
 
-def b64url(data):
-    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
-
-
 def make_jwt():
-    now = int(time.time())
-    header = {"alg": "ES256", "kid": asc_key_id, "typ": "JWT"}
-    payload = {"iss": asc_issuer_id, "exp": now + 1200, "aud": "appstoreconnect-v1"}
-    signing_input = f"{b64url(json.dumps(header, separators=(',', ':')).encode())}.{b64url(json.dumps(payload, separators=(',', ':')).encode())}"
-
+    # Prefer Apple's own token generation to avoid JOSE/DER signature edge cases.
     proc = subprocess.run(
-        ["openssl", "dgst", "-binary", "-sha256", "-sign", asc_key_path],
-        input=signing_input.encode(),
+        [
+            "xcrun",
+            "altool",
+            "--generate-jwt",
+            "--apiKey",
+            asc_key_id,
+            "--apiIssuer",
+            asc_issuer_id,
+            "--p8-file-path",
+            asc_key_path,
+        ],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        text=True,
         check=False,
     )
-    if proc.returncode != 0:
-        fail(f"Failed to sign ASC JWT: {proc.stderr.decode('utf-8', errors='replace').strip()}")
 
-    signature = b64url(proc.stdout)
-    return f"{signing_input}.{signature}"
+    output = (proc.stdout or "") + "\n" + (proc.stderr or "")
+    if proc.returncode != 0:
+        fail(f"Failed to generate ASC JWT via altool: {output.strip()}")
+
+    for line in output.splitlines():
+        line = line.strip()
+        if line.count(".") == 2 and " " not in line:
+            return line
+
+    fail("Failed to parse ASC JWT from altool output")
 
 
 _token = ""
