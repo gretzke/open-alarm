@@ -29,7 +29,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
     static func main() {
         do {
             try runChecks()
-            print("✅ Deterministic scheduling checks passed (18/18)")
+            print("✅ Deterministic scheduling checks passed (22/22)")
         } catch {
             if let failure = error as? CheckFailure {
                 fputs("❌ \(failure.message)\n", stderr)
@@ -152,7 +152,52 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 5) disable-next activation builds N=5 manual queue anchored to second canonical occurrence
+        // 5) stop-intent hook routes to single-alarm reconcile
+        do {
+            let alarmID = UUID(uuidString: "DCE8CB2E-01D8-4548-B03A-2A12F3A16DB1")!
+            try expectEqual(
+                AlarmScheduleReconcileRouting.target(for: .stopIntent(alarmID)),
+                .alarm(alarmID),
+                "stop intent should route to alarm-scoped reconcile"
+            )
+        }
+
+        // 6) snooze-intent hook routes to single-alarm reconcile
+        do {
+            let alarmID = UUID(uuidString: "FB0C589E-8D72-45B3-B16F-25FC774E5FF9")!
+            try expectEqual(
+                AlarmScheduleReconcileRouting.target(for: .snoozeIntent(alarmID)),
+                .alarm(alarmID),
+                "snooze intent should route to alarm-scoped reconcile"
+            )
+        }
+
+        // 7) app-launch hook routes to all-alarms reconcile
+        do {
+            try expectEqual(
+                AlarmScheduleReconcileRouting.target(for: .appLaunch),
+                .allAlarms,
+                "app-launch reconciliation should route to all alarms"
+            )
+        }
+
+        // 8) reconcile hook routing is idempotent
+        do {
+            let alarmID = UUID(uuidString: "2D78DAD2-3D64-4B9E-A2A9-DCA6A743DF9F")!
+            let stopFirst = AlarmScheduleReconcileRouting.target(for: .stopIntent(alarmID))
+            let stopSecond = AlarmScheduleReconcileRouting.target(for: .stopIntent(alarmID))
+            let snoozeFirst = AlarmScheduleReconcileRouting.target(for: .snoozeIntent(alarmID))
+            let snoozeSecond = AlarmScheduleReconcileRouting.target(for: .snoozeIntent(alarmID))
+            let launchFirst = AlarmScheduleReconcileRouting.target(for: .appLaunch)
+            let launchSecond = AlarmScheduleReconcileRouting.target(for: .appLaunch)
+
+            try expectEqual(stopFirst, stopSecond, "stop hook should be deterministic")
+            try expectEqual(snoozeFirst, snoozeSecond, "snooze hook should be deterministic")
+            try expectEqual(stopFirst, snoozeFirst, "stop and snooze should share the same single-alarm reconcile route")
+            try expectEqual(launchFirst, launchSecond, "app-launch hook should be deterministic")
+        }
+
+        // 9) disable-next activation builds N=5 manual queue anchored to second canonical occurrence
         do {
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -204,7 +249,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 6) modify-next-earlier does not restore on first ring, restores on anchor ring
+        // 10) modify-next-earlier does not restore on first ring, restores on anchor ring
         do {
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -273,7 +318,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 7) modify-next-later restores at overridden ring
+        // 11) modify-next-later restores at overridden ring
         do {
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -324,7 +369,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 8) schedule signature changes clear temporary override state
+        // 12) schedule signature changes clear temporary override state
         do {
             let previous = AlarmCanonicalScheduleSignature(
                 spec: AlarmCanonicalScheduleSpec(
@@ -362,7 +407,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 9) wake-check delay options include required user-facing choices
+        // 13) wake-check delay options include required user-facing choices
         do {
             try expectEqual(
                 WakeUpCheckTimingPolicy.checkDelayOptionsMinutes,
@@ -371,7 +416,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 10) wake-check delay debug sentinel uses 5-second delay
+        // 14) wake-check delay debug sentinel uses 5-second delay
         do {
             try expectEqual(
                 WakeUpCheckTimingPolicy.checkDelayInterval(
@@ -382,7 +427,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 11) wake-check normal delay values stay minute-based
+        // 15) wake-check normal delay values stay minute-based
         do {
             try expectEqual(
                 WakeUpCheckTimingPolicy.checkDelayInterval(for: 5),
@@ -391,7 +436,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 12) wake-check delay clamping preserves debug sentinel and clamps invalid values
+        // 16) wake-check delay clamping preserves debug sentinel and clamps invalid values
         do {
             try expectEqual(
                 WakeUpCheckTimingPolicy.clampCheckDelayMinutes(
@@ -412,7 +457,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 13) wake-check timeout options include required user-facing choices
+        // 17) wake-check timeout options include required user-facing choices
         do {
             try expectEqual(
                 WakeUpCheckTimingPolicy.responseTimeoutOptionsMinutes,
@@ -421,7 +466,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 14) wake-check timeout debug sentinel uses 5-second timeout
+        // 18) wake-check timeout debug sentinel uses 5-second timeout
         do {
             try expectEqual(
                 WakeUpCheckTimingPolicy.responseTimeoutInterval(
@@ -432,7 +477,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 15) wake-check normal timeout values stay minute-based
+        // 19) wake-check normal timeout values stay minute-based
         do {
             try expectEqual(
                 WakeUpCheckTimingPolicy.responseTimeoutInterval(for: 3),
@@ -441,7 +486,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 16) wake-check timeout normalization preserves debug sentinel and clamps invalid values
+        // 20) wake-check timeout normalization preserves debug sentinel and clamps invalid values
         do {
             try expectEqual(
                 WakeUpCheckTimingPolicy.normalizeResponseTimeoutMinutes(
@@ -457,7 +502,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 17) disable-next vs modify-next are mutually exclusive modes
+        // 21) disable-next vs modify-next are mutually exclusive modes
         do {
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -497,7 +542,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             try expectEqual(modify?.overrideState.kind, .modifyNext, "modify intent should set modify-next mode")
         }
 
-        // 18) fallback queue rebuild after missed anchor still emits future bridges
+        // 22) fallback queue rebuild after missed anchor still emits future bridges
         do {
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = TimeZone(secondsFromGMT: 0)!

@@ -5,7 +5,7 @@ import SwiftUI
 import UIKit
 
 @MainActor
-final class AlarmStore: ObservableObject {
+final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
     @Published private(set) var alarms: [UserAlarm] = []
     @Published var defaultSharedSettings: SharedAlarmSettings
     @Published var defaultNapDurationMinutes: Int
@@ -58,6 +58,7 @@ final class AlarmStore: ObservableObject {
         }
 
         self.wakeUpCheckNotificationService.ensureCategoryRegistered()
+        AlarmScheduleReconcileEntrypoint.register(handler: self)
 
         load()
         observeAlarmUpdates()
@@ -66,7 +67,7 @@ final class AlarmStore: ObservableObject {
         Task { @MainActor [weak self] in
             await self?.refreshNotificationPermissionStatus()
             await self?.reconcilePendingWakeUpCheckConfirmations()
-            await self?.reconcileAllAlarmSchedules()
+            await AlarmScheduleReconcileEntrypoint.reconcile(trigger: .appLaunch)
         }
     }
 
@@ -80,7 +81,7 @@ final class AlarmStore: ObservableObject {
         Task { @MainActor [weak self] in
             await self?.refreshNotificationPermissionStatus()
             await self?.reconcilePendingWakeUpCheckConfirmations()
-            await self?.reconcileAllAlarmSchedules()
+            await AlarmScheduleReconcileEntrypoint.reconcile(trigger: .appLaunch)
         }
     }
 
@@ -373,7 +374,7 @@ final class AlarmStore: ObservableObject {
         save()
 
         await cancelRuntimeAlarms(ids: staleManualIDs.subtracting(Set(current.manualScheduleQueue.map(\.id))))
-        await reconcileSchedulingForAlarm(current.id)
+        await AlarmScheduleReconcileEntrypoint.reconcileSchedule(alarmID: current.id)
     }
 
     func setAlarmEnabled(_ alarm: UserAlarm, enabled: Bool, skipNext: Bool?) async throws {
@@ -447,7 +448,7 @@ final class AlarmStore: ObservableObject {
         save()
 
         await cancelRuntimeAlarms(ids: staleManualIDs.subtracting(Set(updatedAlarm.manualScheduleQueue.map(\.id))))
-        await reconcileSchedulingForAlarm(updatedAlarm.id)
+        await AlarmScheduleReconcileEntrypoint.reconcileSchedule(alarmID: updatedAlarm.id)
     }
 
     func deleteAlarm(_ alarm: UserAlarm) {
@@ -775,7 +776,7 @@ final class AlarmStore: ObservableObject {
         save()
 
         await cancelRuntimeAlarms(ids: staleManualIDs.subtracting(Set(nextAlarm.manualScheduleQueue.map(\.id))))
-        await reconcileSchedulingForAlarm(id)
+        await AlarmScheduleReconcileEntrypoint.reconcileSchedule(alarmID: id)
     }
 
     private func ensureAuthorizedForScheduling() async throws {
@@ -787,7 +788,7 @@ final class AlarmStore: ObservableObject {
 
     private func rescheduleAlarmsUsingDefaultSharedSettings() async {
         for alarm in alarms where alarm.useDefaultSharedSettings {
-            await reconcileSchedulingForAlarm(alarm.id)
+            await AlarmScheduleReconcileEntrypoint.reconcileSchedule(alarmID: alarm.id)
         }
     }
 
@@ -836,6 +837,29 @@ final class AlarmStore: ObservableObject {
             lastKnownAlarmState.removeValue(forKey: id)
             remoteStates.removeValue(forKey: id)
         }
+    }
+
+    func reconcileSchedule(target: AlarmScheduleReconcileTarget, referenceDate: Date) async {
+        switch target {
+        case let .alarm(runtimeAlarmID):
+            guard let alarmID = owningAlarmID(for: runtimeAlarmID) else {
+                return
+            }
+            await reconcileSchedulingForAlarm(alarmID, referenceDate: referenceDate)
+
+        case .allAlarms:
+            await reconcileAllAlarmSchedules(referenceDate: referenceDate)
+        }
+    }
+
+    private func owningAlarmID(for runtimeAlarmID: UUID) -> UUID? {
+        if alarms.contains(where: { $0.id == runtimeAlarmID }) {
+            return runtimeAlarmID
+        }
+
+        return alarms.first(where: { alarm in
+            alarm.manualScheduleQueue.contains(where: { $0.id == runtimeAlarmID })
+        })?.id
     }
 
     /// Reconciles every user alarm against its canonical + temporary override
@@ -1064,7 +1088,7 @@ final class AlarmStore: ObservableObject {
             countdownDuration: countdownDuration,
             schedule: schedule,
             attributes: attributes,
-            stopIntent: nil,
+            stopIntent: StopIntent(alarmID: runtimeAlarmID.uuidString),
             secondaryIntent: secondaryIntent,
             sound: .default
         )
@@ -1083,7 +1107,7 @@ final class AlarmStore: ObservableObject {
 
                 await reconcilePendingWakeUpCheckConfirmations()
                 applyRemoteAlarms(incoming)
-                await reconcileAllAlarmSchedules()
+                await AlarmScheduleReconcileEntrypoint.reconcileAllSchedules()
             }
         }
     }
@@ -1097,8 +1121,8 @@ final class AlarmStore: ObservableObject {
             remoteStates = [:]
         }
 
-        Task { @MainActor [weak self] in
-            await self?.reconcileAllAlarmSchedules()
+        Task { @MainActor in
+            await AlarmScheduleReconcileEntrypoint.reconcileAllSchedules()
         }
     }
 
@@ -1120,8 +1144,8 @@ final class AlarmStore: ObservableObject {
 
         if restoreSchedules {
             for alarmID in affectedAlarmIDs {
-                Task { @MainActor [weak self] in
-                    await self?.reconcileSchedulingForAlarm(alarmID)
+                Task { @MainActor in
+                    await AlarmScheduleReconcileEntrypoint.reconcileSchedule(alarmID: alarmID)
                 }
             }
         }

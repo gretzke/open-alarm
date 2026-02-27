@@ -44,6 +44,28 @@ public struct AlarmScheduleActualState: Equatable, Sendable {
     }
 }
 
+public enum AlarmScheduleReconcileTarget: Equatable, Sendable {
+    case alarm(UUID)
+    case allAlarms
+}
+
+public enum AlarmScheduleReconcileTrigger: Equatable, Sendable {
+    case stopIntent(UUID)
+    case snoozeIntent(UUID)
+    case appLaunch
+}
+
+public enum AlarmScheduleReconcileRouting {
+    public static func target(for trigger: AlarmScheduleReconcileTrigger) -> AlarmScheduleReconcileTarget {
+        switch trigger {
+        case let .stopIntent(alarmID), let .snoozeIntent(alarmID):
+            return .alarm(alarmID)
+        case .appLaunch:
+            return .allAlarms
+        }
+    }
+}
+
 public enum AlarmScheduleOperation: Equatable, Sendable {
     case clearTemporarySkipAndEnableRecurring
     case clearTemporaryOneShot

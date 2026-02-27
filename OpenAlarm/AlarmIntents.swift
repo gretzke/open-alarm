@@ -3,6 +3,39 @@ import AppIntents
 import Foundation
 import SwiftUI
 
+struct StopIntent: LiveActivityIntent {
+    static var title: LocalizedStringResource = "Stop"
+    static var description = IntentDescription("Stop an alarm")
+    static var openAppWhenRun: Bool = false
+
+    @Parameter(title: "alarmID")
+    var alarmID: String
+
+    init(alarmID: String) {
+        self.alarmID = alarmID
+    }
+
+    init() {
+        self.alarmID = ""
+    }
+
+    func perform() async throws -> some IntentResult {
+        guard let id = UUID(uuidString: alarmID) else {
+            return .result()
+        }
+
+        let defaults = UserDefaults.standard
+        var pending = AlarmPersistence.loadPendingSnoozeIDs(from: defaults)
+        if pending.remove(id) != nil {
+            AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
+        }
+
+        try? AlarmManager.shared.stop(id: id)
+        await AlarmScheduleReconcileEntrypoint.reconcile(trigger: .stopIntent(id))
+        return .result()
+    }
+}
+
 struct SnoozeIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Snooze"
     static var description = IntentDescription("Snooze an alarm")
@@ -24,6 +57,10 @@ struct SnoozeIntent: LiveActivityIntent {
             return .result()
         }
 
+        func reconcileSchedule() async {
+            await AlarmScheduleReconcileEntrypoint.reconcile(trigger: .snoozeIntent(id))
+        }
+
         let defaults = UserDefaults.standard
         let defaultSharedSettings = AlarmPersistence.loadDefaultSharedSettings(from: defaults)
 
@@ -40,6 +77,7 @@ struct SnoozeIntent: LiveActivityIntent {
                 pending.remove(id)
                 AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
                 try AlarmManager.shared.stop(id: id)
+                await reconcileSchedule()
                 return .result()
             }
 
@@ -78,6 +116,7 @@ struct SnoozeIntent: LiveActivityIntent {
                     try? AlarmManager.shared.countdown(id: id)
                 }
             }
+            await reconcileSchedule()
             return .result()
         }
 
@@ -92,6 +131,7 @@ struct SnoozeIntent: LiveActivityIntent {
                 try AlarmManager.shared.cancel(id: id)
                 trials.remove(at: index)
                 AlarmPersistence.saveShadowTrials(trials, to: defaults)
+                await reconcileSchedule()
                 return .result()
             }
 
@@ -119,6 +159,7 @@ struct SnoozeIntent: LiveActivityIntent {
                     try? AlarmManager.shared.countdown(id: id)
                 }
             }
+            await reconcileSchedule()
             return .result()
         }
 
@@ -129,6 +170,7 @@ struct SnoozeIntent: LiveActivityIntent {
                 pending.remove(id)
                 AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
                 try AlarmManager.shared.stop(id: id)
+                await reconcileSchedule()
                 return .result()
             }
 
@@ -155,12 +197,14 @@ struct SnoozeIntent: LiveActivityIntent {
                     try? AlarmManager.shared.countdown(id: id)
                 }
             }
+            await reconcileSchedule()
             return .result()
         }
 
         pending.remove(id)
         AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
         try AlarmManager.shared.stop(id: id)
+        await reconcileSchedule()
         return .result()
     }
 
@@ -203,7 +247,7 @@ struct SnoozeIntent: LiveActivityIntent {
             countdownDuration: countdownDuration,
             schedule: schedule,
             attributes: attributes,
-            stopIntent: nil,
+            stopIntent: StopIntent(alarmID: alarm.id.uuidString),
             secondaryIntent: secondaryIntent,
             sound: .default
         )
@@ -245,7 +289,7 @@ struct SnoozeIntent: LiveActivityIntent {
             countdownDuration: countdownDuration,
             schedule: schedule,
             attributes: attributes,
-            stopIntent: nil,
+            stopIntent: StopIntent(alarmID: trial.id.uuidString),
             secondaryIntent: secondaryIntent,
             sound: .default
         )
@@ -289,7 +333,7 @@ struct SnoozeIntent: LiveActivityIntent {
             countdownDuration: countdownDuration,
             schedule: schedule,
             attributes: attributes,
-            stopIntent: nil,
+            stopIntent: StopIntent(alarmID: nap.id.uuidString),
             secondaryIntent: secondaryIntent,
             sound: .default
         )

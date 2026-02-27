@@ -140,6 +140,49 @@ final class AlarmScheduleReconcilerTests: XCTestCase {
         )
     }
 
+    func testStopIntentHookRoutesToAlarmScopedReconcile() {
+        let alarmID = UUID(uuidString: "DCE8CB2E-01D8-4548-B03A-2A12F3A16DB1")!
+
+        XCTAssertEqual(
+            AlarmScheduleReconcileRouting.target(for: .stopIntent(alarmID)),
+            .alarm(alarmID)
+        )
+    }
+
+    func testSnoozeIntentHookRoutesToAlarmScopedReconcile() {
+        let alarmID = UUID(uuidString: "FB0C589E-8D72-45B3-B16F-25FC774E5FF9")!
+
+        XCTAssertEqual(
+            AlarmScheduleReconcileRouting.target(for: .snoozeIntent(alarmID)),
+            .alarm(alarmID)
+        )
+    }
+
+    func testAppLaunchHookRoutesToAllAlarmsReconcile() {
+        XCTAssertEqual(
+            AlarmScheduleReconcileRouting.target(for: .appLaunch),
+            .allAlarms
+        )
+    }
+
+    func testReconcileHookRoutingIsIdempotent() {
+        let alarmID = UUID(uuidString: "2D78DAD2-3D64-4B9E-A2A9-DCA6A743DF9F")!
+
+        let stopFirst = AlarmScheduleReconcileRouting.target(for: .stopIntent(alarmID))
+        let stopSecond = AlarmScheduleReconcileRouting.target(for: .stopIntent(alarmID))
+        XCTAssertEqual(stopFirst, stopSecond)
+
+        let snoozeFirst = AlarmScheduleReconcileRouting.target(for: .snoozeIntent(alarmID))
+        let snoozeSecond = AlarmScheduleReconcileRouting.target(for: .snoozeIntent(alarmID))
+        XCTAssertEqual(snoozeFirst, snoozeSecond)
+
+        XCTAssertEqual(stopFirst, snoozeFirst)
+
+        let launchFirst = AlarmScheduleReconcileRouting.target(for: .appLaunch)
+        let launchSecond = AlarmScheduleReconcileRouting.target(for: .appLaunch)
+        XCTAssertEqual(launchFirst, launchSecond)
+    }
+
     func testDisableNextActivationUsesBridgeQueueAnchoredAtSecondCanonicalOccurrence() {
         let calendar = fixedUTCGregorianCalendar()
         let now = makeUTCDate(year: 2026, month: 2, day: 28, hour: 6, minute: 0, calendar: calendar)
