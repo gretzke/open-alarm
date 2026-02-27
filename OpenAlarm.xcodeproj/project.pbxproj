@@ -29,15 +29,29 @@
 		BDD2C5EBBA247FBB4FD16F4D /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 2E7F4014449CC01093832222 /* InfoPlist.strings */; };
 		BF8889E27B6255835899C3B5 /* AlarmModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7C07703BA4BEC265B421B03 /* AlarmModels.swift */; };
 		D0827BEDA4B4C360461E9F23 /* AlarmPersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0F3414FB10A9E51937B6877 /* AlarmPersistence.swift */; };
+		DDD615542DED46BA648B2FE7 /* AlarmScheduleReconcilerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C0AC8200730558CC6EC3B15 /* AlarmScheduleReconcilerTests.swift */; };
 		E072A215F811DC860E8ED2F1 /* OnboardingEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6981BF284D917EBC650816B /* OnboardingEngine.swift */; };
+		F1CC7D2E7D1CC6F5D537C625 /* AlarmScheduleReconciler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06DDC0185B5B0D8A1400C98B /* AlarmScheduleReconciler.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		DA09E905EB317B29548331EA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 79D57D623C18C92D0D3408CC /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E551FDD196683E640B0F9503;
+			remoteInfo = OpenAlarm;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		0213A81B71B2B9C6B189C61F /* OpenAlarmNotificationDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAlarmNotificationDelegate.swift; sourceTree = "<group>"; };
+		06DDC0185B5B0D8A1400C98B /* AlarmScheduleReconciler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmScheduleReconciler.swift; sourceTree = "<group>"; };
 		0D166817BB079DD4546C285D /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		1AAB5EE73D1350495BF00CA8 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		22E4F6FF18C9BE1617CD7543 /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowView.swift; sourceTree = "<group>"; };
 		3C5513FF1DE8CF198A077C38 /* AlarmEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmEditorView.swift; sourceTree = "<group>"; };
+		4C0AC8200730558CC6EC3B15 /* AlarmScheduleReconcilerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmScheduleReconcilerTests.swift; sourceTree = "<group>"; };
 		568AC6EB43A9044628BFB421 /* WakeUpCheckModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeUpCheckModels.swift; sourceTree = "<group>"; };
 		59535AE7D6830B97391FD0E5 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Localizable.strings; sourceTree = "<group>"; };
 		5C5DC43674A1A23D8D98A25C /* SharedAlarmSettingsEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedAlarmSettingsEditor.swift; sourceTree = "<group>"; };
@@ -52,6 +66,7 @@
 		A6981BF284D917EBC650816B /* OnboardingEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingEngine.swift; sourceTree = "<group>"; };
 		A7C07703BA4BEC265B421B03 /* AlarmModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmModels.swift; sourceTree = "<group>"; };
 		B0511AEB1608CC1DFD19C495 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
+		B5B9304B4982E495CBDABF6C /* OpenAlarmTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OpenAlarmTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B70862277833BF001ABA7BBE /* AlarmStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmStore.swift; sourceTree = "<group>"; };
 		CFE2D4CDA835E9DD606528A0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D65E8CA1DA583D987D1FDE53 /* AppRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRootView.swift; sourceTree = "<group>"; };
@@ -63,10 +78,19 @@
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
+		135C9DF212569F46B82E0C7A /* OpenAlarmSchedulingCoreTests */ = {
+			isa = PBXGroup;
+			children = (
+				4C0AC8200730558CC6EC3B15 /* AlarmScheduleReconcilerTests.swift */,
+			);
+			path = OpenAlarmSchedulingCoreTests;
+			sourceTree = "<group>";
+		};
 		205990B36FE807545D4ADA70 /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				E9ACF85F89CF9D011BF26A5E /* OpenAlarm.app */,
+				B5B9304B4982E495CBDABF6C /* OpenAlarmTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -75,6 +99,7 @@
 			isa = PBXGroup;
 			children = (
 				BCC1989FF6463FB02B837C9B /* OpenAlarm */,
+				135C9DF212569F46B82E0C7A /* OpenAlarmSchedulingCoreTests */,
 				205990B36FE807545D4ADA70 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -87,6 +112,7 @@
 				A7C07703BA4BEC265B421B03 /* AlarmModels.swift */,
 				83400772796DC9406DADEF9F /* AlarmPermissionService.swift */,
 				A0F3414FB10A9E51937B6877 /* AlarmPersistence.swift */,
+				06DDC0185B5B0D8A1400C98B /* AlarmScheduleReconciler.swift */,
 				B70862277833BF001ABA7BBE /* AlarmStore.swift */,
 				D65E8CA1DA583D987D1FDE53 /* AppRootView.swift */,
 				CFE2D4CDA835E9DD606528A0 /* Assets.xcassets */,
@@ -121,6 +147,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		ABF4C9FC0B8852324B978BEB /* OpenAlarmTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C919D048084DDBBC92BA485C /* Build configuration list for PBXNativeTarget "OpenAlarmTests" */;
+			buildPhases = (
+				63CF2F69101741D19BC1428A /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AC10801DA559D0D4BF7B8700 /* PBXTargetDependency */,
+			);
+			name = OpenAlarmTests;
+			packageProductDependencies = (
+			);
+			productName = OpenAlarmTests;
+			productReference = B5B9304B4982E495CBDABF6C /* OpenAlarmTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		E551FDD196683E640B0F9503 /* OpenAlarm */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = C9C9D613DDDE3A42D53F1076 /* Build configuration list for PBXNativeTarget "OpenAlarm" */;
@@ -170,6 +214,7 @@
 			projectRoot = "";
 			targets = (
 				E551FDD196683E640B0F9503 /* OpenAlarm */,
+				ABF4C9FC0B8852324B978BEB /* OpenAlarmTests */,
 			);
 		};
 /* End PBXProject section */
@@ -189,6 +234,14 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		63CF2F69101741D19BC1428A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DDD615542DED46BA648B2FE7 /* AlarmScheduleReconcilerTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8B1B9764DFDA1749CE530B70 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -198,6 +251,7 @@
 				BF8889E27B6255835899C3B5 /* AlarmModels.swift in Sources */,
 				0B5A2C2BC6692B00E79A988E /* AlarmPermissionService.swift in Sources */,
 				D0827BEDA4B4C360461E9F23 /* AlarmPersistence.swift in Sources */,
+				F1CC7D2E7D1CC6F5D537C625 /* AlarmScheduleReconciler.swift in Sources */,
 				75F6F1776DF5731E152893A0 /* AlarmStore.swift in Sources */,
 				43A37EA685F224896032D009 /* AppRootView.swift in Sources */,
 				1068E5E14AAA376BDD6E846B /* L10n.swift in Sources */,
@@ -216,6 +270,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AC10801DA559D0D4BF7B8700 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E551FDD196683E640B0F9503 /* OpenAlarm */;
+			targetProxy = DA09E905EB317B29548331EA /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		2E7F4014449CC01093832222 /* InfoPlist.strings */ = {
@@ -245,7 +307,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 39;
+				CURRENT_PROJECT_VERSION = 33;
 				DEVELOPMENT_TEAM = 7P7CKKPH5L;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = OpenAlarm/Info.plist;
@@ -327,13 +389,32 @@
 			};
 			name = Debug;
 		};
+		6E68B31B9D93239105FE8904 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.gretzke.openalarm.tests;
+				PRODUCT_NAME = OpenAlarmTests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OpenAlarm.app/OpenAlarm";
+			};
+			name = Release;
+		};
 		87E3C40D9A32D37B15041EE3 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 39;
+				CURRENT_PROJECT_VERSION = 33;
 				DEVELOPMENT_TEAM = 7P7CKKPH5L;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = OpenAlarm/Info.plist;
@@ -408,6 +489,25 @@
 			};
 			name = Release;
 		};
+		E3BB9BAE51B0D2BB1D7CA3CE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.gretzke.openalarm.tests;
+				PRODUCT_NAME = OpenAlarmTests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OpenAlarm.app/OpenAlarm";
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -416,6 +516,15 @@
 			buildConfigurations = (
 				16574F1C124257257A5FC3B2 /* Debug */,
 				A4E8FE55565F23EA7D15234D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C919D048084DDBBC92BA485C /* Build configuration list for PBXNativeTarget "OpenAlarmTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E3BB9BAE51B0D2BB1D7CA3CE /* Debug */,
+				6E68B31B9D93239105FE8904 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

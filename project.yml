@@ -27,3 +27,17 @@ targets:
         LOCALIZATIONS: "en de"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1"
+
+  OpenAlarmTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: OpenAlarmSchedulingCoreTests
+    dependencies:
+      - target: OpenAlarm
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.gretzke.openalarm.tests
+        PRODUCT_NAME: OpenAlarmTests
+        SWIFT_VERSION: 5.0
