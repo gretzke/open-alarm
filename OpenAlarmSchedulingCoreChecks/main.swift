@@ -29,7 +29,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
     static func main() {
         do {
             try runChecks()
-            print("✅ Deterministic scheduling checks passed (8/8)")
+            print("✅ Deterministic scheduling checks passed (12/12)")
         } catch {
             if let failure = error as? CheckFailure {
                 fputs("❌ \(failure.message)\n", stderr)
@@ -152,7 +152,57 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 5) wake-check timeout options include required user-facing choices
+        // 5) wake-check delay options include required user-facing choices
+        do {
+            try expectEqual(
+                WakeUpCheckTimingPolicy.checkDelayOptionsMinutes,
+                [1, 3, 5, 10, 15, 20, 30, 45, 60],
+                "wake-check delay options should match UX requirements"
+            )
+        }
+
+        // 6) wake-check delay debug sentinel uses 5-second delay
+        do {
+            try expectEqual(
+                WakeUpCheckTimingPolicy.checkDelayInterval(
+                    for: WakeUpCheckTimingPolicy.debugFiveSecondSentinelMinutes
+                ),
+                5,
+                "wake-check debug delay should be 5 seconds"
+            )
+        }
+
+        // 7) wake-check normal delay values stay minute-based
+        do {
+            try expectEqual(
+                WakeUpCheckTimingPolicy.checkDelayInterval(for: 5),
+                300,
+                "wake-check 5-minute delay should map to 300 seconds"
+            )
+        }
+
+        // 8) wake-check delay clamping preserves debug sentinel and clamps invalid values
+        do {
+            try expectEqual(
+                WakeUpCheckTimingPolicy.clampCheckDelayMinutes(
+                    WakeUpCheckTimingPolicy.debugFiveSecondSentinelMinutes
+                ),
+                0,
+                "debug sentinel should remain 0"
+            )
+            try expectEqual(
+                WakeUpCheckTimingPolicy.clampCheckDelayMinutes(-2),
+                1,
+                "invalid delay values should clamp to 1 minute"
+            )
+            try expectEqual(
+                WakeUpCheckTimingPolicy.clampCheckDelayMinutes(120),
+                60,
+                "delay values above range should clamp to 60 minutes"
+            )
+        }
+
+        // 9) wake-check timeout options include required user-facing choices
         do {
             try expectEqual(
                 WakeUpCheckTimingPolicy.responseTimeoutOptionsMinutes,
@@ -161,7 +211,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 6) wake-check debug sentinel uses 5-second timeout
+        // 10) wake-check timeout debug sentinel uses 5-second timeout
         do {
             try expectEqual(
                 WakeUpCheckTimingPolicy.responseTimeoutInterval(
@@ -172,7 +222,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 7) wake-check normal timeout values stay minute-based
+        // 11) wake-check normal timeout values stay minute-based
         do {
             try expectEqual(
                 WakeUpCheckTimingPolicy.responseTimeoutInterval(for: 3),
@@ -181,7 +231,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 8) wake-check normalization preserves debug sentinel and clamps invalid values
+        // 12) wake-check timeout normalization preserves debug sentinel and clamps invalid values
         do {
             try expectEqual(
                 WakeUpCheckTimingPolicy.normalizeResponseTimeoutMinutes(

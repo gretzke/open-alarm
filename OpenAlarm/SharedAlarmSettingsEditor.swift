@@ -41,7 +41,14 @@ struct SharedAlarmSettingsEditor: View {
     }
 
     private let maxSnoozeOptions: [Int?] = [nil, 1, 2, 3, 5, 10]
-    private let wakeCheckDelayOptions: [Int] = [1, 3, 5, 10, 15, 20, 30, 45, 60]
+
+    private var wakeCheckDelayOptions: [Int] {
+        var options = WakeUpCheckTimingPolicy.checkDelayOptionsMinutes
+        if allowFiveSecondSnoozeOption {
+            options.insert(WakeUpCheckTimingPolicy.debugFiveSecondSentinelMinutes, at: 0)
+        }
+        return options
+    }
 
     private var wakeCheckResponseTimeoutOptions: [Int] {
         var options = WakeUpCheckTimingPolicy.responseTimeoutOptionsMinutes

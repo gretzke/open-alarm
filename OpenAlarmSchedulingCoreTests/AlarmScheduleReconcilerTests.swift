@@ -136,6 +136,40 @@ final class AlarmScheduleReconcilerTests: XCTestCase {
         )
     }
 
+    func testWakeUpCheckDelayOptionsExposeExpectedUserChoices() {
+        XCTAssertEqual(
+            WakeUpCheckTimingPolicy.checkDelayOptionsMinutes,
+            [1, 3, 5, 10, 15, 20, 30, 45, 60]
+        )
+    }
+
+    func testWakeUpCheckDelayIntervalUsesFiveSecondsForDebugSentinel() {
+        XCTAssertEqual(
+            WakeUpCheckTimingPolicy.checkDelayInterval(
+                for: WakeUpCheckTimingPolicy.debugFiveSecondSentinelMinutes
+            ),
+            5
+        )
+    }
+
+    func testWakeUpCheckDelayIntervalUsesMinuteValueForNormalSetting() {
+        XCTAssertEqual(
+            WakeUpCheckTimingPolicy.checkDelayInterval(for: 5),
+            300
+        )
+    }
+
+    func testWakeUpCheckDelayClampingKeepsDebugSentinelButClampsInvalidValues() {
+        XCTAssertEqual(
+            WakeUpCheckTimingPolicy.clampCheckDelayMinutes(
+                WakeUpCheckTimingPolicy.debugFiveSecondSentinelMinutes
+            ),
+            0
+        )
+        XCTAssertEqual(WakeUpCheckTimingPolicy.clampCheckDelayMinutes(-2), 1)
+        XCTAssertEqual(WakeUpCheckTimingPolicy.clampCheckDelayMinutes(120), 60)
+    }
+
     func testWakeUpCheckResponseTimeoutOptionsExposeExpectedUserChoices() {
         XCTAssertEqual(
             WakeUpCheckTimingPolicy.responseTimeoutOptionsMinutes,

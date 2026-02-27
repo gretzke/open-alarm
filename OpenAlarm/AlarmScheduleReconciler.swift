@@ -54,10 +54,22 @@ public enum WakeUpCheckTimingPolicy {
     public static let debugFiveSecondSentinelMinutes = 0
     public static let defaultCheckDelayMinutes = 5
     public static let defaultResponseTimeoutMinutes = 3
+    public static let checkDelayOptionsMinutes: [Int] = [1, 3, 5, 10, 15, 20, 30, 45, 60]
     public static let responseTimeoutOptionsMinutes: [Int] = [1, 2, 3, 5, 10, 20]
 
     public static func clampCheckDelayMinutes(_ minutes: Int) -> Int {
-        min(60, max(1, minutes))
+        if minutes == debugFiveSecondSentinelMinutes {
+            return debugFiveSecondSentinelMinutes
+        }
+        return min(60, max(1, minutes))
+    }
+
+    public static func checkDelayInterval(for minutes: Int) -> TimeInterval {
+        let normalizedMinutes = clampCheckDelayMinutes(minutes)
+        if normalizedMinutes == debugFiveSecondSentinelMinutes {
+            return 5
+        }
+        return TimeInterval(normalizedMinutes * 60)
     }
 
     public static func normalizeResponseTimeoutMinutes(_ minutes: Int) -> Int {

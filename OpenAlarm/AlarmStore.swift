@@ -931,8 +931,9 @@ final class AlarmStore: ObservableObject {
         }
 
         let resolvedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
-        let delayMinutes = WakeUpCheckTimingPolicy.clampCheckDelayMinutes(resolvedSettings.wakeUpCheckDelayMinutes)
-        let checkAt = Date.now.addingTimeInterval(TimeInterval(delayMinutes * 60))
+        let checkAt = Date.now.addingTimeInterval(
+            WakeUpCheckTimingPolicy.checkDelayInterval(for: resolvedSettings.wakeUpCheckDelayMinutes)
+        )
         let deadlineAt = checkAt.addingTimeInterval(
             WakeUpCheckTimingPolicy.responseTimeoutInterval(for: resolvedSettings.wakeUpCheckResponseTimeoutMinutes)
         )
