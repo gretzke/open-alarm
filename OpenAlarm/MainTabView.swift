@@ -451,8 +451,7 @@ private struct AlarmRowView: View {
                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 .padding(.horizontal, 12)
         }
-        .buttonStyle(GlassProminentButtonStyle())
-        .tint(OAColor.actionCyan)
+        .buttonStyle(GlassButtonStyle())
     }
 
     private func nextRepeatingDate(after referenceDate: Date) -> Date? {

@@ -121,7 +121,8 @@ struct AlarmEditorView: View {
                         .buttonStyle(.glassProminent)
                         .popover(
                             isPresented: $showSaveScopePopover,
-                            attachmentAnchor: .point(.topTrailing),
+                            // Anchor to the whole button so the popover starts at the sheet's top edge instead of clipping through it.
+                            attachmentAnchor: .rect(.bounds),
                             arrowEdge: .top
                         ) {
                             GlassEffectContainer(spacing: 10) {
@@ -295,8 +296,7 @@ struct AlarmEditorView: View {
                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 .padding(.horizontal, 12)
         }
-        .buttonStyle(GlassProminentButtonStyle())
-        .tint(OAColor.actionCyan)
+        .buttonStyle(GlassButtonStyle())
     }
 
     // Save actions are handled directly in the toolbar button/menu.
