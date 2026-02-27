@@ -3,3 +3,7 @@ build/
 DerivedData/
 xcuserdata/
 *.swp
+
+# Never commit App Store Connect credentials or generated auth artifacts.
+AuthKey_*.p8
+*.jwt

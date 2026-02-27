@@ -80,3 +80,33 @@ Then open `OpenAlarm.xcodeproj` in Xcode.
 make generate
 make check
 ```
+
+## Deterministic TestFlight upload + attach
+
+Use the automation script below to perform a deterministic TestFlight flow:
+
+1. bump `CURRENT_PROJECT_VERSION` and commit it,
+2. archive + upload using Xcode,
+3. poll App Store Connect until the uploaded build is ready,
+4. attach the build to your internal beta group.
+
+Sensitive values are read from environment variables at runtime only.
+
+```bash
+ASC_KEY_ID="<ASC_KEY_ID>" \
+ASC_ISSUER_ID="<ASC_ISSUER_ID_UUID>" \
+APP_ID="<ASC_APP_ID>" \
+BETA_GROUP_ID="<ASC_INTERNAL_BETA_GROUP_ID>" \
+./scripts/upload_and_attach_testflight.sh
+```
+
+Optional overrides:
+
+- `ASC_KEY_PATH` (default: `~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8`)
+- `BUNDLE_ID` (default: `com.gretzke.openalarm`)
+- `TEAM_ID` (default: `7P7CKKPH5L`)
+- `SCHEME` (default: `OpenAlarm`)
+- `PROJECT` (default: `OpenAlarm.xcodeproj`)
+- `ARCHIVE_PATH` (default: `build/OpenAlarm.xcarchive`)
+- `POLL_SECONDS` (default: `20`)
+- `POLL_TIMEOUT_SECONDS` (default: `1800`)
