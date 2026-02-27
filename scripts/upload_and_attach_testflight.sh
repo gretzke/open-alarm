@@ -344,27 +344,63 @@ def extract_errors(payload):
 def find_build_id(deadline_epoch):
     log(f"Locating uploaded build for version={target_version} build={target_build}")
 
-    while time.time() < deadline_epoch:
-        params = urllib.parse.urlencode(
-            {
-                "filter[app]": app_id,
-                "filter[version]": target_version,
-                "sort": "-uploadedDate",
-                "limit": "200",
-            }
-        )
+    def fetch_builds(include_version_filter):
+        params = {
+            "filter[app]": app_id,
+            "sort": "-uploadedDate",
+            "limit": "200",
+            "include": "preReleaseVersion",
+            "fields[builds]": "version,buildNumber,uploadedDate",
+            "fields[preReleaseVersions]": "version",
+        }
+        if include_version_filter:
+            params["filter[version]"] = target_build
 
-        status, payload = asc_request("GET", f"/v1/builds?{params}")
+        status, payload = asc_request("GET", f"/v1/builds?{urllib.parse.urlencode(params)}")
         if status >= 400:
+            if include_version_filter and status == 400:
+                log("filter[version] unsupported for /v1/builds; retrying without version filter")
+                return None
             fail(
                 f"Failed to list builds (HTTP {status}). {extract_errors(payload)}"
             )
+        return payload
 
-        for build in payload.get("data", []):
-            attributes = build.get("attributes", {})
-            if str(attributes.get("version")) == str(target_version) and str(
-                attributes.get("buildNumber")
-            ) == str(target_build):
+    while time.time() < deadline_epoch:
+        payloads_to_check = []
+
+        filtered_payload = fetch_builds(True)
+        if filtered_payload is not None:
+            payloads_to_check.append(filtered_payload)
+
+        unfiltered_payload = fetch_builds(False)
+        if unfiltered_payload is not None:
+            payloads_to_check.append(unfiltered_payload)
+
+        for current_payload in payloads_to_check:
+            prerelease_map = {
+                item.get("id"): str((item.get("attributes") or {}).get("version"))
+                for item in current_payload.get("included", [])
+                if item.get("type") == "preReleaseVersions"
+            }
+
+            for build in current_payload.get("data", []):
+                attributes = build.get("attributes", {})
+                build_number = attributes.get("buildNumber") or attributes.get("version")
+                if str(build_number) != str(target_build):
+                    continue
+
+                relationships = build.get("relationships", {})
+                prerelease_data = (
+                    relationships.get("preReleaseVersion", {}).get("data", {})
+                    if isinstance(relationships, dict)
+                    else {}
+                )
+                prerelease_id = prerelease_data.get("id") if isinstance(prerelease_data, dict) else None
+                marketing_version = prerelease_map.get(prerelease_id)
+                if marketing_version and str(marketing_version) != str(target_version):
+                    continue
+
                 return build["id"]
 
         remaining = max(0, int(deadline_epoch - time.time()))
@@ -374,6 +410,7 @@ def find_build_id(deadline_epoch):
         time.sleep(poll_seconds)
 
     fail("Timed out waiting for uploaded build to appear in App Store Connect")
+
 
 
 def wait_until_ready(build_id, deadline_epoch):
