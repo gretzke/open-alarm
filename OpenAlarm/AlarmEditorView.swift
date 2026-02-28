@@ -99,7 +99,6 @@ struct AlarmEditorView: View {
                             .font(.headline.weight(.semibold))
                     }
                     .tint(OAColor.textPrimary)
-                    .buttonStyle(.glass)
                     .accessibilityLabel(L10n.actionCancel)
                 }
 
