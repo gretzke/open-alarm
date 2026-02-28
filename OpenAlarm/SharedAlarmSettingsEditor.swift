@@ -3,6 +3,8 @@ import SwiftUI
 private enum SharedSettingsSelectionSheet: String, Identifiable {
     case snoozeDuration
     case maxSnoozes
+    case wakeCheckDelay
+    case wakeCheckResponseTimeout
 
     var id: String { rawValue }
 }
@@ -121,69 +123,24 @@ struct SharedAlarmSettingsEditor: View {
                 .tint(OAColor.actionCyan)
 
                 if settings.wakeUpCheckEnabled {
-                    VStack(spacing: 8) {
-                        Menu {
-                            ForEach(wakeCheckDelayOptions, id: \.self) { minutes in
-                                Button {
-                                    settings.wakeUpCheckDelayMinutes = minutes
-                                } label: {
-                                    Text(snoozeDurationLabel(for: minutes))
-                                }
-                            }
-                        } label: {
-                            HStack(spacing: 10) {
-                                Text(L10n.alarmEditorWakeCheckDelayLabel)
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(OAColor.textPrimary)
+                    VStack(spacing: 0) {
+                        selectionRow(
+                            title: L10n.alarmEditorWakeCheckDelayLabel,
+                            value: snoozeDurationLabel(for: settings.wakeUpCheckDelayMinutes),
+                            action: { selectionSheet = .wakeCheckDelay }
+                        )
 
-                                Spacer(minLength: 0)
+                        Divider()
+                            .overlay(OAColor.glassStroke.opacity(0.8))
 
-                                Text(snoozeDurationLabel(for: settings.wakeUpCheckDelayMinutes))
-                                    .font(.subheadline)
-                                    .foregroundStyle(OAColor.textSecondary)
-
-                                Image(systemName: "chevron.up.chevron.down")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(OAColor.textSecondary)
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                            .frame(maxWidth: .infinity)
-                            .oaGlassButtonChrome()
-                        }
-                        .buttonStyle(.plain)
-
-                        Menu {
-                            ForEach(wakeCheckResponseTimeoutOptions, id: \.self) { minutes in
-                                Button {
-                                    settings.wakeUpCheckResponseTimeoutMinutes = minutes
-                                } label: {
-                                    Text(snoozeDurationLabel(for: minutes))
-                                }
-                            }
-                        } label: {
-                            HStack(spacing: 10) {
-                                Text(L10n.alarmEditorWakeCheckResponseTimeoutLabel)
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(OAColor.textPrimary)
-
-                                Spacer(minLength: 0)
-
-                                Text(snoozeDurationLabel(for: settings.wakeUpCheckResponseTimeoutMinutes))
-                                    .font(.subheadline)
-                                    .foregroundStyle(OAColor.textSecondary)
-
-                                Image(systemName: "chevron.up.chevron.down")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(OAColor.textSecondary)
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                            .frame(maxWidth: .infinity)
-                            .oaGlassButtonChrome()
-                        }
-                        .buttonStyle(.plain)
+                        selectionRow(
+                            title: L10n.alarmEditorWakeCheckResponseTimeoutLabel,
+                            value: snoozeDurationLabel(for: settings.wakeUpCheckResponseTimeoutMinutes),
+                            action: { selectionSheet = .wakeCheckResponseTimeout }
+                        )
                     }
+                    .frame(maxWidth: .infinity)
+                    .oaGlassPanel()
                 }
             }
 
@@ -217,21 +174,11 @@ struct SharedAlarmSettingsEditor: View {
         }
         .sheet(item: $selectionSheet) { item in
             SharedSettingsSelectionSheetView(
-                title: item == .snoozeDuration ? L10n.alarmEditorSnoozeDurationLabel : L10n.alarmEditorSnoozeMaxLabel,
-                options: item == .snoozeDuration
-                    ? snoozeDurationOptions.map(SharedSettingsSelectionOption.value)
-                    : maxSnoozeOptions.map { $0.map(SharedSettingsSelectionOption.value) ?? .unlimited },
+                title: selectionTitle(for: item),
+                options: options(for: item),
                 selected: selectedOption(for: item),
                 format: { option in
-                    switch option {
-                    case let .value(number):
-                        if item == .snoozeDuration {
-                            return snoozeDurationLabel(for: number)
-                        }
-                        return "\(number)"
-                    case .unlimited:
-                        return String(localized: "alarm_editor_snooze_unlimited")
-                    }
+                    optionLabel(option, for: item)
                 },
                 onSelect: { option in
                     switch item {
@@ -245,6 +192,14 @@ struct SharedAlarmSettingsEditor: View {
                             settings.maxSnoozes = number
                         case .unlimited:
                             settings.maxSnoozes = nil
+                        }
+                    case .wakeCheckDelay:
+                        if case let .value(minutes) = option {
+                            settings.wakeUpCheckDelayMinutes = minutes
+                        }
+                    case .wakeCheckResponseTimeout:
+                        if case let .value(minutes) = option {
+                            settings.wakeUpCheckResponseTimeoutMinutes = minutes
                         }
                     }
                     selectionSheet = nil
@@ -302,12 +257,56 @@ struct SharedAlarmSettingsEditor: View {
         }
     }
 
+    private func selectionTitle(for item: SharedSettingsSelectionSheet) -> LocalizedStringKey {
+        switch item {
+        case .snoozeDuration:
+            return L10n.alarmEditorSnoozeDurationLabel
+        case .maxSnoozes:
+            return L10n.alarmEditorSnoozeMaxLabel
+        case .wakeCheckDelay:
+            return L10n.alarmEditorWakeCheckDelayLabel
+        case .wakeCheckResponseTimeout:
+            return L10n.alarmEditorWakeCheckResponseTimeoutLabel
+        }
+    }
+
+    private func options(for item: SharedSettingsSelectionSheet) -> [SharedSettingsSelectionOption] {
+        switch item {
+        case .snoozeDuration:
+            return snoozeDurationOptions.map(SharedSettingsSelectionOption.value)
+        case .maxSnoozes:
+            return maxSnoozeOptions.map { $0.map(SharedSettingsSelectionOption.value) ?? .unlimited }
+        case .wakeCheckDelay:
+            return wakeCheckDelayOptions.map(SharedSettingsSelectionOption.value)
+        case .wakeCheckResponseTimeout:
+            return wakeCheckResponseTimeoutOptions.map(SharedSettingsSelectionOption.value)
+        }
+    }
+
     private func selectedOption(for item: SharedSettingsSelectionSheet) -> SharedSettingsSelectionOption {
         switch item {
         case .snoozeDuration:
             return .value(settings.snoozeDurationMinutes)
         case .maxSnoozes:
             return settings.maxSnoozes.map(SharedSettingsSelectionOption.value) ?? .unlimited
+        case .wakeCheckDelay:
+            return .value(settings.wakeUpCheckDelayMinutes)
+        case .wakeCheckResponseTimeout:
+            return .value(settings.wakeUpCheckResponseTimeoutMinutes)
+        }
+    }
+
+    private func optionLabel(_ option: SharedSettingsSelectionOption, for item: SharedSettingsSelectionSheet) -> String {
+        switch option {
+        case let .value(number):
+            switch item {
+            case .snoozeDuration, .wakeCheckDelay, .wakeCheckResponseTimeout:
+                return snoozeDurationLabel(for: number)
+            case .maxSnoozes:
+                return "\(number)"
+            }
+        case .unlimited:
+            return String(localized: "alarm_editor_snooze_unlimited")
         }
     }
 
