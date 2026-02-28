@@ -1029,14 +1029,8 @@ private struct AlarmStoreOverrideIntegrationHarness {
 
                 alarm.manualScheduleQueue = rebuiltQueue
 
-                runtime.stop(id: alarm.id)
-                runtime.cancel(id: alarm.id)
-                lastKnownAlarmState.removeValue(forKey: alarm.id)
-
-                for manual in alarm.manualScheduleQueue where manual.triggerDate > referenceDate.addingTimeInterval(-1) {
-                    runtime.schedule(id: manual.id, triggerDate: manual.triggerDate)
-                    lastKnownAlarmState[manual.id] = .scheduled
-                }
+                suppressCanonicalRuntimeWhileOverrideActive(referenceDate: referenceDate)
+                scheduleManualRuntimeQueueWithRepair(referenceDate: referenceDate)
 
                 remoteStates[alarm.id] = alarm.manualScheduleQueue.isEmpty ? nil : .scheduled
             }
@@ -1124,10 +1118,6 @@ private struct AlarmStoreOverrideIntegrationHarness {
             }
         }
 
-        runtime.stop(id: alarm.id)
-        runtime.cancel(id: alarm.id)
-        lastKnownAlarmState.removeValue(forKey: alarm.id)
-
         if shouldConsumeOverrideDate,
            !shouldRestoreRecurring,
            var mutableOverrideState = alarm.temporaryScheduleOverride {
@@ -1156,7 +1146,66 @@ private struct AlarmStoreOverrideIntegrationHarness {
             alarm.isEnabled = true
             remoteStates.removeValue(forKey: alarm.id)
         } else {
+            suppressCanonicalRuntimeWhileOverrideActive(referenceDate: referenceDate)
             remoteStates[alarm.id] = hasManualAlertingState ? .alerting : .scheduled
+        }
+    }
+
+    private func canonicalSuppressionFallbackDate(referenceDate: Date) -> Date {
+        let latestManualDate = alarm.manualScheduleQueue.map(\.triggerDate).max() ?? referenceDate
+        let baseline = max(latestManualDate, referenceDate)
+        return baseline.addingTimeInterval(60)
+    }
+
+    private mutating func suppressCanonicalRuntimeWhileOverrideActive(referenceDate: Date) {
+        runtime.stop(id: alarm.id)
+        runtime.cancel(id: alarm.id)
+        lastKnownAlarmState.removeValue(forKey: alarm.id)
+
+        guard runtime.containsRuntimeAlarm(id: alarm.id) else {
+            return
+        }
+
+        runtime.schedule(
+            id: alarm.id,
+            triggerDate: canonicalSuppressionFallbackDate(referenceDate: referenceDate)
+        )
+
+        if runtime.containsRuntimeAlarm(id: alarm.id) {
+            lastKnownAlarmState[alarm.id] = .scheduled
+        }
+    }
+
+    private mutating func scheduleManualRuntimeEntry(_ manual: AlarmManualScheduleEntry) {
+        runtime.schedule(id: manual.id, triggerDate: manual.triggerDate)
+
+        if runtime.containsRuntimeAlarm(id: manual.id) {
+            lastKnownAlarmState[manual.id] = .scheduled
+        }
+    }
+
+    private mutating func scheduleManualRuntimeQueueWithRepair(referenceDate: Date) {
+        let activeManualEntries = alarm.manualScheduleQueue.filter {
+            $0.triggerDate > referenceDate.addingTimeInterval(-1)
+        }
+
+        guard !activeManualEntries.isEmpty else {
+            return
+        }
+
+        for manual in activeManualEntries {
+            scheduleManualRuntimeEntry(manual)
+        }
+
+        for _ in 0 ..< 2 {
+            let missingEntries = activeManualEntries.filter { !runtime.containsRuntimeAlarm(id: $0.id) }
+            guard !missingEntries.isEmpty else {
+                return
+            }
+
+            for manual in missingEntries {
+                scheduleManualRuntimeEntry(manual)
+            }
         }
     }
 
@@ -1229,19 +1278,25 @@ private struct RuntimeAlarmHarness {
 
     private(set) var byID: [UUID: RuntimeAlarm] = [:]
     private var cancelNoOpIDs: Set<UUID> = []
-    private var droppedScheduleTriggerDates: Set<Date> = []
+    private var droppedScheduleAttemptsByTriggerDate: [Date: Int] = [:]
 
     mutating func addCancelNoOpID(_ id: UUID) {
         cancelNoOpIDs.insert(id)
     }
 
     mutating func addDroppedScheduleTriggerDate(_ triggerDate: Date) {
-        droppedScheduleTriggerDates.insert(triggerDate)
+        droppedScheduleAttemptsByTriggerDate[triggerDate, default: 0] += 1
     }
 
     mutating func schedule(id: UUID, triggerDate: Date?) {
         if let triggerDate,
-           droppedScheduleTriggerDates.contains(triggerDate) {
+           let remainingAttempts = droppedScheduleAttemptsByTriggerDate[triggerDate],
+           remainingAttempts > 0 {
+            if remainingAttempts == 1 {
+                droppedScheduleAttemptsByTriggerDate.removeValue(forKey: triggerDate)
+            } else {
+                droppedScheduleAttemptsByTriggerDate[triggerDate] = remainingAttempts - 1
+            }
             return
         }
 

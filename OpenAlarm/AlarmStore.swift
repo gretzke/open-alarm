@@ -839,6 +839,118 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
         }
     }
 
+    private func runtimeAlarmIDsSnapshot() -> Set<UUID>? {
+        guard let runtimeAlarms = try? alarmManager.alarms else {
+            return nil
+        }
+
+        return Set(runtimeAlarms.map(\.id))
+    }
+
+    private func canonicalSuppressionFallbackDate(
+        for alarm: UserAlarm,
+        referenceDate: Date
+    ) -> Date {
+        let latestManualDate = alarm.manualScheduleQueue.map(\.triggerDate).max() ?? referenceDate
+        let baseline = max(latestManualDate, referenceDate)
+        return baseline.addingTimeInterval(60)
+    }
+
+    private func suppressCanonicalRuntimeWhileOverrideActive(
+        for alarm: UserAlarm,
+        referenceDate: Date
+    ) async {
+        try? alarmManager.stop(id: alarm.id)
+        try? alarmManager.cancel(id: alarm.id)
+        lastKnownAlarmState.removeValue(forKey: alarm.id)
+
+        guard let runtimeIDs = runtimeAlarmIDsSnapshot(),
+              runtimeIDs.contains(alarm.id) else {
+            return
+        }
+
+        do {
+            let suppressionDate = canonicalSuppressionFallbackDate(
+                for: alarm,
+                referenceDate: referenceDate
+            )
+            let config = makeConfiguration(
+                for: alarm,
+                schedule: .fixed(suppressionDate),
+                isShadowTrial: false,
+                forceDisableSnooze: true,
+                runtimeAlarmID: alarm.id,
+                configReferenceID: alarm.scheduleConfigReferenceID
+            )
+            let remote = try await scheduleAlarmWithUpdateFallback(
+                id: alarm.id,
+                configuration: config,
+                isUpdate: true
+            )
+            lastKnownAlarmState[alarm.id] = remote.state
+        } catch {
+            lastKnownAlarmState.removeValue(forKey: alarm.id)
+        }
+    }
+
+    private func scheduleManualRuntimeEntry(
+        _ manual: AlarmManualScheduleEntry,
+        for alarm: UserAlarm
+    ) async {
+        do {
+            let config = makeConfiguration(
+                for: alarm,
+                schedule: .fixed(manual.triggerDate),
+                isShadowTrial: false,
+                forceDisableSnooze: true,
+                runtimeAlarmID: manual.id,
+                configReferenceID: manual.configReferenceID
+            )
+            let remote = try await scheduleAlarmWithUpdateFallback(
+                id: manual.id,
+                configuration: config,
+                isUpdate: true
+            )
+            lastKnownAlarmState[manual.id] = remote.state
+        } catch {
+            // Best effort. Next reconciliation opportunity can recover.
+        }
+    }
+
+    private func scheduleManualRuntimeQueueWithRepair(
+        for alarm: UserAlarm,
+        referenceDate: Date
+    ) async {
+        let activeManualEntries = alarm.manualScheduleQueue.filter {
+            $0.triggerDate > referenceDate.addingTimeInterval(-1)
+        }
+
+        guard !activeManualEntries.isEmpty else {
+            return
+        }
+
+        for manual in activeManualEntries {
+            await scheduleManualRuntimeEntry(manual, for: alarm)
+        }
+
+        // AlarmKit can occasionally drop a schedule call without surfacing an
+        // error; verify expected manual IDs and retry missing entries.
+        for _ in 0 ..< 2 {
+            guard let runtimeIDs = runtimeAlarmIDsSnapshot() else {
+                return
+            }
+
+            let missingEntries = activeManualEntries.filter { !runtimeIDs.contains($0.id) }
+            guard !missingEntries.isEmpty else {
+                return
+            }
+
+            for manual in missingEntries {
+                await scheduleManualRuntimeEntry(manual, for: alarm)
+            }
+        }
+    }
+
     func reconcileSchedule(target: AlarmScheduleReconcileTarget, referenceDate: Date) async {
         switch target {
         case let .alarm(runtimeAlarmID):
@@ -936,34 +1048,15 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
                 }
 
                 // While override is active, recurring schedule must be removed.
-                try? alarmManager.stop(id: alarm.id)
-                try? alarmManager.cancel(id: alarm.id)
-                lastKnownAlarmState.removeValue(forKey: alarm.id)
+                await suppressCanonicalRuntimeWhileOverrideActive(
+                    for: alarm,
+                    referenceDate: referenceDate
+                )
 
-                for manual in alarm.manualScheduleQueue {
-                    guard manual.triggerDate > referenceDate.addingTimeInterval(-1) else {
-                        continue
-                    }
-
-                    do {
-                        let config = makeConfiguration(
-                            for: alarm,
-                            schedule: .fixed(manual.triggerDate),
-                            isShadowTrial: false,
-                            forceDisableSnooze: true,
-                            runtimeAlarmID: manual.id,
-                            configReferenceID: manual.configReferenceID
-                        )
-                        let remote = try await scheduleAlarmWithUpdateFallback(
-                            id: manual.id,
-                            configuration: config,
-                            isUpdate: true
-                        )
-                        lastKnownAlarmState[manual.id] = remote.state
-                    } catch {
-                        // Best effort. Next reconciliation opportunity can recover.
-                    }
-                }
+                await scheduleManualRuntimeQueueWithRepair(
+                    for: alarm,
+                    referenceDate: referenceDate
+                )
 
                 remoteStates[alarm.id] = alarm.manualScheduleQueue.isEmpty ? nil : .scheduled
             }
