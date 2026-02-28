@@ -64,11 +64,10 @@ struct NapEditorView: View {
                                 .font(.headline.weight(.bold))
                         }
                     }
-                    .frame(width: 44, height: 44)
-                    .contentShape(Circle())
                     .tint(OAColor.actionCyan)
                     .buttonStyle(.glassProminent)
-                    .buttonBorderShape(.circle)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
                     .disabled(isSaving)
                     .accessibilityLabel(L10n.napEditorStartButton)
                 }

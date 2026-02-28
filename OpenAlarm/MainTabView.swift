@@ -302,20 +302,20 @@ private struct ActiveNapRowView: View {
                 } label: {
                     Label(nap.isPaused ? L10n.actionContinue : L10n.actionPause, systemImage: nap.isPaused ? "play.fill" : "pause.fill")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.white)
+                        .foregroundStyle(OAColor.textPrimary)
                         .frame(maxWidth: .infinity, minHeight: 48)
                         .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(GlassButtonStyle())
 
                 Button(action: onDelete) {
                     Label(L10n.actionDelete, systemImage: "trash")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.white)
+                        .foregroundStyle(OAColor.danger)
                         .frame(maxWidth: .infinity, minHeight: 48)
                         .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(GlassButtonStyle())
             }
         }
         .padding(18)

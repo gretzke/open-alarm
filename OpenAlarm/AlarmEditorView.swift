@@ -116,12 +116,11 @@ struct AlarmEditorView: View {
                         } label: {
                             Image(systemName: "checkmark")
                                 .font(.headline.weight(.bold))
-                                .frame(width: 44, height: 44)
-                                .contentShape(Circle())
                         }
                         .tint(OAColor.actionCyan)
                         .buttonStyle(.glassProminent)
-                        .buttonBorderShape(.circle)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
                         .popover(
                             isPresented: $showSaveScopePopover,
                             // Anchor from the full 44x44 toolbar hit-target so the popover body clears the sheet top.
