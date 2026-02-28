@@ -63,31 +63,183 @@ final class AlarmScheduleReconcilerTests: XCTestCase {
         )
     }
 
-    func testLegacyOneShotModifyNextEarlier0900To0800ShouldNotRestoreRecurringAt0800Fire() {
+    func testTemporaryOverrideRegressionMatrixCoversCallbackAndAppReopenReconcilePaths() {
         let calendar = fixedUTCGregorianCalendar()
-        let overrideFire = makeUTCDate(year: 2026, month: 3, day: 2, hour: 8, minute: 0, calendar: calendar)
-        let now = makeUTCDate(year: 2026, month: 3, day: 2, hour: 8, minute: 1, calendar: calendar)
 
-        let desired = AlarmScheduleDesiredPlan(
-            isRepeating: true,
-            mode: .temporaryOneShot(triggerDate: overrideFire),
-            nextTriggerOverrideDate: overrideFire
-        )
-        let actual = AlarmScheduleActualState(
-            previous: .alerting,
-            current: .missing
-        )
+        let now = makeUTCDate(year: 2026, month: 3, day: 2, hour: 6, minute: 0, calendar: calendar)
+        let canonicalToday = makeUTCDate(year: 2026, month: 3, day: 2, hour: 9, minute: 0, calendar: calendar)
+        let canonicalTomorrow = makeUTCDate(year: 2026, month: 3, day: 3, hour: 9, minute: 0, calendar: calendar)
+        let canonicalDayAfterTomorrow = makeUTCDate(year: 2026, month: 3, day: 4, hour: 9, minute: 0, calendar: calendar)
 
-        let operations = AlarmScheduleReconciler.reconcile(
-            desired: desired,
-            actual: actual,
-            now: now
+        let modifyEarlierOverride = makeUTCDate(year: 2026, month: 3, day: 2, hour: 8, minute: 0, calendar: calendar)
+        let modifyLaterOverride = makeUTCDate(year: 2026, month: 3, day: 2, hour: 10, minute: 0, calendar: calendar)
+
+        let schedule = AlarmCanonicalScheduleSpec(
+            weekdayNumbers: [1, 2, 3, 4, 5, 6, 7],
+            hour: 9,
+            minute: 0,
+            isEnabled: true
         )
 
-        XCTAssertFalse(
-            operations.contains(.scheduleRecurringRestore),
-            "Modify-next earlier (09:00 -> 08:00) should not restore recurring at 08:00 fire; otherwise 09:00 can ring on the same day."
-        )
+        struct Scenario {
+            let name: String
+            let intent: AlarmTemporaryOverrideIntent
+            let expectedKind: AlarmTemporaryScheduleOverrideKind
+            let expectedRestoreAnchorDate: Date
+            let expectedInitialFirstTrigger: Date
+            let disallowedInitialTrigger: Date?
+            let completionDateFromCallback: Date
+            let completionDateFromColdStartReconcile: Date
+            let expectedConsumesOverrideDateOnCompletion: Bool
+            let expectedRestoresRecurringOnCompletion: Bool
+            let appReopenReferenceDate: Date
+            let expectedFirstTriggerAfterAppReopenRebuild: Date
+            let disallowedRebuiltTrigger: Date?
+        }
+
+        let scenarios: [Scenario] = [
+            Scenario(
+                name: "modify-next earlier (09:00 -> 08:00)",
+                intent: .modifyNext(triggerDate: modifyEarlierOverride),
+                expectedKind: .modifyNext,
+                expectedRestoreAnchorDate: canonicalToday,
+                expectedInitialFirstTrigger: modifyEarlierOverride,
+                disallowedInitialTrigger: canonicalToday,
+                completionDateFromCallback: modifyEarlierOverride,
+                completionDateFromColdStartReconcile: modifyEarlierOverride,
+                expectedConsumesOverrideDateOnCompletion: true,
+                expectedRestoresRecurringOnCompletion: false,
+                appReopenReferenceDate: makeUTCDate(year: 2026, month: 3, day: 2, hour: 8, minute: 5, calendar: calendar),
+                expectedFirstTriggerAfterAppReopenRebuild: canonicalTomorrow,
+                disallowedRebuiltTrigger: canonicalToday
+            ),
+            Scenario(
+                name: "modify-next later (09:00 -> 10:00)",
+                intent: .modifyNext(triggerDate: modifyLaterOverride),
+                expectedKind: .modifyNext,
+                expectedRestoreAnchorDate: canonicalToday,
+                expectedInitialFirstTrigger: modifyLaterOverride,
+                disallowedInitialTrigger: canonicalToday,
+                completionDateFromCallback: modifyLaterOverride,
+                completionDateFromColdStartReconcile: modifyLaterOverride,
+                expectedConsumesOverrideDateOnCompletion: true,
+                expectedRestoresRecurringOnCompletion: true,
+                appReopenReferenceDate: makeUTCDate(year: 2026, month: 3, day: 2, hour: 10, minute: 5, calendar: calendar),
+                expectedFirstTriggerAfterAppReopenRebuild: canonicalTomorrow,
+                disallowedRebuiltTrigger: nil
+            ),
+            Scenario(
+                name: "disable-next / skip-next",
+                intent: .disableNext,
+                expectedKind: .disableNext,
+                expectedRestoreAnchorDate: canonicalTomorrow,
+                expectedInitialFirstTrigger: canonicalTomorrow,
+                disallowedInitialTrigger: canonicalToday,
+                completionDateFromCallback: canonicalTomorrow,
+                completionDateFromColdStartReconcile: canonicalTomorrow,
+                expectedConsumesOverrideDateOnCompletion: false,
+                expectedRestoresRecurringOnCompletion: true,
+                appReopenReferenceDate: makeUTCDate(year: 2026, month: 3, day: 3, hour: 9, minute: 5, calendar: calendar),
+                expectedFirstTriggerAfterAppReopenRebuild: canonicalDayAfterTomorrow,
+                disallowedRebuiltTrigger: nil
+            )
+        ]
+
+        for scenario in scenarios {
+            let activation = AlarmSchedulePlanner.activateTemporaryOverride(
+                canonicalSchedule: schedule,
+                intent: scenario.intent,
+                now: now,
+                manualQueueDepth: 5,
+                calendar: calendar
+            )
+
+            XCTAssertNotNil(activation, "\(scenario.name): activation should succeed")
+            guard let activation else { continue }
+
+            XCTAssertEqual(
+                activation.overrideState.kind,
+                scenario.expectedKind,
+                "\(scenario.name): persisted override kind should match intent"
+            )
+            XCTAssertEqual(
+                activation.overrideState.restoreAnchorDate,
+                scenario.expectedRestoreAnchorDate,
+                "\(scenario.name): restore anchor should match canonical expectations"
+            )
+            XCTAssertEqual(
+                activation.manualTriggerDates.first,
+                scenario.expectedInitialFirstTrigger,
+                "\(scenario.name): initial queue head should be deterministic"
+            )
+
+            if let disallowedInitialTrigger = scenario.disallowedInitialTrigger {
+                XCTAssertFalse(
+                    activation.manualTriggerDates.contains(disallowedInitialTrigger),
+                    "\(scenario.name): initial queue should not include disallowed canonical slot"
+                )
+            }
+
+            let consumedFromCallback = AlarmSchedulePlanner.shouldConsumeOverrideDate(
+                afterManualAlarmFiredAt: scenario.completionDateFromCallback,
+                overrideState: activation.overrideState
+            )
+            XCTAssertEqual(
+                consumedFromCallback,
+                scenario.expectedConsumesOverrideDateOnCompletion,
+                "\(scenario.name): callback completion should consume override date as expected"
+            )
+
+            let restoredFromCallback = AlarmSchedulePlanner.shouldRestoreRecurringSchedule(
+                afterManualAlarmFiredAt: scenario.completionDateFromCallback,
+                overrideState: activation.overrideState
+            )
+            XCTAssertEqual(
+                restoredFromCallback,
+                scenario.expectedRestoresRecurringOnCompletion,
+                "\(scenario.name): callback completion restore decision should match expectation"
+            )
+
+            let consumedFromColdStart = AlarmSchedulePlanner.shouldConsumeOverrideDate(
+                afterManualAlarmFiredAt: scenario.completionDateFromColdStartReconcile,
+                overrideState: activation.overrideState
+            )
+            XCTAssertEqual(
+                consumedFromColdStart,
+                scenario.expectedConsumesOverrideDateOnCompletion,
+                "\(scenario.name): app-reopen reconcile should consume override date consistently"
+            )
+
+            let restoredFromColdStart = AlarmSchedulePlanner.shouldRestoreRecurringSchedule(
+                afterManualAlarmFiredAt: scenario.completionDateFromColdStartReconcile,
+                overrideState: activation.overrideState
+            )
+            XCTAssertEqual(
+                restoredFromColdStart,
+                scenario.expectedRestoresRecurringOnCompletion,
+                "\(scenario.name): app-reopen reconcile restore decision should match callback semantics"
+            )
+
+            let rebuilt = AlarmSchedulePlanner.desiredManualTriggerDates(
+                canonicalSchedule: schedule,
+                overrideState: activation.overrideState,
+                now: scenario.appReopenReferenceDate,
+                manualQueueDepth: 5,
+                calendar: calendar
+            )
+            XCTAssertEqual(
+                rebuilt.first,
+                scenario.expectedFirstTriggerAfterAppReopenRebuild,
+                "\(scenario.name): app-reopen reconcile should rebuild deterministic future bridge queue"
+            )
+
+            if let disallowedRebuiltTrigger = scenario.disallowedRebuiltTrigger {
+                XCTAssertFalse(
+                    rebuilt.contains(disallowedRebuiltTrigger),
+                    "\(scenario.name): rebuilt queue should not reintroduce disallowed canonical slot"
+                )
+            }
+        }
     }
 
     func testDuplicateFireCallbackHandlingIsIdempotentAfterFirstRestoreMutation() {
