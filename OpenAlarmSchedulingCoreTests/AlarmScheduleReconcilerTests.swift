@@ -63,6 +63,33 @@ final class AlarmScheduleReconcilerTests: XCTestCase {
         )
     }
 
+    func testLegacyOneShotModifyNextEarlier0900To0800ShouldNotRestoreRecurringAt0800Fire() {
+        let calendar = fixedUTCGregorianCalendar()
+        let overrideFire = makeUTCDate(year: 2026, month: 3, day: 2, hour: 8, minute: 0, calendar: calendar)
+        let now = makeUTCDate(year: 2026, month: 3, day: 2, hour: 8, minute: 1, calendar: calendar)
+
+        let desired = AlarmScheduleDesiredPlan(
+            isRepeating: true,
+            mode: .temporaryOneShot(triggerDate: overrideFire),
+            nextTriggerOverrideDate: overrideFire
+        )
+        let actual = AlarmScheduleActualState(
+            previous: .alerting,
+            current: .missing
+        )
+
+        let operations = AlarmScheduleReconciler.reconcile(
+            desired: desired,
+            actual: actual,
+            now: now
+        )
+
+        XCTAssertFalse(
+            operations.contains(.scheduleRecurringRestore),
+            "Modify-next earlier (09:00 -> 08:00) should not restore recurring at 08:00 fire; otherwise 09:00 can ring on the same day."
+        )
+    }
+
     func testDuplicateFireCallbackHandlingIsIdempotentAfterFirstRestoreMutation() {
         let now = Date(timeIntervalSince1970: 1_000_000)
         let oneShotTrigger = now.addingTimeInterval(-60)
