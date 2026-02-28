@@ -302,18 +302,20 @@ private struct ActiveNapRowView: View {
                 } label: {
                     Label(nap.isPaused ? L10n.actionContinue : L10n.actionPause, systemImage: nap.isPaused ? "play.fill" : "pause.fill")
                         .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.white)
                         .frame(maxWidth: .infinity, minHeight: 48)
+                        .contentShape(Rectangle())
                 }
-                .buttonStyle(GlassProminentButtonStyle())
-                .tint(OAColor.actionCyan)
+                .buttonStyle(.plain)
 
-                Button(role: .destructive, action: onDelete) {
+                Button(action: onDelete) {
                     Label(L10n.actionDelete, systemImage: "trash")
                         .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.white)
                         .frame(maxWidth: .infinity, minHeight: 48)
+                        .contentShape(Rectangle())
                 }
-                .buttonStyle(GlassButtonStyle())
-                .tint(OAColor.danger)
+                .buttonStyle(.plain)
             }
         }
         .padding(18)
@@ -633,11 +635,10 @@ private struct SettingsHomeView: View {
                                     .foregroundStyle(OAColor.textSecondary)
                             }
                             .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
-                            .frame(maxWidth: .infinity)
-                            .oaGlassButtonChrome()
+                            .frame(maxWidth: .infinity, minHeight: 48)
+                            .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(GlassButtonStyle())
                         .accessibilityIdentifier("settings_default_config_manage")
                     }
                     .padding(20)
@@ -667,11 +668,10 @@ private struct SettingsHomeView: View {
                                     .foregroundStyle(OAColor.textSecondary)
                             }
                             .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
-                            .frame(maxWidth: .infinity)
-                            .oaGlassButtonChrome()
+                            .frame(maxWidth: .infinity, minHeight: 48)
+                            .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(GlassButtonStyle())
                         .accessibilityIdentifier("settings_nap_defaults_manage")
                     }
                     .padding(20)
