@@ -30,6 +30,25 @@ struct StopIntent: LiveActivityIntent {
             AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
         }
 
+        let defaultSharedSettings = AlarmPersistence.loadDefaultSharedSettings(from: defaults)
+        let alarms = AlarmPersistence.loadUserAlarms(from: defaults)
+        let hasWakeCheckEnabled = alarms
+            .first(where: { $0.id == id })?
+            .resolvedSharedSettings(defaults: defaultSharedSettings)
+            .wakeUpCheckEnabled ?? false
+        let hasActiveWakeCheckSession = AlarmPersistence
+            .loadWakeUpCheckSessions(from: defaults)
+            .contains(where: { $0.alarmID == id })
+
+        if WakeUpCheckCoordinator.shouldEnqueuePipelineOnStopIntent(
+            wakeUpCheckEnabledForAlarm: hasWakeCheckEnabled,
+            hasActiveSession: hasActiveWakeCheckSession
+        ) {
+            var pendingStarts = AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: defaults)
+            pendingStarts.insert(id)
+            AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingStarts, to: defaults)
+        }
+
         try? AlarmManager.shared.stop(id: id)
         await AlarmScheduleReconcileEntrypoint.reconcile(trigger: .stopIntent(id))
         return .result()

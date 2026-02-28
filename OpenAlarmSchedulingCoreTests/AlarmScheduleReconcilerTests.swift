@@ -939,6 +939,98 @@ final class AlarmScheduleReconcilerTests: XCTestCase {
         XCTAssertEqual(WakeUpCheckTimingPolicy.normalizeResponseTimeoutMinutes(-2), 1)
     }
 
+    func testWakeUpCheckCoordinatorStopIntentPolicyMatchesPipelineRequirements() {
+        XCTAssertTrue(
+            WakeUpCheckCoordinator.shouldEnqueuePipelineOnStopIntent(
+                wakeUpCheckEnabledForAlarm: true,
+                hasActiveSession: false
+            )
+        )
+        XCTAssertTrue(
+            WakeUpCheckCoordinator.shouldEnqueuePipelineOnStopIntent(
+                wakeUpCheckEnabledForAlarm: false,
+                hasActiveSession: true
+            )
+        )
+        XCTAssertFalse(
+            WakeUpCheckCoordinator.shouldEnqueuePipelineOnStopIntent(
+                wakeUpCheckEnabledForAlarm: false,
+                hasActiveSession: false
+            )
+        )
+        XCTAssertTrue(WakeUpCheckCoordinator.wakeCheckAlarmsDisableSnooze)
+    }
+
+    func testWakeUpCheckCoordinatorCarriesForwardConfigSnapshotAcrossCycles() {
+        let alarmID = UUID(uuidString: "A65F2D6B-EA42-4CF9-B6B3-AC7A6B7E50EF")!
+        let previous = WakeUpCheckSessionState(
+            alarmID: alarmID,
+            cycle: 3,
+            checkAt: Date(timeIntervalSince1970: 1_500),
+            deadlineAt: Date(timeIntervalSince1970: 1_800),
+            notificationID: "previous",
+            status: .deadlineFired,
+            configSnapshot: WakeUpCheckConfigSnapshot(checkDelayMinutes: 10, responseTimeoutMinutes: 2),
+            createdAt: Date(timeIntervalSince1970: 1_200),
+            updatedAt: Date(timeIntervalSince1970: 1_900)
+        )
+
+        let next = WakeUpCheckCoordinator.nextCycleSession(
+            alarmID: alarmID,
+            previousSession: previous,
+            fallbackSnapshot: WakeUpCheckConfigSnapshot(checkDelayMinutes: 1, responseTimeoutMinutes: 1),
+            now: Date(timeIntervalSince1970: 2_000),
+            makeNotificationID: { id, cycle in "wakecheck.\(id.uuidString).\(cycle)" }
+        )
+
+        XCTAssertEqual(next.cycle, 4)
+        XCTAssertEqual(
+            next.configSnapshot,
+            WakeUpCheckConfigSnapshot(checkDelayMinutes: 10, responseTimeoutMinutes: 2)
+        )
+        XCTAssertEqual(next.status, .scheduling)
+    }
+
+    func testWakeUpCheckSessionStateDecodesLegacySessionAndDerivesSnapshot() throws {
+        struct LegacyWakeUpCheckSession: Codable {
+            let alarmID: UUID
+            let cycle: Int
+            let checkAt: Date
+            let deadlineAt: Date
+            let notificationID: String
+            let isAwaitingConfirmation: Bool
+            let createdAt: Date
+            let updatedAt: Date
+        }
+
+        let alarmID = UUID(uuidString: "F8D306E2-DBA7-45A4-9EFC-6516467950A8")!
+        let createdAt = Date(timeIntervalSince1970: 10_000)
+        let checkAt = createdAt.addingTimeInterval(5 * 60)
+        let deadlineAt = checkAt.addingTimeInterval(3 * 60)
+
+        let legacy = LegacyWakeUpCheckSession(
+            alarmID: alarmID,
+            cycle: 2,
+            checkAt: checkAt,
+            deadlineAt: deadlineAt,
+            notificationID: "legacy.id",
+            isAwaitingConfirmation: false,
+            createdAt: createdAt,
+            updatedAt: createdAt.addingTimeInterval(10)
+        )
+
+        let data = try JSONEncoder().encode(legacy)
+        let decoded = try JSONDecoder().decode(WakeUpCheckSessionState.self, from: data)
+
+        XCTAssertEqual(decoded.alarmID, alarmID)
+        XCTAssertEqual(decoded.cycle, 2)
+        XCTAssertEqual(decoded.status, .deadlineFired)
+        XCTAssertEqual(
+            decoded.configSnapshot,
+            WakeUpCheckConfigSnapshot(checkDelayMinutes: 5, responseTimeoutMinutes: 3)
+        )
+    }
+
     private func fixedUTCGregorianCalendar() -> Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!

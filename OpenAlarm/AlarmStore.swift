@@ -24,7 +24,7 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
     private var alarmUpdatesTask: Task<Void, Never>?
     private var lastKnownAlarmState: [UUID: Alarm.State] = [:]
     private var pendingRepeatRestores: Set<UUID> = []
-    private var wakeUpCheckSessionsByAlarmID: [UUID: WakeUpCheckSession] = [:]
+    private var wakeUpCheckSessionsByAlarmID: [UUID: WakeUpCheckSessionState] = [:]
 
     /// When temporary schedule override is active, we keep this many explicit
     /// one-shot alarms queued as fallback bridges.
@@ -66,7 +66,6 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
 
         Task { @MainActor [weak self] in
             await self?.refreshNotificationPermissionStatus()
-            await self?.reconcilePendingWakeUpCheckConfirmations()
             await AlarmScheduleReconcileEntrypoint.reconcile(trigger: .appLaunch)
         }
     }
@@ -80,7 +79,6 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
 
         Task { @MainActor [weak self] in
             await self?.refreshNotificationPermissionStatus()
-            await self?.reconcilePendingWakeUpCheckConfirmations()
             await AlarmScheduleReconcileEntrypoint.reconcile(trigger: .appLaunch)
         }
     }
@@ -431,6 +429,16 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
             if pending.remove(updatedAlarm.id) != nil {
                 AlarmPersistence.savePendingSnoozeIDs(pending, to: userDefaults)
             }
+
+            var pendingStarts = AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: userDefaults)
+            if pendingStarts.remove(updatedAlarm.id) != nil {
+                AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingStarts, to: userDefaults)
+            }
+
+            var pendingConfirm = AlarmPersistence.loadPendingWakeUpCheckConfirmIDs(from: userDefaults)
+            if pendingConfirm.remove(updatedAlarm.id) != nil {
+                AlarmPersistence.savePendingWakeUpCheckConfirmIDs(pendingConfirm, to: userDefaults)
+            }
         }
 
         updatedAlarm.lifecycleState = .scheduled
@@ -463,6 +471,11 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
         var pending = AlarmPersistence.loadPendingSnoozeIDs(from: userDefaults)
         if pending.remove(alarm.id) != nil {
             AlarmPersistence.savePendingSnoozeIDs(pending, to: userDefaults)
+        }
+
+        var pendingWakeStarts = AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: userDefaults)
+        if pendingWakeStarts.remove(alarm.id) != nil {
+            AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingWakeStarts, to: userDefaults)
         }
 
         var pendingWakeConfirm = AlarmPersistence.loadPendingWakeUpCheckConfirmIDs(from: userDefaults)
@@ -750,10 +763,16 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
         }
 
         let wakeCheckEnabled = nextAlarm.resolvedSharedSettings(defaults: defaultSharedSettings).wakeUpCheckEnabled
-        if !wakeCheckEnabled,
-           let session = wakeUpCheckSessionsByAlarmID.removeValue(forKey: id) {
-            wakeUpCheckNotificationService.cancel(notificationID: session.notificationID)
-            persistWakeUpCheckSessions()
+        if !wakeCheckEnabled {
+            if let session = wakeUpCheckSessionsByAlarmID.removeValue(forKey: id) {
+                wakeUpCheckNotificationService.cancel(notificationID: session.notificationID)
+                persistWakeUpCheckSessions()
+            }
+
+            var pendingWakeStarts = AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: userDefaults)
+            if pendingWakeStarts.remove(id) != nil {
+                AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingWakeStarts, to: userDefaults)
+            }
         }
 
         persistCommittedAlarm(nextAlarm)
@@ -1017,6 +1036,8 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
     }
 
     func reconcileSchedule(target: AlarmScheduleReconcileTarget, referenceDate: Date) async {
+        await reconcileWakeUpCheckPipeline(target: target, referenceDate: referenceDate)
+
         switch target {
         case let .alarm(runtimeAlarmID):
             guard let alarmID = owningAlarmID(for: runtimeAlarmID) else {
@@ -1197,6 +1218,33 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
             return
         }
 
+        if let wakeSession = wakeUpCheckSessionsByAlarmID[alarm.id] {
+            // Wake-check pipeline owns runtime scheduling while a session exists.
+            // Keep recurring reconciliation deterministic, but do not re-arm
+            // canonical repeating schedule until confirmation completes.
+            let deadlineDate = max(referenceDate.addingTimeInterval(1), wakeSession.deadlineAt)
+
+            do {
+                let config = makeConfiguration(
+                    for: alarm,
+                    schedule: .fixed(deadlineDate),
+                    isShadowTrial: false,
+                    forceDisableSnooze: WakeUpCheckCoordinator.wakeCheckAlarmsDisableSnooze
+                )
+                let remote = try await scheduleAlarmWithUpdateFallback(
+                    id: alarm.id,
+                    configuration: config,
+                    isUpdate: true
+                )
+                lastKnownAlarmState[alarm.id] = remote.state
+                remoteStates[alarm.id] = remote.state
+            } catch {
+                // Best effort. Foreground refresh can recover.
+            }
+
+            return
+        }
+
         if alarm.isEnabled {
             do {
                 let config = makeConfiguration(for: alarm, schedule: alarm.schedule, isShadowTrial: false)
@@ -1318,7 +1366,6 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
                     return
                 }
 
-                await reconcilePendingWakeUpCheckConfirmations()
                 applyRemoteAlarms(incoming)
                 await AlarmScheduleReconcileEntrypoint.reconcileAllSchedules()
             }
@@ -1343,6 +1390,56 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
         AlarmPersistence.saveWakeUpCheckSessions(Array(wakeUpCheckSessionsByAlarmID.values), to: userDefaults)
     }
 
+    private func wakeUpCheckPipelineAlarmIDs(
+        for target: AlarmScheduleReconcileTarget,
+        pendingStartIDs: Set<UUID>,
+        pendingConfirmIDs: Set<UUID>
+    ) -> Set<UUID> {
+        switch target {
+        case let .alarm(runtimeAlarmID):
+            return [owningAlarmID(for: runtimeAlarmID) ?? runtimeAlarmID]
+
+        case .allAlarms:
+            var ids = Set(alarms.map(\.id))
+            ids.formUnion(wakeUpCheckSessionsByAlarmID.keys)
+            ids.formUnion(pendingStartIDs)
+            ids.formUnion(pendingConfirmIDs)
+            return ids
+        }
+    }
+
+    private func reconcileWakeUpCheckPipeline(
+        target: AlarmScheduleReconcileTarget,
+        referenceDate: Date
+    ) async {
+        var pendingConfirmIDs = AlarmPersistence.loadPendingWakeUpCheckConfirmIDs(from: userDefaults)
+        var pendingStartIDs = AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: userDefaults)
+
+        let targetAlarmIDs = wakeUpCheckPipelineAlarmIDs(
+            for: target,
+            pendingStartIDs: pendingStartIDs,
+            pendingConfirmIDs: pendingConfirmIDs
+        )
+
+        if !pendingConfirmIDs.isEmpty {
+            for alarmID in pendingConfirmIDs.intersection(targetAlarmIDs) {
+                await completeWakeUpCheck(for: alarmID)
+                pendingConfirmIDs.remove(alarmID)
+                pendingStartIDs.remove(alarmID)
+            }
+        }
+
+        if !pendingStartIDs.isEmpty {
+            for alarmID in pendingStartIDs.intersection(targetAlarmIDs) {
+                await startWakeUpCheckCycle(for: alarmID, referenceDate: referenceDate)
+                pendingStartIDs.remove(alarmID)
+            }
+        }
+
+        AlarmPersistence.savePendingWakeUpCheckConfirmIDs(pendingConfirmIDs, to: userDefaults)
+        AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingStartIDs, to: userDefaults)
+    }
+
     private func clearAllWakeUpCheckSessions(restoreSchedules: Bool = false) {
         let affectedAlarmIDs = Set(wakeUpCheckSessionsByAlarmID.keys)
 
@@ -1363,6 +1460,12 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
             }
         }
 
+        var pendingStarts = AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: userDefaults)
+        if !pendingStarts.isEmpty {
+            pendingStarts.removeAll()
+            AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingStarts, to: userDefaults)
+        }
+
         var pendingConfirm = AlarmPersistence.loadPendingWakeUpCheckConfirmIDs(from: userDefaults)
         if !pendingConfirm.isEmpty {
             pendingConfirm.removeAll()
@@ -1370,49 +1473,73 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
         }
     }
 
-    private func startWakeUpCheckCycle(for alarm: inout UserAlarm, changed: inout Bool) -> Bool {
+    private func startWakeUpCheckCycle(
+        for alarmID: UUID,
+        referenceDate: Date
+    ) async {
+        let previousSession = wakeUpCheckSessionsByAlarmID[alarmID]
+
+        guard let alarmIndex = alarms.firstIndex(where: { $0.id == alarmID }) else {
+            if let previousSession {
+                wakeUpCheckNotificationService.cancel(notificationID: previousSession.notificationID)
+                wakeUpCheckSessionsByAlarmID.removeValue(forKey: alarmID)
+                persistWakeUpCheckSessions()
+            }
+            return
+        }
+
+        let alarm = alarms[alarmIndex]
+        let resolvedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
+        let shouldStartCycle = WakeUpCheckCoordinator.shouldEnqueuePipelineOnStopIntent(
+            wakeUpCheckEnabledForAlarm: resolvedSettings.wakeUpCheckEnabled,
+            hasActiveSession: previousSession != nil
+        )
+
+        guard shouldStartCycle else {
+            return
+        }
+
         guard notificationPermissionStatus == .authorized else {
-            if let session = wakeUpCheckSessionsByAlarmID.removeValue(forKey: alarm.id) {
-                wakeUpCheckNotificationService.cancel(notificationID: session.notificationID)
+            if let previousSession {
+                wakeUpCheckNotificationService.cancel(notificationID: previousSession.notificationID)
+                wakeUpCheckSessionsByAlarmID.removeValue(forKey: alarmID)
                 persistWakeUpCheckSessions()
             }
 
-            return false
+            if alarms[alarmIndex].lifecycleState != .scheduled {
+                alarms[alarmIndex].lifecycleState = .scheduled
+                alarms[alarmIndex].updatedAt = referenceDate
+                alarms = sortAlarms(alarms)
+                save()
+            }
+            return
         }
 
-        let resolvedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
-        let checkAt = Date.now.addingTimeInterval(
-            WakeUpCheckTimingPolicy.checkDelayInterval(for: resolvedSettings.wakeUpCheckDelayMinutes)
+        let fallbackSnapshot = WakeUpCheckConfigSnapshot(
+            checkDelayMinutes: resolvedSettings.wakeUpCheckDelayMinutes,
+            responseTimeoutMinutes: resolvedSettings.wakeUpCheckResponseTimeoutMinutes
         )
-        let deadlineAt = checkAt.addingTimeInterval(
-            WakeUpCheckTimingPolicy.responseTimeoutInterval(for: resolvedSettings.wakeUpCheckResponseTimeoutMinutes)
-        )
-
-        let previousCycle = wakeUpCheckSessionsByAlarmID[alarm.id]?.cycle ?? 0
-        let session = WakeUpCheckSession(
-            alarmID: alarm.id,
-            cycle: previousCycle + 1,
-            checkAt: checkAt,
-            deadlineAt: deadlineAt,
-            notificationID: WakeUpCheckNotificationConstants.notificationID(alarmID: alarm.id, cycle: previousCycle + 1),
-            isAwaitingConfirmation: true,
-            createdAt: .now,
-            updatedAt: .now
+        let nextSession = WakeUpCheckCoordinator.nextCycleSession(
+            alarmID: alarmID,
+            previousSession: previousSession,
+            fallbackSnapshot: fallbackSnapshot,
+            now: referenceDate,
+            makeNotificationID: WakeUpCheckNotificationConstants.notificationID
         )
 
-        if let previous = wakeUpCheckSessionsByAlarmID[alarm.id] {
-            wakeUpCheckNotificationService.cancel(notificationID: previous.notificationID)
+        if let previousSession {
+            wakeUpCheckNotificationService.cancel(notificationID: previousSession.notificationID)
         }
 
-        wakeUpCheckSessionsByAlarmID[alarm.id] = session
+        wakeUpCheckSessionsByAlarmID[alarmID] = nextSession
         persistWakeUpCheckSessions()
 
-        if alarm.lifecycleState != .awaitingWakeCheck {
-            alarm.lifecycleState = .awaitingWakeCheck
-            changed = true
+        if alarms[alarmIndex].lifecycleState != .awaitingWakeCheck {
+            alarms[alarmIndex].lifecycleState = .awaitingWakeCheck
+            alarms[alarmIndex].updatedAt = referenceDate
+            alarms = sortAlarms(alarms)
+            save()
         }
-
-        let alarmID = alarm.id
 
         Task { @MainActor [weak self] in
             guard let self else {
@@ -1420,7 +1547,7 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
             }
 
             guard let latestAlarm = alarms.first(where: { $0.id == alarmID }) else {
-                if wakeUpCheckSessionsByAlarmID[alarmID]?.notificationID == session.notificationID {
+                if wakeUpCheckSessionsByAlarmID[alarmID]?.notificationID == nextSession.notificationID {
                     wakeUpCheckSessionsByAlarmID.removeValue(forKey: alarmID)
                     persistWakeUpCheckSessions()
                 }
@@ -1428,13 +1555,13 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
             }
 
             do {
-                try await wakeUpCheckNotificationService.scheduleWakeCheckNotification(for: session)
+                try await wakeUpCheckNotificationService.scheduleWakeCheckNotification(for: nextSession)
 
                 let config = makeConfiguration(
                     for: latestAlarm,
-                    schedule: .fixed(deadlineAt),
+                    schedule: .fixed(nextSession.deadlineAt),
                     isShadowTrial: false,
-                    forceDisableSnooze: true
+                    forceDisableSnooze: WakeUpCheckCoordinator.wakeCheckAlarmsDisableSnooze
                 )
                 let remoteAlarm = try await scheduleAlarmWithUpdateFallback(
                     id: latestAlarm.id,
@@ -1444,29 +1571,30 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
 
                 lastKnownAlarmState[latestAlarm.id] = remoteAlarm.state
                 remoteStates[latestAlarm.id] = remoteAlarm.state
-            } catch {
-                if wakeUpCheckSessionsByAlarmID[latestAlarm.id]?.notificationID == session.notificationID {
-                    wakeUpCheckSessionsByAlarmID.removeValue(forKey: latestAlarm.id)
+
+                if let latestSession = wakeUpCheckSessionsByAlarmID[latestAlarm.id],
+                   latestSession.notificationID == nextSession.notificationID {
+                    wakeUpCheckSessionsByAlarmID[latestAlarm.id] = WakeUpCheckStateMachine.markAwaitingConfirmation(
+                        latestSession,
+                        now: .now
+                    )
                     persistWakeUpCheckSessions()
+                }
+            } catch {
+                if wakeUpCheckSessionsByAlarmID[alarmID]?.notificationID == nextSession.notificationID {
+                    wakeUpCheckSessionsByAlarmID.removeValue(forKey: alarmID)
+                    persistWakeUpCheckSessions()
+                }
+
+                if let failedIndex = alarms.firstIndex(where: { $0.id == alarmID }),
+                   alarms[failedIndex].lifecycleState != .scheduled {
+                    alarms[failedIndex].lifecycleState = .scheduled
+                    alarms[failedIndex].updatedAt = .now
+                    alarms = sortAlarms(alarms)
+                    save()
                 }
             }
         }
-
-        return true
-    }
-
-    private func reconcilePendingWakeUpCheckConfirmations() async {
-        var pendingConfirmIDs = AlarmPersistence.loadPendingWakeUpCheckConfirmIDs(from: userDefaults)
-        guard !pendingConfirmIDs.isEmpty else {
-            return
-        }
-
-        for alarmID in pendingConfirmIDs {
-            await completeWakeUpCheck(for: alarmID)
-        }
-
-        pendingConfirmIDs.removeAll()
-        AlarmPersistence.savePendingWakeUpCheckConfirmIDs(pendingConfirmIDs, to: userDefaults)
     }
 
     private func completeWakeUpCheck(for alarmID: UUID) async {
@@ -1491,6 +1619,16 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
         var pendingSnooze = AlarmPersistence.loadPendingSnoozeIDs(from: userDefaults)
         if pendingSnooze.remove(alarmID) != nil {
             AlarmPersistence.savePendingSnoozeIDs(pendingSnooze, to: userDefaults)
+        }
+
+        var pendingWakeStarts = AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: userDefaults)
+        if pendingWakeStarts.remove(alarmID) != nil {
+            AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingWakeStarts, to: userDefaults)
+        }
+
+        var pendingWakeConfirm = AlarmPersistence.loadPendingWakeUpCheckConfirmIDs(from: userDefaults)
+        if pendingWakeConfirm.remove(alarmID) != nil {
+            AlarmPersistence.savePendingWakeUpCheckConfirmIDs(pendingWakeConfirm, to: userDefaults)
         }
 
         if alarm.isRepeating, alarm.isEnabled {
@@ -1689,6 +1827,15 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
 
             switch currentState {
             case .alerting:
+                if let session = wakeUpCheckSessionsByAlarmID[alarmID],
+                   session.status != .deadlineFired {
+                    wakeUpCheckSessionsByAlarmID[alarmID] = WakeUpCheckStateMachine.markDeadlineFired(
+                        session,
+                        now: referenceDate
+                    )
+                    persistWakeUpCheckSessions()
+                }
+
                 if alarm.lifecycleState != .alerting {
                     alarm.lifecycleState = .alerting
                     changed = true
@@ -1711,6 +1858,16 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
                 remoteStates.removeValue(forKey: id)
                 lastKnownAlarmState.removeValue(forKey: id)
                 pendingSnoozeIDs.remove(id)
+
+                var pendingWakeStarts = AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: userDefaults)
+                if pendingWakeStarts.remove(id) != nil {
+                    AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingWakeStarts, to: userDefaults)
+                }
+
+                var pendingWakeConfirm = AlarmPersistence.loadPendingWakeUpCheckConfirmIDs(from: userDefaults)
+                if pendingWakeConfirm.remove(id) != nil {
+                    AlarmPersistence.savePendingWakeUpCheckConfirmIDs(pendingWakeConfirm, to: userDefaults)
+                }
 
                 if let session = wakeUpCheckSessionsByAlarmID.removeValue(forKey: id) {
                     wakeUpCheckNotificationService.cancel(notificationID: session.notificationID)
@@ -1797,8 +1954,11 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
                 scheduleRepeatRestore(for: alarm)
             }
 
-            if wakeCheckEnabled,
-               startWakeUpCheckCycle(for: &alarm, changed: &changed) {
+            if wakeCheckEnabled {
+                if alarm.lifecycleState != .scheduled {
+                    alarm.lifecycleState = .scheduled
+                    changed = true
+                }
                 return
             }
 
@@ -1809,8 +1969,11 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
             return
         }
 
-        if wakeCheckEnabled,
-           startWakeUpCheckCycle(for: &alarm, changed: &changed) {
+        if wakeCheckEnabled {
+            if alarm.lifecycleState != .scheduled {
+                alarm.lifecycleState = .scheduled
+                changed = true
+            }
             return
         }
 

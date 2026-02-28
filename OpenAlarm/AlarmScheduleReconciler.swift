@@ -110,6 +110,229 @@ public enum WakeUpCheckTimingPolicy {
     }
 }
 
+public struct WakeUpCheckConfigSnapshot: Codable, Equatable, Sendable {
+    public var checkDelayMinutes: Int
+    public var responseTimeoutMinutes: Int
+
+    public init(checkDelayMinutes: Int, responseTimeoutMinutes: Int) {
+        self.checkDelayMinutes = WakeUpCheckTimingPolicy.clampCheckDelayMinutes(checkDelayMinutes)
+        self.responseTimeoutMinutes = WakeUpCheckTimingPolicy.normalizeResponseTimeoutMinutes(responseTimeoutMinutes)
+    }
+}
+
+public enum WakeUpCheckSessionStatus: String, Codable, Equatable, Sendable {
+    /// Durable transition written before side-effects (notification + runtime alarm).
+    case scheduling
+
+    /// Notification + runtime alarm are intended to be armed for this cycle.
+    case awaitingConfirmation
+
+    /// Deadline alarm has reached alerting state at least once in this cycle.
+    case deadlineFired
+}
+
+public struct WakeUpCheckSessionState: Codable, Equatable, Sendable {
+    public var alarmID: UUID
+    public var cycle: Int
+    public var checkAt: Date
+    public var deadlineAt: Date
+    public var notificationID: String
+    public var status: WakeUpCheckSessionStatus
+    public var configSnapshot: WakeUpCheckConfigSnapshot
+    public var createdAt: Date
+    public var updatedAt: Date
+
+    private enum CodingKeys: String, CodingKey {
+        case alarmID
+        case cycle
+        case checkAt
+        case deadlineAt
+        case notificationID
+        case status
+        case configSnapshot
+        case createdAt
+        case updatedAt
+        case legacyIsAwaitingConfirmation = "isAwaitingConfirmation"
+    }
+
+    public init(
+        alarmID: UUID,
+        cycle: Int,
+        checkAt: Date,
+        deadlineAt: Date,
+        notificationID: String,
+        status: WakeUpCheckSessionStatus,
+        configSnapshot: WakeUpCheckConfigSnapshot,
+        createdAt: Date,
+        updatedAt: Date
+    ) {
+        self.alarmID = alarmID
+        self.cycle = cycle
+        self.checkAt = checkAt
+        self.deadlineAt = deadlineAt
+        self.notificationID = notificationID
+        self.status = status
+        self.configSnapshot = configSnapshot
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        alarmID = try container.decode(UUID.self, forKey: .alarmID)
+        cycle = try container.decodeIfPresent(Int.self, forKey: .cycle) ?? 1
+        checkAt = try container.decode(Date.self, forKey: .checkAt)
+        deadlineAt = try container.decode(Date.self, forKey: .deadlineAt)
+        notificationID = try container.decodeIfPresent(String.self, forKey: .notificationID) ?? ""
+
+        if let decodedStatus = try container.decodeIfPresent(WakeUpCheckSessionStatus.self, forKey: .status) {
+            status = decodedStatus
+        } else if let legacyAwaiting = try container.decodeIfPresent(Bool.self, forKey: .legacyIsAwaitingConfirmation) {
+            status = legacyAwaiting ? .awaitingConfirmation : .deadlineFired
+        } else {
+            status = .awaitingConfirmation
+        }
+
+        let decodedCreatedAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? .now
+        let decodedUpdatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? decodedCreatedAt
+
+        if let decodedSnapshot = try container.decodeIfPresent(WakeUpCheckConfigSnapshot.self, forKey: .configSnapshot) {
+            configSnapshot = decodedSnapshot
+        } else {
+            // Legacy migration: previous session shape did not persist an explicit
+            // wake-check config snapshot. Derive best-effort values from persisted
+            // check/deadline timing deltas so repeated cycles remain stable.
+            let checkDelayRawMinutes = Int(round(checkAt.timeIntervalSince(decodedCreatedAt) / 60.0))
+            let timeoutRawMinutes = Int(round(deadlineAt.timeIntervalSince(checkAt) / 60.0))
+            configSnapshot = WakeUpCheckConfigSnapshot(
+                checkDelayMinutes: checkDelayRawMinutes,
+                responseTimeoutMinutes: timeoutRawMinutes
+            )
+        }
+
+        createdAt = decodedCreatedAt
+        updatedAt = decodedUpdatedAt
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(alarmID, forKey: .alarmID)
+        try container.encode(cycle, forKey: .cycle)
+        try container.encode(checkAt, forKey: .checkAt)
+        try container.encode(deadlineAt, forKey: .deadlineAt)
+        try container.encode(notificationID, forKey: .notificationID)
+        try container.encode(status, forKey: .status)
+        try container.encode(configSnapshot, forKey: .configSnapshot)
+        try container.encode(createdAt, forKey: .createdAt)
+        try container.encode(updatedAt, forKey: .updatedAt)
+    }
+}
+
+public enum WakeUpCheckStateMachine {
+    public static func nextCycle(
+        alarmID: UUID,
+        previousSession: WakeUpCheckSessionState?,
+        configSnapshot: WakeUpCheckConfigSnapshot,
+        now: Date,
+        makeNotificationID: (UUID, Int) -> String
+    ) -> WakeUpCheckSessionState {
+        let nextCycle = (previousSession?.cycle ?? 0) + 1
+        let checkAt = now.addingTimeInterval(
+            WakeUpCheckTimingPolicy.checkDelayInterval(for: configSnapshot.checkDelayMinutes)
+        )
+        let deadlineAt = checkAt.addingTimeInterval(
+            WakeUpCheckTimingPolicy.responseTimeoutInterval(for: configSnapshot.responseTimeoutMinutes)
+        )
+
+        return WakeUpCheckSessionState(
+            alarmID: alarmID,
+            cycle: nextCycle,
+            checkAt: checkAt,
+            deadlineAt: deadlineAt,
+            notificationID: makeNotificationID(alarmID, nextCycle),
+            status: .scheduling,
+            configSnapshot: configSnapshot,
+            createdAt: now,
+            updatedAt: now
+        )
+    }
+
+    public static func markAwaitingConfirmation(
+        _ session: WakeUpCheckSessionState,
+        now: Date
+    ) -> WakeUpCheckSessionState {
+        var next = session
+        next.status = .awaitingConfirmation
+        next.updatedAt = now
+        return next
+    }
+
+    public static func markDeadlineFired(
+        _ session: WakeUpCheckSessionState,
+        now: Date
+    ) -> WakeUpCheckSessionState {
+        var next = session
+        next.status = .deadlineFired
+        next.updatedAt = now
+        return next
+    }
+}
+
+/// Coordinator model layered on top of `WakeUpCheckStateMachine`.
+///
+/// `WakeUpCheckStateMachine` stays focused on pure cycle/status transitions,
+/// while this coordinator owns policy decisions about when the pipeline should
+/// run and how cycle config snapshots should be carried across repeated cycles.
+public enum WakeUpCheckCoordinator {
+    /// Wake-check pipeline entry from StopIntent.
+    ///
+    /// Start another cycle when:
+    /// - wake-check is enabled for this alarm (first cycle), or
+    /// - a wake-check session already exists (continue existing pipeline even if
+    ///   user toggled settings after the first cycle started).
+    public static func shouldEnqueuePipelineOnStopIntent(
+        wakeUpCheckEnabledForAlarm: Bool,
+        hasActiveSession: Bool
+    ) -> Bool {
+        hasActiveSession || wakeUpCheckEnabledForAlarm
+    }
+
+    /// Repeated cycles keep using the persisted snapshot captured when pipeline
+    /// execution started so timing stays stable until explicit confirmation.
+    public static func configSnapshotForNextCycle(
+        previousSession: WakeUpCheckSessionState?,
+        fallbackSnapshot: WakeUpCheckConfigSnapshot
+    ) -> WakeUpCheckConfigSnapshot {
+        previousSession?.configSnapshot ?? fallbackSnapshot
+    }
+
+    /// Policy constant used by runtime scheduling: wake-check alarms never show
+    /// snooze to keep the confirmation loop strict.
+    public static var wakeCheckAlarmsDisableSnooze: Bool {
+        true
+    }
+
+    public static func nextCycleSession(
+        alarmID: UUID,
+        previousSession: WakeUpCheckSessionState?,
+        fallbackSnapshot: WakeUpCheckConfigSnapshot,
+        now: Date,
+        makeNotificationID: (UUID, Int) -> String
+    ) -> WakeUpCheckSessionState {
+        WakeUpCheckStateMachine.nextCycle(
+            alarmID: alarmID,
+            previousSession: previousSession,
+            configSnapshot: configSnapshotForNextCycle(
+                previousSession: previousSession,
+                fallbackSnapshot: fallbackSnapshot
+            ),
+            now: now,
+            makeNotificationID: makeNotificationID
+        )
+    }
+}
+
 /// Pure reconciler retained for existing recurring/one-shot state transitions.
 ///
 /// New unified temporary-override planning is implemented in `AlarmSchedulePlanner`

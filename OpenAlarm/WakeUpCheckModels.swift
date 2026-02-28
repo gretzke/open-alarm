@@ -20,16 +20,7 @@ struct WakeUpCheckDefaults: Codable, Equatable, Sendable {
     }
 }
 
-struct WakeUpCheckSession: Codable, Equatable, Sendable {
-    var alarmID: UUID
-    var cycle: Int
-    var checkAt: Date
-    var deadlineAt: Date
-    var notificationID: String
-    var isAwaitingConfirmation: Bool
-    var createdAt: Date
-    var updatedAt: Date
-}
+// Wake-check session state and coordinator live in AlarmScheduleReconciler.swift.
 
 enum WakeUpCheckAction: String {
     case confirmAwake = "WAKE_CHECK_CONFIRM_AWAKE"

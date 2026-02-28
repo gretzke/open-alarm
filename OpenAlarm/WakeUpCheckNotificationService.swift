@@ -26,7 +26,7 @@ final class WakeUpCheckNotificationService {
         center.setNotificationCategories([category])
     }
 
-    func scheduleWakeCheckNotification(for session: WakeUpCheckSession) async throws {
+    func scheduleWakeCheckNotification(for session: WakeUpCheckSessionState) async throws {
         let content = UNMutableNotificationContent()
         content.title = String(localized: "wake_check_notification_title")
         content.body = String(localized: "wake_check_notification_body")

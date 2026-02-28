@@ -78,6 +78,7 @@ enum AlarmPersistence {
     static let userAlarmsKey = "OPENALARM_USER_ALARMS_V1"
     static let shadowTrialsKey = "OPENALARM_SHADOW_TRIALS_V1"
     static let pendingSnoozeIDsKey = "OPENALARM_PENDING_SNOOZE_IDS_V1"
+    static let pendingWakeUpCheckStartIDsKey = "OPENALARM_PENDING_WAKE_CHECK_START_IDS_V1"
     static let pendingWakeUpCheckConfirmIDsKey = "OPENALARM_PENDING_WAKE_CHECK_CONFIRM_IDS_V1"
     static let defaultSharedSettingsKey = "OPENALARM_DEFAULT_SHARED_SETTINGS_V1"
     static let defaultWakeUpCheckDefaultsKey = "OPENALARM_DEFAULT_WAKE_CHECK_DEFAULTS_V1"
@@ -140,6 +141,18 @@ enum AlarmPersistence {
         defaults.set(raw, forKey: pendingSnoozeIDsKey)
     }
 
+    static func loadPendingWakeUpCheckStartIDs(from defaults: UserDefaults = .standard) -> Set<UUID> {
+        guard let raw = defaults.array(forKey: pendingWakeUpCheckStartIDsKey) as? [String] else {
+            return []
+        }
+        return Set(raw.compactMap(UUID.init(uuidString:)))
+    }
+
+    static func savePendingWakeUpCheckStartIDs(_ ids: Set<UUID>, to defaults: UserDefaults = .standard) {
+        let raw = ids.map(\.uuidString)
+        defaults.set(raw, forKey: pendingWakeUpCheckStartIDsKey)
+    }
+
     static func loadPendingWakeUpCheckConfirmIDs(from defaults: UserDefaults = .standard) -> Set<UUID> {
         guard let raw = defaults.array(forKey: pendingWakeUpCheckConfirmIDsKey) as? [String] else {
             return []
@@ -185,19 +198,19 @@ enum AlarmPersistence {
         defaults.removeObject(forKey: defaultWakeUpCheckDefaultsKey)
     }
 
-    static func loadWakeUpCheckSessions(from defaults: UserDefaults = .standard) -> [WakeUpCheckSession] {
+    static func loadWakeUpCheckSessions(from defaults: UserDefaults = .standard) -> [WakeUpCheckSessionState] {
         guard let data = defaults.data(forKey: wakeUpCheckSessionsKey) else {
             return []
         }
 
         do {
-            return try JSONDecoder().decode([WakeUpCheckSession].self, from: data)
+            return try JSONDecoder().decode([WakeUpCheckSessionState].self, from: data)
         } catch {
             return []
         }
     }
 
-    static func saveWakeUpCheckSessions(_ sessions: [WakeUpCheckSession], to defaults: UserDefaults = .standard) {
+    static func saveWakeUpCheckSessions(_ sessions: [WakeUpCheckSessionState], to defaults: UserDefaults = .standard) {
         do {
             let data = try JSONEncoder().encode(sessions)
             defaults.set(data, forKey: wakeUpCheckSessionsKey)
