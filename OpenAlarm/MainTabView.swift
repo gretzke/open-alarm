@@ -247,11 +247,14 @@ private struct NapBannerView: View {
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(OAColor.textSecondary)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(18)
             .oaGlassCard()
+            .contentShape(RoundedRectangle(cornerRadius: OARadius.card, style: .continuous))
             .padding(.vertical, 6)
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("nap_banner_take_nap")
     }
 }
 
@@ -450,6 +453,7 @@ private struct AlarmRowView: View {
                 .foregroundStyle(OAColor.textPrimary)
                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 .padding(.horizontal, 12)
+                .contentShape(Rectangle())
         }
         .buttonStyle(GlassButtonStyle())
     }
@@ -634,6 +638,7 @@ private struct SettingsHomeView: View {
                             .oaGlassButtonChrome()
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("settings_default_config_manage")
                     }
                     .padding(20)
                     .oaGlassCard()
@@ -667,6 +672,7 @@ private struct SettingsHomeView: View {
                             .oaGlassButtonChrome()
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("settings_nap_defaults_manage")
                     }
                     .padding(20)
                     .oaGlassCard()
@@ -687,23 +693,25 @@ private struct SettingsHomeView: View {
                         .tint(OAColor.actionCyan)
 
                         Button {
-                alarmStore.openSettings()
-            } label: {
-                HStack(spacing: 10) {
-                    Text(L10n.actionOpenSettings)
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(OAColor.textPrimary)
+                            alarmStore.openSettings()
+                        } label: {
+                            HStack(spacing: 10) {
+                                Text(L10n.actionOpenSettings)
+                                    .font(.body.weight(.semibold))
+                                    .foregroundStyle(OAColor.textPrimary)
 
-                    Spacer(minLength: 0)
+                                Spacer(minLength: 0)
 
-                    Image(systemName: "arrow.up.right.square")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(OAColor.textSecondary)
-                }
-                .padding(.horizontal, 16)
-                .frame(maxWidth: .infinity, minHeight: 48)
-            }
-            .buttonStyle(GlassButtonStyle())
+                                Image(systemName: "arrow.up.right.square")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(OAColor.textSecondary)
+                            }
+                            .padding(.horizontal, 16)
+                            .frame(maxWidth: .infinity, minHeight: 48)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(GlassButtonStyle())
+                        .accessibilityIdentifier("settings_open_system_settings")
                     }
                     .padding(20)
                     .oaGlassCard()

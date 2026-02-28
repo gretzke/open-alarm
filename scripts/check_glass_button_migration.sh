@@ -42,5 +42,13 @@ if violations:
         print(f" - {rel}:{line}")
     raise SystemExit(1)
 
+theme_path = root / "OpenAlarm/OpenAlarmTheme.swift"
+theme_text = theme_path.read_text(encoding="utf-8")
+if ".contentShape(shape)" not in theme_text:
+    print("❌ Hit-area guardrail missing: OAGlassButtonChromeModifier must apply .contentShape(shape).")
+    print(f" - {theme_path.relative_to(root)}")
+    raise SystemExit(1)
+
 print("✅ No legacy ad-hoc glass button pattern found in migrated screens.")
+print("✅ Glass button chrome hit-area guardrail is present.")
 PY

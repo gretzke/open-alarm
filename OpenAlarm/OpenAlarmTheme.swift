@@ -57,24 +57,30 @@ private struct OAGlassButtonChromeModifier: ViewModifier {
     let tint: Color?
     let cornerRadius: CGFloat
 
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+    }
+
     func body(content: Content) -> some View {
         Group {
             if let tint {
                 content.glassEffect(
                     .regular.tint(tint).interactive(),
-                    in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    in: shape
                 )
             } else {
                 content.glassEffect(
                     .regular.interactive(),
-                    in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    in: shape
                 )
             }
         }
         .overlay(
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            shape
                 .stroke(OAColor.glassStroke.opacity(0.75), lineWidth: 0.8)
         )
+        // Guardrail: any control that uses this chrome should remain tappable across the full rendered surface.
+        .contentShape(shape)
     }
 }
 

@@ -116,13 +116,15 @@ struct AlarmEditorView: View {
                         } label: {
                             Image(systemName: "checkmark")
                                 .font(.headline.weight(.bold))
+                                .frame(width: 44, height: 44)
+                                .contentShape(Rectangle())
                         }
                         .tint(OAColor.actionCyan)
                         .buttonStyle(.glassProminent)
                         .popover(
                             isPresented: $showSaveScopePopover,
-                            // Anchor to the whole button so the popover starts at the sheet's top edge instead of clipping through it.
-                            attachmentAnchor: .rect(.bounds),
+                            // Anchor from the full 44x44 toolbar hit-target so the popover body clears the sheet top.
+                            attachmentAnchor: .point(.bottomTrailing),
                             arrowEdge: .top
                         ) {
                             GlassEffectContainer(spacing: 10) {
@@ -284,6 +286,7 @@ struct AlarmEditorView: View {
                     RoundedRectangle(cornerRadius: OARadius.chip, style: .continuous)
                         .fill(isSelected ? OAColor.actionCyan : OAColor.glassFill)
                 )
+                .contentShape(RoundedRectangle(cornerRadius: OARadius.chip, style: .continuous))
         }
         .buttonStyle(.plain)
     }
@@ -295,6 +298,7 @@ struct AlarmEditorView: View {
                 .foregroundStyle(OAColor.textPrimary)
                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 .padding(.horizontal, 12)
+                .contentShape(Rectangle())
         }
         .buttonStyle(GlassButtonStyle())
     }
