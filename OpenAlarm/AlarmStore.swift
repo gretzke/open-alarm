@@ -1349,6 +1349,7 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
                 }
 
                 var shouldRestoreRecurring = false
+                var shouldConsumeOverrideDate = false
                 var hasManualAlertingState = false
 
                 for manual in alarm.manualScheduleQueue {
@@ -1373,6 +1374,13 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
                     let completedWhileColdStart = currentState == nil && manual.triggerDate <= referenceDate
 
                     if completedFromFireTransition || completedWhileColdStart {
+                        if AlarmSchedulePlanner.shouldConsumeOverrideDate(
+                            afterManualAlarmFiredAt: manual.triggerDate,
+                            overrideState: overrideState
+                        ) {
+                            shouldConsumeOverrideDate = true
+                        }
+
                         if AlarmSchedulePlanner.shouldRestoreRecurringSchedule(
                             afterManualAlarmFiredAt: manual.triggerDate,
                             overrideState: overrideState
@@ -1386,6 +1394,28 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
                 try? alarmManager.stop(id: alarm.id)
                 try? alarmManager.cancel(id: alarm.id)
                 lastKnownAlarmState.removeValue(forKey: alarm.id)
+
+                if shouldConsumeOverrideDate,
+                   !shouldRestoreRecurring,
+                   var mutableOverrideState = alarm.temporaryScheduleOverride {
+                    var consumedMutation = false
+
+                    if alarm.nextTriggerOverrideDate != nil {
+                        alarm.nextTriggerOverrideDate = nil
+                        consumedMutation = true
+                    }
+
+                    if mutableOverrideState.overrideDate != nil {
+                        mutableOverrideState.overrideDate = nil
+                        alarm.temporaryScheduleOverride = mutableOverrideState
+                        consumedMutation = true
+                    }
+
+                    if consumedMutation {
+                        alarm.updatedAt = referenceDate
+                        changed = true
+                    }
+                }
 
                 if shouldRestoreRecurring {
                     let staleManualIDs = Set(alarm.manualScheduleQueue.map(\.id))

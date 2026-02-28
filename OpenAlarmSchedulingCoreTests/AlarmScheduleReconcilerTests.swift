@@ -215,22 +215,24 @@ final class AlarmScheduleReconcilerTests: XCTestCase {
         ))
     }
 
-    func testModifyNextEarlierSchedulesOverrideThenUsualAnchorAndRestoresOnSecondRing() {
+    func testModifyNextEarlierMonFriSchedulesOnlyImmediateOverrideThenFutureCanonicalBridge() {
         let calendar = fixedUTCGregorianCalendar()
-        let now = makeUTCDate(year: 2026, month: 2, day: 28, hour: 6, minute: 0, calendar: calendar)
+        let now = makeUTCDate(year: 2026, month: 3, day: 1, hour: 12, minute: 0, calendar: calendar) // Sunday
 
         let schedule = AlarmCanonicalScheduleSpec(
-            weekdayNumbers: [1, 2, 3, 4, 5, 6, 7],
-            hour: 8,
+            weekdayNumbers: [2, 6],
+            hour: 9,
             minute: 0,
             isEnabled: true
         )
 
-        let overrideDate = makeUTCDate(year: 2026, month: 2, day: 28, hour: 7, minute: 0, calendar: calendar)
+        let mondayOverride = makeUTCDate(year: 2026, month: 3, day: 2, hour: 8, minute: 0, calendar: calendar)
+        let mondayCanonical = makeUTCDate(year: 2026, month: 3, day: 2, hour: 9, minute: 0, calendar: calendar)
+        let fridayCanonical = makeUTCDate(year: 2026, month: 3, day: 6, hour: 9, minute: 0, calendar: calendar)
 
         let activation = AlarmSchedulePlanner.activateTemporaryOverride(
             canonicalSchedule: schedule,
-            intent: .modifyNext(triggerDate: overrideDate),
+            intent: .modifyNext(triggerDate: mondayOverride),
             now: now,
             manualQueueDepth: 5,
             calendar: calendar
@@ -238,19 +240,76 @@ final class AlarmScheduleReconcilerTests: XCTestCase {
 
         XCTAssertNotNil(activation)
         XCTAssertEqual(activation?.overrideState.kind, .modifyNext)
+        XCTAssertEqual(activation?.overrideState.restoreAnchorDate, mondayCanonical)
+        XCTAssertEqual(activation?.manualTriggerDates.first, mondayOverride)
+        XCTAssertEqual(activation?.manualTriggerDates.dropFirst().first, fridayCanonical)
+        XCTAssertFalse(activation!.manualTriggerDates.contains(mondayCanonical))
+    }
 
-        let expectedAnchor = makeUTCDate(year: 2026, month: 2, day: 28, hour: 8, minute: 0, calendar: calendar)
-        XCTAssertEqual(activation?.overrideState.restoreAnchorDate, expectedAnchor)
-        XCTAssertEqual(activation?.manualTriggerDates.prefix(2), [overrideDate, expectedAnchor])
+    func testModifyNextEarlierOverrideIsConsumedOnFirstEligibleRing() {
+        let calendar = fixedUTCGregorianCalendar()
+        let now = makeUTCDate(year: 2026, month: 3, day: 1, hour: 12, minute: 0, calendar: calendar)
 
+        let schedule = AlarmCanonicalScheduleSpec(
+            weekdayNumbers: [2, 6],
+            hour: 9,
+            minute: 0,
+            isEnabled: true
+        )
+
+        let mondayOverride = makeUTCDate(year: 2026, month: 3, day: 2, hour: 8, minute: 0, calendar: calendar)
+
+        let activation = AlarmSchedulePlanner.activateTemporaryOverride(
+            canonicalSchedule: schedule,
+            intent: .modifyNext(triggerDate: mondayOverride),
+            now: now,
+            manualQueueDepth: 5,
+            calendar: calendar
+        )
+
+        XCTAssertNotNil(activation)
+        XCTAssertTrue(AlarmSchedulePlanner.shouldConsumeOverrideDate(
+            afterManualAlarmFiredAt: mondayOverride,
+            overrideState: activation!.overrideState
+        ))
         XCTAssertFalse(AlarmSchedulePlanner.shouldRestoreRecurringSchedule(
-            afterManualAlarmFiredAt: overrideDate,
+            afterManualAlarmFiredAt: mondayOverride,
             overrideState: activation!.overrideState
         ))
-        XCTAssertTrue(AlarmSchedulePlanner.shouldRestoreRecurringSchedule(
-            afterManualAlarmFiredAt: expectedAnchor,
-            overrideState: activation!.overrideState
-        ))
+    }
+
+    func testModifyNextEarlierReconcileAfterConsumedOverrideDoesNotReintroduceSameDayCanonical() {
+        let calendar = fixedUTCGregorianCalendar()
+
+        let mondayCanonical = makeUTCDate(year: 2026, month: 3, day: 2, hour: 9, minute: 0, calendar: calendar)
+        let mondayAfterOverride = makeUTCDate(year: 2026, month: 3, day: 2, hour: 8, minute: 30, calendar: calendar)
+        let fridayCanonical = makeUTCDate(year: 2026, month: 3, day: 6, hour: 9, minute: 0, calendar: calendar)
+
+        let schedule = AlarmCanonicalScheduleSpec(
+            weekdayNumbers: [2, 6],
+            hour: 9,
+            minute: 0,
+            isEnabled: true
+        )
+
+        let consumedState = AlarmTemporaryScheduleOverride(
+            kind: .modifyNext,
+            overrideDate: nil,
+            restoreAnchorDate: mondayCanonical,
+            skippedCanonicalDate: nil,
+            activatedAt: makeUTCDate(year: 2026, month: 3, day: 1, hour: 12, minute: 0, calendar: calendar)
+        )
+
+        let rebuilt = AlarmSchedulePlanner.desiredManualTriggerDates(
+            canonicalSchedule: schedule,
+            overrideState: consumedState,
+            now: mondayAfterOverride,
+            manualQueueDepth: 5,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(rebuilt.first, fridayCanonical)
+        XCTAssertFalse(rebuilt.contains(mondayCanonical))
     }
 
     func testModifyNextLaterRestoresWhenOverrideRings() {

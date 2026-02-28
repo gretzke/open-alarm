@@ -232,8 +232,9 @@ public enum AlarmTemporaryScheduleOverrideKind: String, Codable, Equatable, Send
 /// - `restoreAnchorDate` is the earliest manual fire date that may restore recurring.
 /// - A fired manual alarm restores recurring iff `firedAt >= restoreAnchorDate`.
 ///
-/// For modify-next-earlier, `overrideDate < restoreAnchorDate`, so the first ring
-/// does not restore and the second (usual-time anchor) does.
+/// For modify-next-earlier, `overrideDate < restoreAnchorDate`.
+/// The override ring is consumed first, the usual-time canonical slot is skipped,
+/// and recurring restore happens from the first manual bridge at/after anchor.
 public struct AlarmTemporaryScheduleOverride: Codable, Equatable, Sendable {
     public var kind: AlarmTemporaryScheduleOverrideKind
     public var overrideDate: Date?
@@ -445,24 +446,16 @@ public enum AlarmSchedulePlanner {
             )
 
         case .modifyNext:
-            let overrideDate = overrideState.overrideDate ?? overrideState.restoreAnchorDate
-
             var candidates: [Date] = []
 
-            if overrideDate > now {
+            if let overrideDate = overrideState.overrideDate,
+               overrideDate > now {
                 candidates.append(overrideDate)
             }
 
-            if overrideDate < overrideState.restoreAnchorDate,
-               overrideState.restoreAnchorDate > now {
-                // Earlier-than-usual path: keep explicit usual-time anchor so the
-                // first ring does not restore and the second one does.
-                candidates.append(overrideState.restoreAnchorDate)
-            }
-
-            // After the explicit override/anchor points, canonical bridges keep
-            // restore opportunities alive if callbacks were missed.
-            let bridgeSeed = max(now, max(overrideState.restoreAnchorDate, overrideDate))
+            // Canonical bridges intentionally start strictly after restore anchor,
+            // so the overridden canonical slot is not reintroduced as a second ring.
+            let bridgeSeed = max(now, overrideState.restoreAnchorDate)
             let bridges = canonicalOccurrences(
                 after: bridgeSeed,
                 schedule: canonicalSchedule,
@@ -475,12 +468,27 @@ public enum AlarmSchedulePlanner {
         }
     }
 
+    /// Consumption criterion for the explicit modify-next override ring.
+    ///
+    /// Once consumed, callers should clear display/persistence fields tied to the
+    /// one-off override so stale override times do not leak to later days.
+    public static func shouldConsumeOverrideDate(
+        afterManualAlarmFiredAt firedAt: Date,
+        overrideState: AlarmTemporaryScheduleOverride
+    ) -> Bool {
+        guard overrideState.kind == .modifyNext,
+              let overrideDate = overrideState.overrideDate else {
+            return false
+        }
+
+        return firedAt >= overrideDate
+    }
+
     /// Restore criterion used by callbacks and cold-start recovery.
     ///
     /// This single inequality unifies all flows:
     /// - disable-next: first bridge date equals restore anchor
-    /// - modify earlier: first manual < anchor (no restore), second >= anchor (restore)
-    /// - modify later: override date is >= anchor (restore immediately)
+    /// - modify-next: restore from first manual bridge fired at/after anchor
     public static func shouldRestoreRecurringSchedule(
         afterManualAlarmFiredAt firedAt: Date,
         overrideState: AlarmTemporaryScheduleOverride

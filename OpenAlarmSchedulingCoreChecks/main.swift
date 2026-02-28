@@ -249,7 +249,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 10) modify-next-earlier does not restore on first ring, restores on anchor ring
+        // 10) Mon/Fri modify-next-earlier applies once, consumes override, and skips same-day canonical
         do {
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -258,63 +258,107 @@ struct AlarmScheduleReconcilerDeterministicChecks {
                 calendar: calendar,
                 timeZone: calendar.timeZone,
                 year: 2026,
-                month: 2,
-                day: 28,
-                hour: 6,
+                month: 3,
+                day: 1,
+                hour: 12,
                 minute: 0,
                 second: 0
-            ).date!
-            let overrideDate = DateComponents(
+            ).date! // Sunday
+            let mondayOverride = DateComponents(
                 calendar: calendar,
                 timeZone: calendar.timeZone,
                 year: 2026,
-                month: 2,
-                day: 28,
-                hour: 7,
-                minute: 0,
-                second: 0
-            ).date!
-            let anchorDate = DateComponents(
-                calendar: calendar,
-                timeZone: calendar.timeZone,
-                year: 2026,
-                month: 2,
-                day: 28,
+                month: 3,
+                day: 2,
                 hour: 8,
+                minute: 0,
+                second: 0
+            ).date!
+            let mondayCanonical = DateComponents(
+                calendar: calendar,
+                timeZone: calendar.timeZone,
+                year: 2026,
+                month: 3,
+                day: 2,
+                hour: 9,
+                minute: 0,
+                second: 0
+            ).date!
+            let fridayCanonical = DateComponents(
+                calendar: calendar,
+                timeZone: calendar.timeZone,
+                year: 2026,
+                month: 3,
+                day: 6,
+                hour: 9,
                 minute: 0,
                 second: 0
             ).date!
 
             let schedule = AlarmCanonicalScheduleSpec(
-                weekdayNumbers: [1, 2, 3, 4, 5, 6, 7],
-                hour: 8,
+                weekdayNumbers: [2, 6],
+                hour: 9,
                 minute: 0,
                 isEnabled: true
             )
 
             let activation = AlarmSchedulePlanner.activateTemporaryOverride(
                 canonicalSchedule: schedule,
-                intent: .modifyNext(triggerDate: overrideDate),
+                intent: .modifyNext(triggerDate: mondayOverride),
                 now: now,
                 manualQueueDepth: 5,
                 calendar: calendar
             )
 
-            try expectTrue(activation != nil, "modify-next-earlier activation should succeed")
-            try expectEqual(activation?.manualTriggerDates.prefix(2), [overrideDate, anchorDate], "earlier flow should keep override + canonical anchor")
+            try expectTrue(activation != nil, "modify-next Mon/Fri activation should succeed")
+            try expectEqual(activation?.manualTriggerDates.first, mondayOverride, "first trigger should be override day/time")
+            try expectEqual(activation?.manualTriggerDates.dropFirst().first, fridayCanonical, "second trigger should skip Monday 09:00 and bridge to Friday")
             try expectTrue(
-                !AlarmSchedulePlanner.shouldRestoreRecurringSchedule(
-                    afterManualAlarmFiredAt: overrideDate,
+                !(activation?.manualTriggerDates.contains(mondayCanonical) ?? true),
+                "queue must not include same-day canonical slot after earlier override"
+            )
+
+            try expectTrue(
+                AlarmSchedulePlanner.shouldConsumeOverrideDate(
+                    afterManualAlarmFiredAt: mondayOverride,
                     overrideState: activation!.overrideState
                 ),
-                "earlier first ring should not restore recurring"
+                "override date should be consumed on first eligible manual ring"
             )
             try expectTrue(
-                AlarmSchedulePlanner.shouldRestoreRecurringSchedule(
-                    afterManualAlarmFiredAt: anchorDate,
+                !AlarmSchedulePlanner.shouldRestoreRecurringSchedule(
+                    afterManualAlarmFiredAt: mondayOverride,
                     overrideState: activation!.overrideState
                 ),
-                "earlier second ring (anchor) should restore recurring"
+                "first eligible override ring should not restore recurring before anchor"
+            )
+
+            var consumedState = activation!.overrideState
+            consumedState.overrideDate = nil
+
+            let mondayAfterOverride = DateComponents(
+                calendar: calendar,
+                timeZone: calendar.timeZone,
+                year: 2026,
+                month: 3,
+                day: 2,
+                hour: 8,
+                minute: 30,
+                second: 0
+            ).date!
+
+            let rebuilt = AlarmSchedulePlanner.desiredManualTriggerDates(
+                canonicalSchedule: schedule,
+                overrideState: consumedState,
+                now: mondayAfterOverride,
+                manualQueueDepth: 5,
+                calendar: calendar
+            )
+
+            try expectEqual(rebuilt.first, fridayCanonical, "reconcile after consume should not reintroduce Monday 09:00")
+            try expectTrue(
+                !rebuilt.contains(mondayCanonical),
+                "reconcile should not revive stale same-day canonical trigger"
             )
         }
 
