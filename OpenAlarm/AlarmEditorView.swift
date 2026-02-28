@@ -99,6 +99,7 @@ struct AlarmEditorView: View {
                             .font(.headline.weight(.semibold))
                     }
                     .tint(OAColor.textPrimary)
+                    .buttonStyle(.glass)
                     .accessibilityLabel(L10n.actionCancel)
                 }
 
@@ -119,14 +120,8 @@ struct AlarmEditorView: View {
                         }
                         .tint(OAColor.actionCyan)
                         .buttonStyle(.glassProminent)
-                        .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
-                        .popover(
-                            isPresented: $showSaveScopePopover,
-                            // Anchor from the full 44x44 toolbar hit-target so the popover body clears the sheet top.
-                            attachmentAnchor: .point(.bottomTrailing),
-                            arrowEdge: .top
-                        ) {
+                        .popover(isPresented: $showSaveScopePopover) {
                             GlassEffectContainer(spacing: 10) {
                                 VStack(alignment: .leading, spacing: 10) {
                                     saveScopeActionButton(title: L10n.alarmEditorApplyNextOnlyOption) {
