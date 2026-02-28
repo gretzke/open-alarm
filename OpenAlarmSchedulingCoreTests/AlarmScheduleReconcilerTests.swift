@@ -658,6 +658,12 @@ final class AlarmScheduleReconcilerTests: XCTestCase {
             minute: 0
         )
 
+        harness.seedCanonicalRuntime(triggerDate: mondayCanonical)
+        XCTAssertTrue(
+            harness.runtime.containsRuntimeAlarm(id: harness.alarm.id),
+            "precondition: canonical recurring runtime alarm should exist before modify-next activation"
+        )
+
         harness.activateModifyNext(triggerDate: mondayOverride, now: sundayNoon)
 
         let overrideEntry = harness.alarm.manualScheduleQueue.first(where: { $0.triggerDate == mondayOverride })
@@ -678,11 +684,11 @@ final class AlarmScheduleReconcilerTests: XCTestCase {
         )
     }
 
-    func testIntegrationModifyNextEarlierStopIntentThenCallbackPlusAppReopenLeavesOverrideStale() throws {
+    func testIntegrationModifyNextEarlierStopIntentThenCallbackSuppressesCanonical0900SameDayRing() throws {
         let calendar = fixedUTCGregorianCalendar()
         let sundayNoon = makeUTCDate(year: 2026, month: 3, day: 1, hour: 12, minute: 0, calendar: calendar)
         let mondayOverride = makeUTCDate(year: 2026, month: 3, day: 2, hour: 8, minute: 0, calendar: calendar)
-        let fridayCanonical = makeUTCDate(year: 2026, month: 3, day: 6, hour: 9, minute: 0, calendar: calendar)
+        let mondayCanonical = makeUTCDate(year: 2026, month: 3, day: 2, hour: 9, minute: 0, calendar: calendar)
 
         var harness = AlarmStoreOverrideIntegrationHarness(
             calendar: calendar,
@@ -693,45 +699,82 @@ final class AlarmScheduleReconcilerTests: XCTestCase {
             minute: 0
         )
 
+        harness.seedCanonicalRuntime(triggerDate: mondayCanonical)
         harness.activateModifyNext(triggerDate: mondayOverride, now: sundayNoon)
 
         let overrideRuntimeID = try XCTUnwrap(
             harness.alarm.manualScheduleQueue.first(where: { $0.triggerDate == mondayOverride })?.id
         )
 
-        // Alarm callback marks override runtime as alerting first.
-        harness.runtime.setState(.alerting, for: overrideRuntimeID)
+        let firedAtOverride = harness.runtime.fireDue(at: mondayOverride)
+        XCTAssertEqual(
+            firedAtOverride,
+            [overrideRuntimeID],
+            "08:00 override runtime should be the only alarm that enters alerting"
+        )
+
         harness.applyRemoteSnapshot(referenceDate: mondayOverride)
 
         // Stop intent reconciliation targets runtime ID before callback stream reports completion.
         harness.reconcile(trigger: .stopIntent(overrideRuntimeID), referenceDate: mondayOverride.addingTimeInterval(5))
 
-        // Callback + app-open snapshots now only see future bridge IDs.
+        // Callback snapshot no longer includes the consumed override runtime.
         harness.runtime.removeRuntimeAlarm(id: overrideRuntimeID)
         harness.applyRemoteSnapshot(referenceDate: mondayOverride.addingTimeInterval(10))
+        harness.reconcileAll(referenceDate: mondayOverride.addingTimeInterval(10))
 
-        var reopened = AlarmStoreOverrideIntegrationHarness(
+        let firedAtCanonical = harness.runtime.fireDue(at: mondayCanonical)
+        XCTAssertFalse(
+            firedAtCanonical.contains(harness.alarm.id),
+            "canonical 09:00 must be suppressed after the 08:00 override completed"
+        )
+
+        XCTAssertFalse(
+            harness.runtime.containsRuntimeAlarmScheduled(for: mondayCanonical),
+            "same-day canonical 09:00 runtime slot should stay absent after override callback path"
+        )
+    }
+
+    func testIntegrationModifyNextEarlierBugReproWhenOverrideRuntimeIsDroppedAndCanonicalCancelNoops() throws {
+        let calendar = fixedUTCGregorianCalendar()
+        let sundayNoon = makeUTCDate(year: 2026, month: 3, day: 1, hour: 12, minute: 0, calendar: calendar)
+        let mondayOverride = makeUTCDate(year: 2026, month: 3, day: 2, hour: 8, minute: 0, calendar: calendar)
+        let mondayCanonical = makeUTCDate(year: 2026, month: 3, day: 2, hour: 9, minute: 0, calendar: calendar)
+
+        var harness = AlarmStoreOverrideIntegrationHarness(
             calendar: calendar,
-            persistedAlarm: harness.alarm,
-            runtime: harness.runtime
+            alarmID: UUID(uuidString: "5EC8BB26-09E4-4388-B8D3-64508EE268E8")!,
+            configReferenceID: UUID(uuidString: "B6FA4DF6-AF9F-4E51-9D37-BDECBEC572B4")!,
+            weekdayNumbers: [2, 6],
+            hour: 9,
+            minute: 0
         )
 
-        reopened.applyRemoteSnapshot(referenceDate: mondayOverride.addingTimeInterval(5 * 60))
-        reopened.reconcileAll(referenceDate: mondayOverride.addingTimeInterval(5 * 60))
+        // Missing runtime factor in previous harness: preexisting canonical runtime can survive
+        // if runtime stop/cancel operations no-op and override scheduling silently drops.
+        harness.seedCanonicalRuntime(triggerDate: mondayCanonical)
+        harness.runtime.addCancelNoOpID(harness.alarm.id)
+        harness.runtime.addDroppedScheduleTriggerDate(mondayOverride)
 
-        XCTAssertEqual(
-            reopened.alarm.manualScheduleQueue.first?.triggerDate,
-            fridayCanonical,
-            "after override completion, Friday should remain as next bridge runtime"
+        harness.activateModifyNext(triggerDate: mondayOverride, now: sundayNoon)
+
+        let overrideRuntimeID = try XCTUnwrap(
+            harness.alarm.manualScheduleQueue.first(where: { $0.triggerDate == mondayOverride })?.id
         )
 
-        XCTAssertNil(
-            reopened.alarm.nextTriggerOverrideDate,
-            "override display field should be cleared after stop callback + app reopen path"
+        let firedAtOverride = harness.runtime.fireDue(at: mondayOverride)
+        XCTAssertTrue(
+            firedAtOverride.contains(overrideRuntimeID),
+            "BUG REPRO: expected override runtime to fire at 08:00, but it never entered alerting."
         )
-        XCTAssertNil(
-            reopened.alarm.temporaryScheduleOverride?.overrideDate,
-            "persisted override date should not stay stale once override runtime completed"
+
+        harness.applyRemoteSnapshot(referenceDate: mondayOverride.addingTimeInterval(60))
+        harness.reconcileAll(referenceDate: mondayOverride.addingTimeInterval(60))
+
+        let firedAtCanonical = harness.runtime.fireDue(at: mondayCanonical)
+        XCTAssertFalse(
+            firedAtCanonical.contains(harness.alarm.id),
+            "BUG REPRO: canonical 09:00 fired even though modify-next override should suppress same-day canonical ring."
         )
     }
 
@@ -866,6 +909,12 @@ private struct AlarmStoreOverrideIntegrationHarness {
         self.calendar = calendar
         self.alarm = persistedAlarm
         self.runtime = runtime
+    }
+
+    mutating func seedCanonicalRuntime(triggerDate: Date) {
+        runtime.schedule(id: alarm.id, triggerDate: triggerDate)
+        lastKnownAlarmState[alarm.id] = .scheduled
+        remoteStates[alarm.id] = .scheduled
     }
 
     mutating func activateModifyNext(triggerDate: Date, now: Date) {
@@ -1179,12 +1228,31 @@ private struct RuntimeAlarmHarness {
     }
 
     private(set) var byID: [UUID: RuntimeAlarm] = [:]
+    private var cancelNoOpIDs: Set<UUID> = []
+    private var droppedScheduleTriggerDates: Set<Date> = []
+
+    mutating func addCancelNoOpID(_ id: UUID) {
+        cancelNoOpIDs.insert(id)
+    }
+
+    mutating func addDroppedScheduleTriggerDate(_ triggerDate: Date) {
+        droppedScheduleTriggerDates.insert(triggerDate)
+    }
 
     mutating func schedule(id: UUID, triggerDate: Date?) {
+        if let triggerDate,
+           droppedScheduleTriggerDates.contains(triggerDate) {
+            return
+        }
+
         byID[id] = RuntimeAlarm(id: id, state: .scheduled, triggerDate: triggerDate)
     }
 
     mutating func stop(id: UUID) {
+        if cancelNoOpIDs.contains(id) {
+            return
+        }
+
         guard var current = byID[id] else {
             return
         }
@@ -1196,6 +1264,10 @@ private struct RuntimeAlarmHarness {
     }
 
     mutating func cancel(id: UUID) {
+        if cancelNoOpIDs.contains(id) {
+            return
+        }
+
         byID.removeValue(forKey: id)
     }
 
@@ -1206,6 +1278,26 @@ private struct RuntimeAlarmHarness {
         } else {
             byID[id] = RuntimeAlarm(id: id, state: state, triggerDate: nil)
         }
+    }
+
+    mutating func fireDue(at referenceDate: Date) -> [UUID] {
+        let sortedIDs = byID.keys.sorted { $0.uuidString < $1.uuidString }
+        var fired: [UUID] = []
+
+        for id in sortedIDs {
+            guard var current = byID[id],
+                  current.state == .scheduled,
+                  let triggerDate = current.triggerDate,
+                  triggerDate <= referenceDate else {
+                continue
+            }
+
+            current.state = .alerting
+            byID[id] = current
+            fired.append(id)
+        }
+
+        return fired
     }
 
     mutating func removeRuntimeAlarm(id: UUID) {
