@@ -778,6 +778,100 @@ final class AlarmScheduleReconcilerTests: XCTestCase {
         )
     }
 
+    func testPhase1ReconcileBarriersRunInABCOrderForOverrideQueueRebuild() throws {
+        let calendar = fixedUTCGregorianCalendar()
+        let sundayNoon = makeUTCDate(year: 2026, month: 3, day: 1, hour: 12, minute: 0, calendar: calendar)
+        let mondayOverride = makeUTCDate(year: 2026, month: 3, day: 2, hour: 8, minute: 0, calendar: calendar)
+
+        var harness = AlarmStoreOverrideIntegrationHarness(
+            calendar: calendar,
+            alarmID: UUID(uuidString: "0F5A5CDA-37D1-4E34-9E32-AD2F17D4EFB5")!,
+            configReferenceID: UUID(uuidString: "1DBA8D8A-7D39-42D2-A8B5-75DA6A2F7A95")!,
+            weekdayNumbers: [2, 6],
+            hour: 9,
+            minute: 0
+        )
+
+        harness.activateModifyNext(triggerDate: mondayOverride, now: sundayNoon)
+
+        let overrideRuntimeID = try XCTUnwrap(
+            harness.alarm.manualScheduleQueue.first(where: { $0.triggerDate == mondayOverride })?.id
+        )
+
+        _ = harness.runtime.fireDue(at: mondayOverride)
+        harness.applyRemoteSnapshot(referenceDate: mondayOverride)
+
+        // Callback completion arrives as "missing" after stop/cancel.
+        harness.runtime.removeRuntimeAlarm(id: overrideRuntimeID)
+        harness.applyRemoteSnapshot(referenceDate: mondayOverride.addingTimeInterval(10))
+
+        harness.resetReconcileBarrierTrace()
+        harness.reconcileAll(referenceDate: mondayOverride.addingTimeInterval(10))
+
+        XCTAssertEqual(harness.reconcileBarrierTrace, ["A", "B:commit", "C"])
+    }
+
+    func testPhase1CallbackRestoreDefersManualCleanupToReconcileBarrierC() throws {
+        let calendar = fixedUTCGregorianCalendar()
+        let sundayNoon = makeUTCDate(year: 2026, month: 3, day: 1, hour: 12, minute: 0, calendar: calendar)
+        let mondayOverrideLater = makeUTCDate(year: 2026, month: 3, day: 2, hour: 10, minute: 0, calendar: calendar)
+
+        var harness = AlarmStoreOverrideIntegrationHarness(
+            calendar: calendar,
+            alarmID: UUID(uuidString: "C2AC0F2A-80F6-49B7-A03A-D86D0536F68A")!,
+            configReferenceID: UUID(uuidString: "A93707DF-8E1B-4F42-8886-E2D2353A463F")!,
+            weekdayNumbers: [2, 6],
+            hour: 9,
+            minute: 0
+        )
+
+        harness.activateModifyNext(triggerDate: mondayOverrideLater, now: sundayNoon)
+
+        let overrideRuntimeID = try XCTUnwrap(
+            harness.alarm.manualScheduleQueue.first(where: { $0.triggerDate == mondayOverrideLater })?.id
+        )
+
+        harness.runtime.removeRuntimeAlarm(id: overrideRuntimeID)
+        harness.applyRemoteSnapshot(referenceDate: mondayOverrideLater.addingTimeInterval(60))
+
+        XCTAssertNil(harness.alarm.temporaryScheduleOverride)
+        XCTAssertTrue(harness.alarm.manualScheduleQueue.contains(where: { $0.id == overrideRuntimeID }))
+        XCTAssertFalse(harness.runtime.containsRuntimeAlarm(id: harness.alarm.id))
+
+        harness.resetReconcileBarrierTrace()
+        harness.reconcileAll(referenceDate: mondayOverrideLater.addingTimeInterval(60))
+
+        XCTAssertEqual(harness.reconcileBarrierTrace, ["A", "B:commit", "C"])
+        XCTAssertTrue(harness.alarm.manualScheduleQueue.isEmpty)
+        XCTAssertFalse(harness.runtime.containsRuntimeAlarm(id: overrideRuntimeID))
+        XCTAssertTrue(harness.runtime.containsRuntimeAlarm(id: harness.alarm.id))
+    }
+
+    func testPhase1DisableNextActivationSuppressesCanonicalRuntimeAndKeepsManualBridgeOnly() throws {
+        let calendar = fixedUTCGregorianCalendar()
+        let sundayNoon = makeUTCDate(year: 2026, month: 3, day: 1, hour: 12, minute: 0, calendar: calendar)
+        let mondayCanonical = makeUTCDate(year: 2026, month: 3, day: 2, hour: 7, minute: 0, calendar: calendar)
+
+        var harness = AlarmStoreOverrideIntegrationHarness(
+            calendar: calendar,
+            alarmID: UUID(uuidString: "8D95D5C9-C05A-4D47-B89D-6D308662497D")!,
+            configReferenceID: UUID(uuidString: "F3B44552-86BE-4FEC-845B-327D336A3CF7")!,
+            weekdayNumbers: [1, 2, 3, 4, 5, 6, 7],
+            hour: 7,
+            minute: 0
+        )
+
+        harness.seedCanonicalRuntime(triggerDate: mondayCanonical)
+        harness.activateDisableNext(now: sundayNoon)
+
+        XCTAssertEqual(harness.alarm.temporaryScheduleOverride?.kind, .disableNext)
+        XCTAssertFalse(harness.runtime.containsRuntimeAlarm(id: harness.alarm.id))
+
+        let firstManual = try XCTUnwrap(harness.alarm.manualScheduleQueue.first)
+        XCTAssertTrue(harness.runtime.containsRuntimeAlarm(id: firstManual.id))
+        XCTAssertFalse(harness.runtime.containsRuntimeAlarmScheduled(for: mondayCanonical))
+    }
+
     func testWakeUpCheckDelayOptionsExposeExpectedUserChoices() {
         XCTAssertEqual(
             WakeUpCheckTimingPolicy.checkDelayOptionsMinutes,
@@ -881,6 +975,7 @@ private struct AlarmStoreOverrideIntegrationHarness {
     var runtime: RuntimeAlarmHarness
     private var lastKnownAlarmState: [UUID: AlarmScheduleRemoteState] = [:]
     private var remoteStates: [UUID: AlarmScheduleRemoteState] = [:]
+    private(set) var reconcileBarrierTrace: [String] = []
 
     init(
         calendar: Calendar,
@@ -929,18 +1024,40 @@ private struct AlarmStoreOverrideIntegrationHarness {
             return
         }
 
-        alarm.isEnabled = true
-        alarm.nextTriggerOverrideDate = triggerDate
-        alarm.skipNextUntilDate = nil
-        alarm.temporaryScheduleOverride = activation.overrideState
-        alarm.manualScheduleQueue = buildManualQueueEntries(
-            triggerDates: activation.manualTriggerDates,
-            restoreAnchorDate: activation.overrideState.restoreAnchorDate,
-            configReferenceID: alarm.scheduleConfigReferenceID,
-            overrideDate: activation.overrideState.overrideDate
+        applyTemporaryScheduleOverrideActivation(
+            activation,
+            isEnabled: true,
+            nextTriggerOverrideDate: triggerDate,
+            skipNextUntilDate: nil
         )
 
         reconcileSchedule(target: .alarm(alarm.id), referenceDate: now)
+    }
+
+    mutating func activateDisableNext(now: Date) {
+        guard let activation = AlarmSchedulePlanner.activateTemporaryOverride(
+            canonicalSchedule: alarm.canonicalScheduleSpec,
+            intent: .disableNext,
+            now: now,
+            manualQueueDepth: manualOverrideQueueDepth,
+            calendar: calendar
+        ) else {
+            XCTFail("expected disable-next activation to succeed")
+            return
+        }
+
+        applyTemporaryScheduleOverrideActivation(
+            activation,
+            isEnabled: false,
+            nextTriggerOverrideDate: nil,
+            skipNextUntilDate: activation.overrideState.skippedCanonicalDate
+        )
+
+        reconcileSchedule(target: .alarm(alarm.id), referenceDate: now)
+    }
+
+    mutating func resetReconcileBarrierTrace() {
+        reconcileBarrierTrace.removeAll()
     }
 
     mutating func reconcile(trigger: AlarmScheduleReconcileTrigger, referenceDate: Date) {
@@ -982,15 +1099,43 @@ private struct AlarmStoreOverrideIntegrationHarness {
         return alarm.manualScheduleQueue.contains(where: { $0.id == runtimeAlarmID }) ? alarm.id : nil
     }
 
+    private struct HarnessDeterministicReconcilePlan {
+        var alarm: HarnessAlarm
+        var staleManualRuntimeIDs: Set<UUID>
+        var didMutatePersistedState: Bool
+    }
+
     private mutating func reconcileSchedulingForAlarm(_ alarmID: UUID, referenceDate: Date) {
         guard alarm.id == alarmID else {
             return
         }
 
-        if let overrideState = alarm.temporaryScheduleOverride,
-           alarm.isRepeating {
+        reconcileBarrierTrace.append("A")
+        let planning = deterministicPlanningBarrier(referenceDate: referenceDate)
+
+        if planning.didMutatePersistedState {
+            alarm = planning.alarm
+            reconcileBarrierTrace.append("B:commit")
+        } else {
+            reconcileBarrierTrace.append("B:noop")
+        }
+
+        reconcileBarrierTrace.append("C")
+        runtimeConvergenceBarrier(
+            staleManualRuntimeIDs: planning.staleManualRuntimeIDs,
+            referenceDate: referenceDate
+        )
+    }
+
+    private mutating func deterministicPlanningBarrier(referenceDate: Date) -> HarnessDeterministicReconcilePlan {
+        var plannedAlarm = alarm
+        var staleManualRuntimeIDs: Set<UUID> = []
+        var didMutatePersistedState = false
+
+        if let overrideState = plannedAlarm.temporaryScheduleOverride,
+           plannedAlarm.isRepeating {
             let desiredDates = AlarmSchedulePlanner.desiredManualTriggerDates(
-                canonicalSchedule: alarm.canonicalScheduleSpec,
+                canonicalSchedule: plannedAlarm.canonicalScheduleSpec,
                 overrideState: overrideState,
                 now: referenceDate,
                 manualQueueDepth: manualOverrideQueueDepth,
@@ -998,14 +1143,16 @@ private struct AlarmStoreOverrideIntegrationHarness {
             )
 
             if desiredDates.isEmpty {
-                alarm.temporaryScheduleOverride = nil
-                alarm.manualScheduleQueue.removeAll()
-                alarm.skipNextUntilDate = nil
-                alarm.nextTriggerOverrideDate = nil
-                alarm.isEnabled = true
+                staleManualRuntimeIDs.formUnion(plannedAlarm.manualScheduleQueue.map(\.id))
+                clearTemporaryScheduleOverrideState(
+                    on: &plannedAlarm,
+                    restoreEnabledState: overrideState.kind == .disableNext ? true : nil,
+                    clearManualQueue: true
+                )
+                didMutatePersistedState = true
             } else {
                 var existingByDate: [Date: AlarmManualScheduleEntry] = [:]
-                for entry in alarm.manualScheduleQueue where existingByDate[entry.triggerDate] == nil {
+                for entry in plannedAlarm.manualScheduleQueue where existingByDate[entry.triggerDate] == nil {
                     existingByDate[entry.triggerDate] = entry
                 }
 
@@ -1018,47 +1165,74 @@ private struct AlarmStoreOverrideIntegrationHarness {
                         id: UUID(),
                         triggerDate: date,
                         restoreAnchorDate: overrideState.restoreAnchorDate,
-                        configReferenceID: alarm.scheduleConfigReferenceID,
+                        configReferenceID: plannedAlarm.scheduleConfigReferenceID,
                         role: (overrideState.overrideDate != nil && date == overrideState.overrideDate) ? .overrideTrigger : .canonicalBridge
                     )
                 }
 
-                let staleManualIDs = Set(alarm.manualScheduleQueue.map(\.id))
+                let staleIDs = Set(plannedAlarm.manualScheduleQueue.map(\.id))
                     .subtracting(Set(rebuiltQueue.map(\.id)))
-                cancelRuntimeAlarms(ids: staleManualIDs)
+                staleManualRuntimeIDs.formUnion(staleIDs)
 
-                alarm.manualScheduleQueue = rebuiltQueue
-
-                suppressCanonicalRuntimeWhileOverrideActive(referenceDate: referenceDate)
-                scheduleManualRuntimeQueueWithRepair(referenceDate: referenceDate)
-
-                remoteStates[alarm.id] = alarm.manualScheduleQueue.isEmpty ? nil : .scheduled
+                if rebuiltQueue != plannedAlarm.manualScheduleQueue {
+                    plannedAlarm.manualScheduleQueue = rebuiltQueue
+                    didMutatePersistedState = true
+                }
             }
+        } else if plannedAlarm.temporaryScheduleOverride != nil {
+            staleManualRuntimeIDs.formUnion(plannedAlarm.manualScheduleQueue.map(\.id))
+            clearTemporaryScheduleOverrideState(
+                on: &plannedAlarm,
+                restoreEnabledState: nil,
+                clearManualQueue: true
+            )
+            didMutatePersistedState = true
         }
 
-        if alarm.temporaryScheduleOverride == nil {
-            if !alarm.manualScheduleQueue.isEmpty {
-                cancelRuntimeAlarms(ids: Set(alarm.manualScheduleQueue.map(\.id)))
-                alarm.manualScheduleQueue.removeAll()
-            }
+        if plannedAlarm.temporaryScheduleOverride == nil,
+           !plannedAlarm.manualScheduleQueue.isEmpty {
+            staleManualRuntimeIDs.formUnion(plannedAlarm.manualScheduleQueue.map(\.id))
+            plannedAlarm.manualScheduleQueue.removeAll()
+            didMutatePersistedState = true
+        }
 
-            if alarm.isEnabled {
-                runtime.schedule(
-                    id: alarm.id,
-                    triggerDate: AlarmSchedulePlanner.nextCanonicalOccurrence(
-                        after: referenceDate,
-                        schedule: alarm.canonicalScheduleSpec,
-                        calendar: calendar
-                    )
+        return HarnessDeterministicReconcilePlan(
+            alarm: plannedAlarm,
+            staleManualRuntimeIDs: staleManualRuntimeIDs,
+            didMutatePersistedState: didMutatePersistedState
+        )
+    }
+
+    private mutating func runtimeConvergenceBarrier(
+        staleManualRuntimeIDs: Set<UUID>,
+        referenceDate: Date
+    ) {
+        cancelRuntimeAlarms(ids: staleManualRuntimeIDs)
+
+        if alarm.temporaryScheduleOverride != nil,
+           alarm.isRepeating {
+            suppressCanonicalRuntimeWhileOverrideActive(referenceDate: referenceDate)
+            scheduleManualRuntimeQueueWithRepair(referenceDate: referenceDate)
+            remoteStates[alarm.id] = alarm.manualScheduleQueue.isEmpty ? nil : .scheduled
+            return
+        }
+
+        if alarm.isEnabled {
+            runtime.schedule(
+                id: alarm.id,
+                triggerDate: AlarmSchedulePlanner.nextCanonicalOccurrence(
+                    after: referenceDate,
+                    schedule: alarm.canonicalScheduleSpec,
+                    calendar: calendar
                 )
-                lastKnownAlarmState[alarm.id] = .scheduled
-                remoteStates[alarm.id] = .scheduled
-            } else {
-                runtime.stop(id: alarm.id)
-                runtime.cancel(id: alarm.id)
-                lastKnownAlarmState.removeValue(forKey: alarm.id)
-                remoteStates.removeValue(forKey: alarm.id)
-            }
+            )
+            lastKnownAlarmState[alarm.id] = .scheduled
+            remoteStates[alarm.id] = .scheduled
+        } else {
+            runtime.stop(id: alarm.id)
+            runtime.cancel(id: alarm.id)
+            lastKnownAlarmState.removeValue(forKey: alarm.id)
+            remoteStates.removeValue(forKey: alarm.id)
         }
     }
 
@@ -1073,10 +1247,11 @@ private struct AlarmStoreOverrideIntegrationHarness {
         }
 
         guard !alarm.manualScheduleQueue.isEmpty else {
-            alarm.temporaryScheduleOverride = nil
-            alarm.nextTriggerOverrideDate = nil
-            alarm.skipNextUntilDate = nil
-            alarm.isEnabled = true
+            clearTemporaryScheduleOverrideState(
+                on: &alarm,
+                restoreEnabledState: true,
+                clearManualQueue: false
+            )
             return
         }
 
@@ -1119,36 +1294,79 @@ private struct AlarmStoreOverrideIntegrationHarness {
         }
 
         if shouldConsumeOverrideDate,
-           !shouldRestoreRecurring,
-           var mutableOverrideState = alarm.temporaryScheduleOverride {
-            if alarm.nextTriggerOverrideDate != nil {
-                alarm.nextTriggerOverrideDate = nil
-            }
-
-            if mutableOverrideState.overrideDate != nil {
-                mutableOverrideState.overrideDate = nil
-                alarm.temporaryScheduleOverride = mutableOverrideState
-            }
+           !shouldRestoreRecurring {
+            _ = consumeTemporaryModifyOverrideDate(on: &alarm)
         }
 
         if shouldRestoreRecurring {
-            let staleManualIDs = Set(alarm.manualScheduleQueue.map(\.id))
-            for id in staleManualIDs {
-                runtime.stop(id: id)
-                runtime.cancel(id: id)
-                lastKnownAlarmState.removeValue(forKey: id)
-            }
-
-            alarm.temporaryScheduleOverride = nil
-            alarm.manualScheduleQueue.removeAll()
-            alarm.nextTriggerOverrideDate = nil
-            alarm.skipNextUntilDate = nil
-            alarm.isEnabled = true
+            // Phase-1 boundary: keep stale manual IDs until reconcile barrier C.
+            clearTemporaryScheduleOverrideState(
+                on: &alarm,
+                restoreEnabledState: true,
+                clearManualQueue: false
+            )
             remoteStates.removeValue(forKey: alarm.id)
         } else {
-            suppressCanonicalRuntimeWhileOverrideActive(referenceDate: referenceDate)
             remoteStates[alarm.id] = hasManualAlertingState ? .alerting : .scheduled
         }
+    }
+
+    private mutating func applyTemporaryScheduleOverrideActivation(
+        _ activation: AlarmTemporaryOverrideActivationPlan,
+        isEnabled: Bool,
+        nextTriggerOverrideDate: Date?,
+        skipNextUntilDate: Date?
+    ) {
+        alarm.isEnabled = isEnabled
+        alarm.nextTriggerOverrideDate = nextTriggerOverrideDate
+        alarm.skipNextUntilDate = skipNextUntilDate
+        alarm.temporaryScheduleOverride = activation.overrideState
+        alarm.manualScheduleQueue = buildManualQueueEntries(
+            triggerDates: activation.manualTriggerDates,
+            restoreAnchorDate: activation.overrideState.restoreAnchorDate,
+            configReferenceID: alarm.scheduleConfigReferenceID,
+            overrideDate: activation.overrideState.overrideDate
+        )
+    }
+
+    private func clearTemporaryScheduleOverrideState(
+        on alarm: inout HarnessAlarm,
+        restoreEnabledState: Bool?,
+        clearManualQueue: Bool
+    ) {
+        if let restoreEnabledState {
+            alarm.isEnabled = restoreEnabledState
+        }
+
+        alarm.nextTriggerOverrideDate = nil
+        alarm.skipNextUntilDate = nil
+        alarm.temporaryScheduleOverride = nil
+
+        if clearManualQueue {
+            alarm.manualScheduleQueue.removeAll()
+        }
+    }
+
+    private func consumeTemporaryModifyOverrideDate(on alarm: inout HarnessAlarm) -> Bool {
+        guard var overrideState = alarm.temporaryScheduleOverride,
+              overrideState.kind == .modifyNext else {
+            return false
+        }
+
+        var changed = false
+
+        if alarm.nextTriggerOverrideDate != nil {
+            alarm.nextTriggerOverrideDate = nil
+            changed = true
+        }
+
+        if overrideState.overrideDate != nil {
+            overrideState.overrideDate = nil
+            alarm.temporaryScheduleOverride = overrideState
+            changed = true
+        }
+
+        return changed
     }
 
     private func canonicalSuppressionFallbackDate(referenceDate: Date) -> Date {
