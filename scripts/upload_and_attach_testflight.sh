@@ -458,20 +458,7 @@ def wait_until_ready(build_id, deadline_epoch):
     fail("Timed out waiting for internalBuildState=READY_FOR_BETA_TESTING")
 
 
-def already_attached(build_id):
-    params = urllib.parse.urlencode({"filter[id]": build_id, "limit": "1"})
-    status, payload = asc_request("GET", f"/v1/betaGroups/{beta_group_id}/builds?{params}")
-    if status >= 400:
-        fail(f"Failed to inspect beta group membership (HTTP {status}). {extract_errors(payload)}")
-
-    return any(item.get("id") == build_id for item in payload.get("data", []))
-
-
 def attach_build(build_id):
-    if already_attached(build_id):
-        log("Build already attached to beta group")
-        return "already-attached"
-
     payload = {"data": [{"type": "builds", "id": build_id}]}
     status, response_payload = asc_request(
         "POST",
