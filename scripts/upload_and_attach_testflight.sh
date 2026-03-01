@@ -76,14 +76,15 @@ ASC_KEY_ID="${ASC_KEY_ID:-}"
 ASC_ISSUER_ID="${ASC_ISSUER_ID:-}"
 APP_ID="${APP_ID:-}"
 BETA_GROUP_ID="${BETA_GROUP_ID:-}"
+TEAM_ID="${TEAM_ID:-}"
 
 require_var ASC_KEY_ID
 require_var ASC_ISSUER_ID
 require_var APP_ID
 require_var BETA_GROUP_ID
+require_var TEAM_ID
 
 BUNDLE_ID="${BUNDLE_ID:-com.gretzke.openalarm}"
-TEAM_ID="${TEAM_ID:-7P7CKKPH5L}"
 SCHEME="${SCHEME:-OpenAlarm}"
 PROJECT="${PROJECT:-OpenAlarm.xcodeproj}"
 ARCHIVE_PATH="${ARCHIVE_PATH:-build/OpenAlarm.xcarchive}"
@@ -125,7 +126,7 @@ ABS_ARCHIVE_PATH="$(to_abs_path "$ARCHIVE_PATH")"
 UPLOAD_OPTIONS_PATH="$ROOT_DIR/build/UploadOptions.plist"
 
 log "Deterministic TestFlight upload+attach starting"
-log "Scheme=$SCHEME Team=$TEAM_ID Bundle=$BUNDLE_ID AppID=$(mask_value "$APP_ID") GroupID=$(mask_value "$BETA_GROUP_ID")"
+log "Scheme=$SCHEME TeamID=$(mask_value "$TEAM_ID") Bundle=$BUNDLE_ID AppID=$(mask_value "$APP_ID") GroupID=$(mask_value "$BETA_GROUP_ID")"
 
 VERSION_INFO="$(python3 - "$PBXPROJ_PATH" <<'PY'
 import re

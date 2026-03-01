@@ -90,13 +90,23 @@ Use the automation script below to perform a deterministic TestFlight flow:
 3. poll App Store Connect until the uploaded build is ready,
 4. attach the build to your internal beta group.
 
-Sensitive values are read from environment variables at runtime only.
+Sensitive values and account/private IDs are read from environment variables at runtime only.
+Do not hardcode them in scripts or commit them to the repository.
+
+Required environment variables:
+
+- `ASC_KEY_ID`
+- `ASC_ISSUER_ID`
+- `APP_ID`
+- `BETA_GROUP_ID`
+- `TEAM_ID`
 
 ```bash
 ASC_KEY_ID="<ASC_KEY_ID>" \
 ASC_ISSUER_ID="<ASC_ISSUER_ID_UUID>" \
 APP_ID="<ASC_APP_ID>" \
 BETA_GROUP_ID="<ASC_INTERNAL_BETA_GROUP_ID>" \
+TEAM_ID="<APPLE_DEVELOPER_TEAM_ID>" \
 ./scripts/upload_and_attach_testflight.sh
 ```
 
@@ -104,7 +114,6 @@ Optional overrides:
 
 - `ASC_KEY_PATH` (default: `~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8`)
 - `BUNDLE_ID` (default: `com.gretzke.openalarm`)
-- `TEAM_ID` (default: `7P7CKKPH5L`)
 - `SCHEME` (default: `OpenAlarm`)
 - `PROJECT` (default: `OpenAlarm.xcodeproj`)
 - `ARCHIVE_PATH` (default: `build/OpenAlarm.xcarchive`)
