@@ -961,6 +961,43 @@ final class AlarmScheduleReconcilerTests: XCTestCase {
         XCTAssertTrue(WakeUpCheckCoordinator.wakeCheckAlarmsDisableSnooze)
     }
 
+    func testWakeUpCheckCoordinatorArmingFailureResolutionMatchesFallbackPolicy() {
+        XCTAssertEqual(
+            WakeUpCheckCoordinator.armingFailureResolution(
+                isRepeating: false,
+                hasActiveSessionAfterAttempt: false
+            ),
+            .completeNonRepeating
+        )
+        XCTAssertEqual(
+            WakeUpCheckCoordinator.armingFailureResolution(
+                isRepeating: true,
+                hasActiveSessionAfterAttempt: false
+            ),
+            .restoreScheduled
+        )
+        XCTAssertEqual(
+            WakeUpCheckCoordinator.armingFailureResolution(
+                isRepeating: false,
+                hasActiveSessionAfterAttempt: true
+            ),
+            .keepAwaitingActiveSession
+        )
+    }
+
+    func testWakeUpCheckCoordinatorCancelsNotificationOnlyWhenArmingReachedNotificationStage() {
+        XCTAssertTrue(
+            WakeUpCheckCoordinator.shouldCancelNotificationAfterArmingFailure(
+                notificationWasScheduled: true
+            )
+        )
+        XCTAssertFalse(
+            WakeUpCheckCoordinator.shouldCancelNotificationAfterArmingFailure(
+                notificationWasScheduled: false
+            )
+        )
+    }
+
     func testWakeUpCheckCoordinatorCarriesForwardConfigSnapshotAcrossCycles() {
         let alarmID = UUID(uuidString: "A65F2D6B-EA42-4CF9-B6B3-AC7A6B7E50EF")!
         let previous = WakeUpCheckSessionState(

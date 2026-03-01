@@ -1506,12 +1506,10 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
                 persistWakeUpCheckSessions()
             }
 
-            if alarms[alarmIndex].lifecycleState != .scheduled {
-                alarms[alarmIndex].lifecycleState = .scheduled
-                alarms[alarmIndex].updatedAt = referenceDate
-                alarms = sortAlarms(alarms)
-                save()
-            }
+            await applyWakeUpCheckArmingFailureResolution(
+                for: alarmID,
+                referenceDate: referenceDate
+            )
             return
         }
 
@@ -1554,8 +1552,11 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
                 return
             }
 
+            var didScheduleWakeCheckNotification = false
+
             do {
                 try await wakeUpCheckNotificationService.scheduleWakeCheckNotification(for: nextSession)
+                didScheduleWakeCheckNotification = true
 
                 let config = makeConfiguration(
                     for: latestAlarm,
@@ -1582,18 +1583,51 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
                 }
             } catch {
                 if wakeUpCheckSessionsByAlarmID[alarmID]?.notificationID == nextSession.notificationID {
+                    if WakeUpCheckCoordinator.shouldCancelNotificationAfterArmingFailure(
+                        notificationWasScheduled: didScheduleWakeCheckNotification
+                    ) {
+                        wakeUpCheckNotificationService.cancel(notificationID: nextSession.notificationID)
+                    }
+
                     wakeUpCheckSessionsByAlarmID.removeValue(forKey: alarmID)
                     persistWakeUpCheckSessions()
                 }
 
-                if let failedIndex = alarms.firstIndex(where: { $0.id == alarmID }),
-                   alarms[failedIndex].lifecycleState != .scheduled {
-                    alarms[failedIndex].lifecycleState = .scheduled
-                    alarms[failedIndex].updatedAt = .now
-                    alarms = sortAlarms(alarms)
-                    save()
-                }
+                await applyWakeUpCheckArmingFailureResolution(
+                    for: alarmID,
+                    referenceDate: .now
+                )
             }
+        }
+    }
+
+    private func applyWakeUpCheckArmingFailureResolution(
+        for alarmID: UUID,
+        referenceDate: Date
+    ) async {
+        guard let alarmIndex = alarms.firstIndex(where: { $0.id == alarmID }) else {
+            return
+        }
+
+        let resolution = WakeUpCheckCoordinator.armingFailureResolution(
+            isRepeating: alarms[alarmIndex].isRepeating,
+            hasActiveSessionAfterAttempt: wakeUpCheckSessionsByAlarmID[alarmID] != nil
+        )
+
+        switch resolution {
+        case .keepAwaitingActiveSession:
+            return
+
+        case .restoreScheduled:
+            if alarms[alarmIndex].lifecycleState != .scheduled {
+                alarms[alarmIndex].lifecycleState = .scheduled
+                alarms[alarmIndex].updatedAt = referenceDate
+                alarms = sortAlarms(alarms)
+                save()
+            }
+
+        case .completeNonRepeating:
+            await completeWakeUpCheck(for: alarmID)
         }
     }
 

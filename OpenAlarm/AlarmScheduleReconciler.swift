@@ -131,6 +131,17 @@ public enum WakeUpCheckSessionStatus: String, Codable, Equatable, Sendable {
     case deadlineFired
 }
 
+public enum WakeUpCheckArmingFailureResolution: Equatable, Sendable {
+    /// A newer active session exists; keep its awaiting-wake-check lifecycle intact.
+    case keepAwaitingActiveSession
+
+    /// No active session remains; restore neutral scheduled state.
+    case restoreScheduled
+
+    /// No active session remains for a one-shot alarm; finalize completion fallback.
+    case completeNonRepeating
+}
+
 public struct WakeUpCheckSessionState: Codable, Equatable, Sendable {
     public var alarmID: UUID
     public var cycle: Int
@@ -311,6 +322,29 @@ public enum WakeUpCheckCoordinator {
     /// snooze to keep the confirmation loop strict.
     public static var wakeCheckAlarmsDisableSnooze: Bool {
         true
+    }
+
+    /// Derives lifecycle fallback when wake-check arming failed to leave behind
+    /// an active session.
+    public static func armingFailureResolution(
+        isRepeating: Bool,
+        hasActiveSessionAfterAttempt: Bool
+    ) -> WakeUpCheckArmingFailureResolution {
+        if hasActiveSessionAfterAttempt {
+            return .keepAwaitingActiveSession
+        }
+
+        return isRepeating ? .restoreScheduled : .completeNonRepeating
+    }
+
+    /// Notification side-effect cleanup policy for partial arming failures.
+    ///
+    /// When notification arming succeeded but runtime alarm scheduling failed,
+    /// we must cancel the notification to avoid orphan wake-check prompts.
+    public static func shouldCancelNotificationAfterArmingFailure(
+        notificationWasScheduled: Bool
+    ) -> Bool {
+        notificationWasScheduled
     }
 
     public static func nextCycleSession(

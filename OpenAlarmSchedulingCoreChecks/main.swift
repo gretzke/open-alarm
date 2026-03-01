@@ -29,7 +29,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
     static func main() {
         do {
             try runChecks()
-            print("✅ Deterministic scheduling checks passed (24/24)")
+            print("✅ Deterministic scheduling checks passed (26/26)")
         } catch {
             if let failure = error as? CheckFailure {
                 fputs("❌ \(failure.message)\n", stderr)
@@ -607,7 +607,51 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             try expectEqual(next.status, .scheduling, "next cycle should start in scheduling state")
         }
 
-        // 23) disable-next vs modify-next are mutually exclusive modes
+        // 23) wake-check arming failure policy finalizes non-repeating alarms without active sessions
+        do {
+            try expectEqual(
+                WakeUpCheckCoordinator.armingFailureResolution(
+                    isRepeating: false,
+                    hasActiveSessionAfterAttempt: false
+                ),
+                .completeNonRepeating,
+                "one-shot wake-check arming failures should fall back to completion"
+            )
+            try expectEqual(
+                WakeUpCheckCoordinator.armingFailureResolution(
+                    isRepeating: true,
+                    hasActiveSessionAfterAttempt: false
+                ),
+                .restoreScheduled,
+                "repeating wake-check arming failures should restore scheduled state"
+            )
+            try expectEqual(
+                WakeUpCheckCoordinator.armingFailureResolution(
+                    isRepeating: false,
+                    hasActiveSessionAfterAttempt: true
+                ),
+                .keepAwaitingActiveSession,
+                "active wake-check sessions should preserve awaiting state on stale failures"
+            )
+        }
+
+        // 24) wake-check partial arming failure cancels notifications only when they were scheduled
+        do {
+            try expectTrue(
+                WakeUpCheckCoordinator.shouldCancelNotificationAfterArmingFailure(
+                    notificationWasScheduled: true
+                ),
+                "notification must be canceled when runtime arming fails after notification scheduling"
+            )
+            try expectTrue(
+                !WakeUpCheckCoordinator.shouldCancelNotificationAfterArmingFailure(
+                    notificationWasScheduled: false
+                ),
+                "no cancellation needed when notification scheduling never succeeded"
+            )
+        }
+
+        // 25) disable-next vs modify-next are mutually exclusive modes
         do {
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -647,7 +691,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             try expectEqual(modify?.overrideState.kind, .modifyNext, "modify intent should set modify-next mode")
         }
 
-        // 24) fallback queue rebuild after missed anchor still emits future bridges
+        // 26) fallback queue rebuild after missed anchor still emits future bridges
         do {
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = TimeZone(secondsFromGMT: 0)!
