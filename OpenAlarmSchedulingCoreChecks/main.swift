@@ -29,7 +29,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
     static func main() {
         do {
             try runChecks()
-            print("✅ Deterministic scheduling checks passed (26/26)")
+            print("✅ Deterministic scheduling checks passed (28/28)")
         } catch {
             if let failure = error as? CheckFailure {
                 fputs("❌ \(failure.message)\n", stderr)
@@ -575,7 +575,59 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 22) wake-check coordinator carries persisted config snapshot across cycles
+        // 22) immediate stop-intent arming success clears durable pending-start marker
+        do {
+            let alarmID = UUID(uuidString: "A0EE4E5F-7331-46D0-B531-7AB1AFC57E07")!
+            let siblingAlarmID = UUID(uuidString: "00EBC0E6-B6F0-4783-B73B-2224BE465D55")!
+            let pendingStartIDs: Set<UUID> = [alarmID, siblingAlarmID]
+
+            let cleared = WakeUpCheckCoordinator.pendingStartIDsAfterImmediateStopIntentArming(
+                pendingStartIDs: pendingStartIDs,
+                alarmID: alarmID,
+                didArmImmediately: true
+            )
+            try expectEqual(
+                cleared,
+                Set([siblingAlarmID]),
+                "immediate wake-check arming should consume pending-start marker"
+            )
+
+            let unchanged = WakeUpCheckCoordinator.pendingStartIDsAfterImmediateStopIntentArming(
+                pendingStartIDs: pendingStartIDs,
+                alarmID: alarmID,
+                didArmImmediately: false
+            )
+            try expectEqual(
+                unchanged,
+                pendingStartIDs,
+                "failed immediate arming must preserve durable pending-start marker"
+            )
+        }
+
+        // 23) confirm-awake queueing cancels pending-start and enqueues confirmation marker
+        do {
+            let alarmID = UUID(uuidString: "CA32F120-5EAA-4DD7-89E3-EA82D64F4284")!
+            let unrelatedAlarmID = UUID(uuidString: "A503141D-29F5-4567-A95C-1CD7A6805B2A")!
+
+            let next = WakeUpCheckCoordinator.pendingWakeQueuesAfterConfirmAction(
+                alarmID: alarmID,
+                pendingStartIDs: [alarmID, unrelatedAlarmID],
+                pendingConfirmIDs: [unrelatedAlarmID]
+            )
+
+            try expectEqual(
+                next.pendingStartIDs,
+                Set([unrelatedAlarmID]),
+                "confirm action must remove pending-start for same alarm"
+            )
+            try expectEqual(
+                next.pendingConfirmIDs,
+                Set([alarmID, unrelatedAlarmID]),
+                "confirm action must enqueue confirm marker without dropping existing ones"
+            )
+        }
+
+        // 24) wake-check coordinator carries persisted config snapshot across cycles
         do {
             let alarmID = UUID(uuidString: "D7AFC2A6-AB4C-4BB6-B1FC-90D7FD53DB4E")!
             let previous = WakeUpCheckSessionState(
@@ -607,7 +659,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             try expectEqual(next.status, .scheduling, "next cycle should start in scheduling state")
         }
 
-        // 23) wake-check arming failure policy finalizes non-repeating alarms without active sessions
+        // 25) wake-check arming failure policy finalizes non-repeating alarms without active sessions
         do {
             try expectEqual(
                 WakeUpCheckCoordinator.armingFailureResolution(
@@ -635,7 +687,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 24) wake-check partial arming failure cancels notifications only when they were scheduled
+        // 26) wake-check partial arming failure cancels notifications only when they were scheduled
         do {
             try expectTrue(
                 WakeUpCheckCoordinator.shouldCancelNotificationAfterArmingFailure(
@@ -651,7 +703,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 25) disable-next vs modify-next are mutually exclusive modes
+        // 27) disable-next vs modify-next are mutually exclusive modes
         do {
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -691,7 +743,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             try expectEqual(modify?.overrideState.kind, .modifyNext, "modify intent should set modify-next mode")
         }
 
-        // 26) fallback queue rebuild after missed anchor still emits future bridges
+        // 28) fallback queue rebuild after missed anchor still emits future bridges
         do {
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = TimeZone(secondsFromGMT: 0)!

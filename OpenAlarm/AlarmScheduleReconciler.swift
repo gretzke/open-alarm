@@ -347,6 +347,42 @@ public enum WakeUpCheckCoordinator {
         notificationWasScheduled
     }
 
+    /// After an immediate StopIntent arming success, the durable pending-start
+    /// marker must be cleared so subsequent reconciles do not incorrectly create
+    /// another wake-check cycle.
+    public static func pendingStartIDsAfterImmediateStopIntentArming(
+        pendingStartIDs: Set<UUID>,
+        alarmID: UUID,
+        didArmImmediately: Bool
+    ) -> Set<UUID> {
+        guard didArmImmediately else {
+            return pendingStartIDs
+        }
+
+        var nextPendingStartIDs = pendingStartIDs
+        nextPendingStartIDs.remove(alarmID)
+        return nextPendingStartIDs
+    }
+
+    /// Confirm-awake actions must always cancel any queued start marker for the
+    /// same alarm so wake-check does not immediately re-arm after confirmation.
+    public static func pendingWakeQueuesAfterConfirmAction(
+        alarmID: UUID,
+        pendingStartIDs: Set<UUID>,
+        pendingConfirmIDs: Set<UUID>
+    ) -> (pendingStartIDs: Set<UUID>, pendingConfirmIDs: Set<UUID>) {
+        var nextPendingStartIDs = pendingStartIDs
+        nextPendingStartIDs.remove(alarmID)
+
+        var nextPendingConfirmIDs = pendingConfirmIDs
+        nextPendingConfirmIDs.insert(alarmID)
+
+        return (
+            pendingStartIDs: nextPendingStartIDs,
+            pendingConfirmIDs: nextPendingConfirmIDs
+        )
+    }
+
     public static func nextCycleSession(
         alarmID: UUID,
         previousSession: WakeUpCheckSessionState?,

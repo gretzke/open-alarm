@@ -40,16 +40,35 @@ struct StopIntent: LiveActivityIntent {
             .loadWakeUpCheckSessions(from: defaults)
             .contains(where: { $0.alarmID == id })
 
-        if WakeUpCheckCoordinator.shouldEnqueuePipelineOnStopIntent(
+        let shouldEnqueueWakeCheckStart = WakeUpCheckCoordinator.shouldEnqueuePipelineOnStopIntent(
             wakeUpCheckEnabledForAlarm: hasWakeCheckEnabled,
             hasActiveSession: hasActiveWakeCheckSession
-        ) {
+        )
+
+        if shouldEnqueueWakeCheckStart {
             var pendingStarts = AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: defaults)
             pendingStarts.insert(id)
             AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingStarts, to: defaults)
         }
 
         try? AlarmManager.shared.stop(id: id)
+
+        if shouldEnqueueWakeCheckStart {
+            // Intent execution can happen when AlarmStore/reconcile handler is absent.
+            // Perform a minimal immediate arming attempt here, while keeping the
+            // durable pending marker as fallback if this short path cannot finish.
+            let didArmWakeCheckImmediately = await WakeUpCheckStopIntentArmService.armIfPossible(
+                alarmID: id,
+                defaults: defaults
+            )
+            let pendingStartsAfterImmediateArming = WakeUpCheckCoordinator.pendingStartIDsAfterImmediateStopIntentArming(
+                pendingStartIDs: AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: defaults),
+                alarmID: id,
+                didArmImmediately: didArmWakeCheckImmediately
+            )
+            AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingStartsAfterImmediateArming, to: defaults)
+        }
+
         await AlarmScheduleReconcileEntrypoint.reconcile(trigger: .stopIntent(id))
         return .result()
     }

@@ -498,6 +498,8 @@ private struct SharedSettingsSelectionSheetView: View {
                 GlassEffectContainer(spacing: 10) {
                     VStack(spacing: 10) {
                         ForEach(options, id: \.self) { option in
+                            let isSelected = option == selected
+
                             Button {
                                 onSelect(option)
                             } label: {
@@ -505,7 +507,7 @@ private struct SharedSettingsSelectionSheetView: View {
                                     Text(format(option))
                                         .foregroundStyle(OAColor.textPrimary)
                                     Spacer(minLength: 0)
-                                    if option == selected {
+                                    if isSelected {
                                         Image(systemName: "checkmark")
                                             .foregroundStyle(OAColor.actionCyan)
                                     }
@@ -516,6 +518,13 @@ private struct SharedSettingsSelectionSheetView: View {
                             }
                             .frame(maxWidth: .infinity)
                             .buttonStyle(GlassButtonStyle())
+                            .overlay {
+                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                    .stroke(
+                                        selectionItemBorderColor(isSelected: isSelected),
+                                        lineWidth: isSelected ? 1.05 : 0.9
+                                    )
+                            }
                         }
                     }
                 }
@@ -525,5 +534,19 @@ private struct SharedSettingsSelectionSheetView: View {
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
         }
+    }
+
+    private func selectionItemBorderColor(isSelected: Bool) -> Color {
+        if isSelected {
+            return OAColor.actionCyan.opacity(0.62)
+        }
+
+        // Keep item edges readable against dark backgrounds. On modern glass
+        // systems we lean on the glass stroke tint; otherwise use a neutral line.
+        if #available(iOS 26.0, *) {
+            return OAColor.glassStroke.opacity(0.95)
+        }
+
+        return Color.white.opacity(0.30)
     }
 }

@@ -961,6 +961,47 @@ final class AlarmScheduleReconcilerTests: XCTestCase {
         XCTAssertTrue(WakeUpCheckCoordinator.wakeCheckAlarmsDisableSnooze)
     }
 
+    func testWakeUpCheckCoordinatorClearsPendingStartAfterImmediateStopIntentArmingSuccess() {
+        let alarmID = UUID(uuidString: "A0EE4E5F-7331-46D0-B531-7AB1AFC57E07")!
+        let siblingAlarmID = UUID(uuidString: "00EBC0E6-B6F0-4783-B73B-2224BE465D55")!
+        let pendingStartIDs: Set<UUID> = [alarmID, siblingAlarmID]
+
+        XCTAssertEqual(
+            WakeUpCheckCoordinator.pendingStartIDsAfterImmediateStopIntentArming(
+                pendingStartIDs: pendingStartIDs,
+                alarmID: alarmID,
+                didArmImmediately: true
+            ),
+            Set([siblingAlarmID])
+        )
+
+        XCTAssertEqual(
+            WakeUpCheckCoordinator.pendingStartIDsAfterImmediateStopIntentArming(
+                pendingStartIDs: pendingStartIDs,
+                alarmID: alarmID,
+                didArmImmediately: false
+            ),
+            pendingStartIDs
+        )
+    }
+
+    func testWakeUpCheckCoordinatorConfirmActionQueuesConfirmAndCancelsPendingStart() {
+        let alarmID = UUID(uuidString: "CA32F120-5EAA-4DD7-89E3-EA82D64F4284")!
+        let unrelatedAlarmID = UUID(uuidString: "A503141D-29F5-4567-A95C-1CD7A6805B2A")!
+
+        let pendingStartIDs: Set<UUID> = [alarmID, unrelatedAlarmID]
+        let pendingConfirmIDs: Set<UUID> = [unrelatedAlarmID]
+
+        let nextQueues = WakeUpCheckCoordinator.pendingWakeQueuesAfterConfirmAction(
+            alarmID: alarmID,
+            pendingStartIDs: pendingStartIDs,
+            pendingConfirmIDs: pendingConfirmIDs
+        )
+
+        XCTAssertEqual(nextQueues.pendingStartIDs, Set([unrelatedAlarmID]))
+        XCTAssertEqual(nextQueues.pendingConfirmIDs, Set([alarmID, unrelatedAlarmID]))
+    }
+
     func testWakeUpCheckCoordinatorArmingFailureResolutionMatchesFallbackPolicy() {
         XCTAssertEqual(
             WakeUpCheckCoordinator.armingFailureResolution(
