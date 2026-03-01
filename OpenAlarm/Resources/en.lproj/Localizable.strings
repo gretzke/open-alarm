@@ -67,6 +67,7 @@
 "alarm_editor_snooze_debug_5_seconds" = "5 sec";
 "alarm_editor_try_out" = "Try it out";
 "alarm_editor_try_out_starts_in_5_seconds" = "Test alarm will ring in 5 seconds";
+"alarm_try_out_default_label" = "Test Alarm";
 
 "nap_editor_title" = "Take a nap";
 "nap_editor_duration_title" = "Duration";

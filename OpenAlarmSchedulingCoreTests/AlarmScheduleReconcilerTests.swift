@@ -958,6 +958,13 @@ final class AlarmScheduleReconcilerTests: XCTestCase {
                 hasActiveSession: false
             )
         )
+        XCTAssertFalse(
+            WakeUpCheckCoordinator.shouldEnqueuePipelineOnStopIntent(
+                wakeUpCheckEnabledForAlarm: true,
+                hasActiveSession: true,
+                hasPendingConfirmation: true
+            )
+        )
         XCTAssertTrue(WakeUpCheckCoordinator.wakeCheckAlarmsDisableSnooze)
     }
 
@@ -1000,6 +1007,86 @@ final class AlarmScheduleReconcilerTests: XCTestCase {
 
         XCTAssertEqual(nextQueues.pendingStartIDs, Set([unrelatedAlarmID]))
         XCTAssertEqual(nextQueues.pendingConfirmIDs, Set([alarmID, unrelatedAlarmID]))
+    }
+
+    func testWakeUpCheckCoordinatorConfirmMarkerBlocksStaleStopIntentReenqueue() {
+        let alarmID = UUID(uuidString: "C8CC6A70-FD50-4B8A-AB52-56F47FA90AD0")!
+
+        let queuesAfterConfirm = WakeUpCheckCoordinator.pendingWakeQueuesAfterConfirmAction(
+            alarmID: alarmID,
+            pendingStartIDs: [alarmID],
+            pendingConfirmIDs: []
+        )
+
+        XCTAssertFalse(
+            WakeUpCheckCoordinator.shouldEnqueuePipelineOnStopIntent(
+                wakeUpCheckEnabledForAlarm: true,
+                hasActiveSession: true,
+                hasPendingConfirmation: queuesAfterConfirm.pendingConfirmIDs.contains(alarmID)
+            )
+        )
+    }
+
+    func testTryOutAlarmBlueprintMatchesRegularOneShotWakeCheckPipelineInputs() {
+        let defaults = SharedAlarmSettings(
+            snoozeEnabled: true,
+            snoozeDurationMinutes: 3,
+            maxSnoozes: 2,
+            wakeUpCheckEnabled: true,
+            wakeUpCheckDelayMinutes: 1,
+            wakeUpCheckResponseTimeoutMinutes: 2
+        )
+        let trialDate = Date(timeIntervalSince1970: 1_000)
+
+        let oneShotDraft = AlarmDraft(
+            name: String(localized: "alarm_try_out_default_label"),
+            time: trialDate,
+            repeatDays: [],
+            deleteAfterUse: true,
+            useDefaultSharedSettings: true,
+            customSharedSettings: defaults
+        )
+
+        let regularOneShot = oneShotDraft.toUserAlarm(
+            id: UUID(uuidString: "4D6D9B58-70E7-4D93-B90C-75DE190820A0")!,
+            existingCreatedAt: Date(timeIntervalSince1970: 900),
+            defaultSharedSettings: defaults,
+            existingNextTriggerOverrideDate: trialDate,
+            existingIsVisibleInAlarmList: true,
+            existingIsEnabled: true,
+            existingSnoozeCount: 0
+        )
+
+        let tryOutOneShot = oneShotDraft.toUserAlarm(
+            id: UUID(uuidString: "1714B1E8-55E6-4C6E-BF37-032D635B8C48")!,
+            existingCreatedAt: Date(timeIntervalSince1970: 900),
+            defaultSharedSettings: defaults,
+            existingNextTriggerOverrideDate: trialDate,
+            existingIsVisibleInAlarmList: false,
+            existingIsEnabled: true,
+            existingSnoozeCount: 0
+        )
+
+        XCTAssertEqual(regularOneShot.deleteAfterUse, tryOutOneShot.deleteAfterUse)
+        XCTAssertEqual(regularOneShot.useDefaultSharedSettings, tryOutOneShot.useDefaultSharedSettings)
+        XCTAssertEqual(
+            regularOneShot.resolvedSharedSettings(defaults: defaults).wakeUpCheckEnabled,
+            tryOutOneShot.resolvedSharedSettings(defaults: defaults).wakeUpCheckEnabled
+        )
+
+        let regularShouldEnqueue = WakeUpCheckCoordinator.shouldEnqueuePipelineOnStopIntent(
+            wakeUpCheckEnabledForAlarm: regularOneShot.resolvedSharedSettings(defaults: defaults).wakeUpCheckEnabled,
+            hasActiveSession: false,
+            hasPendingConfirmation: false
+        )
+        let tryOutShouldEnqueue = WakeUpCheckCoordinator.shouldEnqueuePipelineOnStopIntent(
+            wakeUpCheckEnabledForAlarm: tryOutOneShot.resolvedSharedSettings(defaults: defaults).wakeUpCheckEnabled,
+            hasActiveSession: false,
+            hasPendingConfirmation: false
+        )
+
+        XCTAssertEqual(regularShouldEnqueue, tryOutShouldEnqueue)
+        XCTAssertTrue(tryOutShouldEnqueue)
     }
 
     func testWakeUpCheckCoordinatorArmingFailureResolutionMatchesFallbackPolicy() {

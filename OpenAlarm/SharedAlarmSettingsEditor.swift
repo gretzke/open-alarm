@@ -383,7 +383,7 @@ struct SharedAlarmSettingsEditor: View {
 
         Task {
             do {
-                try await alarmStore.scheduleTryOut(sharedSettings: settings, after: seconds)
+                try await alarmStore.scheduleTryOut(after: seconds)
                 showTryOutToast = true
                 Task {
                     try? await Task.sleep(for: .seconds(1.8))
@@ -515,16 +515,16 @@ private struct SharedSettingsSelectionSheetView: View {
                                 .padding(.horizontal, 16)
                                 .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
                                 .contentShape(Rectangle())
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
+                                        .stroke(
+                                            selectionItemBorderColor(isSelected: isSelected),
+                                            lineWidth: isSelected ? 1.05 : 0.9
+                                        )
+                                }
                             }
                             .frame(maxWidth: .infinity)
                             .buttonStyle(GlassButtonStyle())
-                            .overlay {
-                                RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                    .stroke(
-                                        selectionItemBorderColor(isSelected: isSelected),
-                                        lineWidth: isSelected ? 1.05 : 0.9
-                                    )
-                            }
                         }
                     }
                 }
