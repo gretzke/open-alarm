@@ -110,6 +110,8 @@ TEAM_ID="<APPLE_DEVELOPER_TEAM_ID>" \
 ./scripts/upload_and_attach_testflight.sh
 ```
 
+Convenience option (recommended for local runs): keep these vars in a local untracked file such as `.env.testflight.local`, then `source` it before running the script (see `scripts/README.md`).
+
 Optional overrides:
 
 - `ASC_KEY_PATH` (default: `~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8`)
