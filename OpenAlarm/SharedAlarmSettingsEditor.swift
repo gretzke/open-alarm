@@ -383,7 +383,7 @@ struct SharedAlarmSettingsEditor: View {
 
         Task {
             do {
-                try await alarmStore.scheduleTryOut(after: seconds)
+                try await alarmStore.scheduleTryOut(sharedSettings: settings, after: seconds)
                 showTryOutToast = true
                 Task {
                     try? await Task.sleep(for: .seconds(1.8))

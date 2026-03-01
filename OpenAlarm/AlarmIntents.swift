@@ -39,24 +39,17 @@ struct StopIntent: LiveActivityIntent {
         let hasActiveWakeCheckSession = AlarmPersistence
             .loadWakeUpCheckSessions(from: defaults)
             .contains(where: { $0.alarmID == id })
-        let pendingConfirmIDs = AlarmPersistence.loadPendingWakeUpCheckConfirmIDs(from: defaults)
-        let hasPendingWakeCheckConfirmation = pendingConfirmIDs.contains(id)
 
         let shouldEnqueueWakeCheckStart = WakeUpCheckCoordinator.shouldEnqueuePipelineOnStopIntent(
             wakeUpCheckEnabledForAlarm: hasWakeCheckEnabled,
-            hasActiveSession: hasActiveWakeCheckSession,
-            hasPendingConfirmation: hasPendingWakeCheckConfirmation
+            hasActiveSession: hasActiveWakeCheckSession
         )
 
-        var pendingStarts = AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: defaults)
         if shouldEnqueueWakeCheckStart {
+            var pendingStarts = AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: defaults)
             pendingStarts.insert(id)
-        } else if hasPendingWakeCheckConfirmation {
-            // Confirm-awake is terminal for the in-flight cycle. Any stale
-            // pending-start marker for the same alarm must be cleared.
-            pendingStarts.remove(id)
+            AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingStarts, to: defaults)
         }
-        AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingStarts, to: defaults)
 
         try? AlarmManager.shared.stop(id: id)
 

@@ -29,7 +29,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
     static func main() {
         do {
             try runChecks()
-            print("✅ Deterministic scheduling checks passed (29/29)")
+            print("✅ Deterministic scheduling checks passed (28/28)")
         } catch {
             if let failure = error as? CheckFailure {
                 fputs("❌ \(failure.message)\n", stderr)
@@ -570,14 +570,6 @@ struct AlarmScheduleReconcilerDeterministicChecks {
                 "non-wake-check alarms with no active session should not enqueue pipeline"
             )
             try expectTrue(
-                !WakeUpCheckCoordinator.shouldEnqueuePipelineOnStopIntent(
-                    wakeUpCheckEnabledForAlarm: true,
-                    hasActiveSession: true,
-                    hasPendingConfirmation: true
-                ),
-                "pending confirm markers must block wake-check re-enqueue"
-            )
-            try expectTrue(
                 WakeUpCheckCoordinator.wakeCheckAlarmsDisableSnooze,
                 "wake-check alarms must always disable snooze"
             )
@@ -635,29 +627,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 24) confirm marker blocks stale stop-intent re-enqueue for same alarm
-        do {
-            let alarmID = UUID(uuidString: "C8CC6A70-FD50-4B8A-AB52-56F47FA90AD0")!
-
-            let queuesAfterConfirm = WakeUpCheckCoordinator.pendingWakeQueuesAfterConfirmAction(
-                alarmID: alarmID,
-                pendingStartIDs: [alarmID],
-                pendingConfirmIDs: []
-            )
-
-            let shouldRestart = WakeUpCheckCoordinator.shouldEnqueuePipelineOnStopIntent(
-                wakeUpCheckEnabledForAlarm: true,
-                hasActiveSession: true,
-                hasPendingConfirmation: queuesAfterConfirm.pendingConfirmIDs.contains(alarmID)
-            )
-
-            try expectTrue(
-                !shouldRestart,
-                "confirm marker must suppress stale stop-intent re-enqueue"
-            )
-        }
-
-        // 25) wake-check coordinator carries persisted config snapshot across cycles
+        // 24) wake-check coordinator carries persisted config snapshot across cycles
         do {
             let alarmID = UUID(uuidString: "D7AFC2A6-AB4C-4BB6-B1FC-90D7FD53DB4E")!
             let previous = WakeUpCheckSessionState(
@@ -689,7 +659,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             try expectEqual(next.status, .scheduling, "next cycle should start in scheduling state")
         }
 
-        // 26) wake-check arming failure policy finalizes non-repeating alarms without active sessions
+        // 25) wake-check arming failure policy finalizes non-repeating alarms without active sessions
         do {
             try expectEqual(
                 WakeUpCheckCoordinator.armingFailureResolution(
@@ -717,7 +687,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 27) wake-check partial arming failure cancels notifications only when they were scheduled
+        // 26) wake-check partial arming failure cancels notifications only when they were scheduled
         do {
             try expectTrue(
                 WakeUpCheckCoordinator.shouldCancelNotificationAfterArmingFailure(
@@ -733,7 +703,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             )
         }
 
-        // 28) disable-next vs modify-next are mutually exclusive modes
+        // 27) disable-next vs modify-next are mutually exclusive modes
         do {
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -773,7 +743,7 @@ struct AlarmScheduleReconcilerDeterministicChecks {
             try expectEqual(modify?.overrideState.kind, .modifyNext, "modify intent should set modify-next mode")
         }
 
-        // 29) fallback queue rebuild after missed anchor still emits future bridges
+        // 28) fallback queue rebuild after missed anchor still emits future bridges
         do {
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = TimeZone(secondsFromGMT: 0)!

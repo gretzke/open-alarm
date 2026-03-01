@@ -175,10 +175,6 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
     var repeatDays: [AlarmWeekday]
     var deleteAfterUse: Bool
 
-    /// Hidden alarms remain fully managed by the scheduling/runtime pipeline,
-    /// but are excluded from list/editor surfaces (used by try-out alarms).
-    var isVisibleInAlarmList: Bool
-
     var useDefaultSharedSettings: Bool
     var customSharedSettings: SharedAlarmSettings
 
@@ -215,7 +211,6 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         minute: Int,
         repeatDays: [AlarmWeekday],
         deleteAfterUse: Bool,
-        isVisibleInAlarmList: Bool = true,
         useDefaultSharedSettings: Bool,
         customSharedSettings: SharedAlarmSettings,
         scheduleConfigReferenceID: UUID,
@@ -235,7 +230,6 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         self.minute = minute
         self.repeatDays = repeatDays.sorted { $0.rawValue < $1.rawValue }
         self.deleteAfterUse = deleteAfterUse
-        self.isVisibleInAlarmList = isVisibleInAlarmList
         self.useDefaultSharedSettings = useDefaultSharedSettings
         self.customSharedSettings = customSharedSettings
         self.scheduleConfigReferenceID = scheduleConfigReferenceID
@@ -316,7 +310,6 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         case minute
         case repeatDays
         case deleteAfterUse
-        case isVisibleInAlarmList
         case wakeUpCheckEnabled // legacy migration key
         case wakeUpCheckDelayMinutes // legacy migration key
         case useDefaultSharedSettings
@@ -343,7 +336,6 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         repeatDays = (try container.decodeIfPresent([AlarmWeekday].self, forKey: .repeatDays) ?? [])
             .sorted { $0.rawValue < $1.rawValue }
         deleteAfterUse = try container.decodeIfPresent(Bool.self, forKey: .deleteAfterUse) ?? true
-        isVisibleInAlarmList = try container.decodeIfPresent(Bool.self, forKey: .isVisibleInAlarmList) ?? true
 
         customSharedSettings = try container.decodeIfPresent(SharedAlarmSettings.self, forKey: .customSharedSettings) ?? .featureDefaults
         useDefaultSharedSettings = try container.decodeIfPresent(Bool.self, forKey: .useDefaultSharedSettings) ?? true
@@ -380,7 +372,6 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         try container.encode(minute, forKey: .minute)
         try container.encode(repeatDays, forKey: .repeatDays)
         try container.encode(deleteAfterUse, forKey: .deleteAfterUse)
-        try container.encode(isVisibleInAlarmList, forKey: .isVisibleInAlarmList)
         try container.encode(useDefaultSharedSettings, forKey: .useDefaultSharedSettings)
         try container.encode(customSharedSettings, forKey: .customSharedSettings)
         try container.encode(scheduleConfigReferenceID, forKey: .scheduleConfigReferenceID)
@@ -522,7 +513,6 @@ struct AlarmDraft: Equatable {
         defaultSharedSettings: SharedAlarmSettings,
         existingScheduleConfigReferenceID: UUID? = nil,
         existingNextTriggerOverrideDate: Date? = nil,
-        existingIsVisibleInAlarmList: Bool = true,
         existingIsEnabled: Bool = true,
         existingSkipNextUntilDate: Date? = nil,
         existingSnoozeCount: Int?,
@@ -541,7 +531,6 @@ struct AlarmDraft: Equatable {
             minute: minute,
             repeatDays: Array(repeatDays),
             deleteAfterUse: deleteAfterUse,
-            isVisibleInAlarmList: existingIsVisibleInAlarmList,
             useDefaultSharedSettings: useDefaultSharedSettings,
             customSharedSettings: persistedCustomSharedSettings,
             scheduleConfigReferenceID: existingScheduleConfigReferenceID ?? id,

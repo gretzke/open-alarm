@@ -46,10 +46,6 @@ private struct AlarmHomeView: View {
     private let editorPartialDetent: PresentationDetent = .fraction(0.82)
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
-    private var visibleAlarms: [UserAlarm] {
-        alarmStore.alarms.filter(\.isVisibleInAlarmList)
-    }
-
     private func presentEditor(_ route: AlarmEditorRoute) {
         editorDetent = editorPartialDetent
         editorRoute = route
@@ -116,7 +112,7 @@ private struct AlarmHomeView: View {
                     .listRowBackground(Color.clear)
                 }
 
-                if visibleAlarms.isEmpty {
+                if alarmStore.alarms.isEmpty {
                     Section {
                         ContentUnavailableView(
                             L10n.alarmListEmptyTitle,
@@ -130,7 +126,7 @@ private struct AlarmHomeView: View {
                     }
                 } else {
                     Section {
-                        ForEach(visibleAlarms) { alarm in
+                        ForEach(alarmStore.alarms) { alarm in
                             AlarmRowView(
                                 alarm: alarm,
                                 now: now,

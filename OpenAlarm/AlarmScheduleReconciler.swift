@@ -302,19 +302,11 @@ public enum WakeUpCheckCoordinator {
     /// - wake-check is enabled for this alarm (first cycle), or
     /// - a wake-check session already exists (continue existing pipeline even if
     ///   user toggled settings after the first cycle started).
-    ///
-    /// But never enqueue when a confirm-awake marker is already pending: that
-    /// marker represents an explicit terminal user intent for the current cycle.
     public static func shouldEnqueuePipelineOnStopIntent(
         wakeUpCheckEnabledForAlarm: Bool,
-        hasActiveSession: Bool,
-        hasPendingConfirmation: Bool = false
+        hasActiveSession: Bool
     ) -> Bool {
-        guard !hasPendingConfirmation else {
-            return false
-        }
-
-        return hasActiveSession || wakeUpCheckEnabledForAlarm
+        hasActiveSession || wakeUpCheckEnabledForAlarm
     }
 
     /// Repeated cycles keep using the persisted snapshot captured when pipeline

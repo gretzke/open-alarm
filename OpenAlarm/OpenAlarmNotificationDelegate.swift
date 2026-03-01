@@ -49,16 +49,6 @@ final class OpenAlarmNotificationDelegate: NSObject, UIApplicationDelegate, UNUs
         AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingWakeQueues.pendingStartIDs)
         AlarmPersistence.savePendingWakeUpCheckConfirmIDs(pendingWakeQueues.pendingConfirmIDs)
 
-        // Confirm is terminal for the current wake-check cycle.
-        // Remove active session immediately so stale StopIntent callbacks cannot
-        // re-arm from a leftover "hasActiveSession" signal.
-        var sessions = AlarmPersistence.loadWakeUpCheckSessions()
-        if let session = sessions.first(where: { $0.alarmID == alarmID }) {
-            WakeUpCheckNotificationService().cancel(notificationID: session.notificationID)
-            sessions.removeAll(where: { $0.alarmID == alarmID })
-            AlarmPersistence.saveWakeUpCheckSessions(sessions)
-        }
-
         // Best effort immediate shutdown for already-armed wake-check alarms.
         try? AlarmManager.shared.stop(id: alarmID)
         try? AlarmManager.shared.cancel(id: alarmID)

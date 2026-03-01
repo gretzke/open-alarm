@@ -31,14 +31,10 @@ enum WakeUpCheckStopIntentArmService {
         let resolvedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
         let persistedSessions = AlarmPersistence.loadWakeUpCheckSessions(from: defaults)
         let previousSession = persistedSessions.first(where: { $0.alarmID == alarmID })
-        let hasPendingConfirmation = AlarmPersistence
-            .loadPendingWakeUpCheckConfirmIDs(from: defaults)
-            .contains(alarmID)
 
         let shouldStartCycle = WakeUpCheckCoordinator.shouldEnqueuePipelineOnStopIntent(
             wakeUpCheckEnabledForAlarm: resolvedSettings.wakeUpCheckEnabled,
-            hasActiveSession: previousSession != nil,
-            hasPendingConfirmation: hasPendingConfirmation
+            hasActiveSession: previousSession != nil
         )
 
         guard shouldStartCycle else {

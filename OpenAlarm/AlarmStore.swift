@@ -61,7 +61,6 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
         AlarmScheduleReconcileEntrypoint.register(handler: self)
 
         load()
-        clearLegacyShadowTrials()
         observeAlarmUpdates()
         refreshFromSystem()
 
@@ -487,108 +486,73 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
         save()
     }
 
-    func scheduleTryOut(sharedSettings _: SharedAlarmSettings, after seconds: TimeInterval) async throws {
-        // Try-out now intentionally reuses the exact same one-shot alarm
-        // treatment path as normal alarms (delete-after-use + default shared
-        // settings). The explicit `sharedSettings` argument is ignored so wake-
-        // check behavior cannot diverge via a separate shadow-trial pipeline.
-        try await scheduleTryOut(after: seconds)
-    }
-
-    func scheduleTryOut(after seconds: TimeInterval) async throws {
-        try await ensureAuthorizedForScheduling()
-
-        clearLegacyShadowTrials()
-        clearExistingHiddenTryOutAlarms()
-
-        let trialDate = Date.now.addingTimeInterval(max(1, seconds))
-        let trialID = UUID()
-
-        let trialDraft = AlarmDraft(
-            name: String(localized: "alarm_try_out_default_label"),
-            time: trialDate,
+    func scheduleTryOut(sharedSettings: SharedAlarmSettings, after seconds: TimeInterval) async throws {
+        let draft = AlarmDraft(
+            name: "",
+            time: .now,
             repeatDays: [],
             deleteAfterUse: true,
-            useDefaultSharedSettings: true,
-            customSharedSettings: defaultSharedSettings
+            useDefaultSharedSettings: false,
+            customSharedSettings: sharedSettings
         )
+        try await scheduleTryOut(from: draft, after: seconds)
+    }
 
-        var trialAlarm = trialDraft.toUserAlarm(
-            id: trialID,
+    func scheduleTryOut(from draft: AlarmDraft, after seconds: TimeInterval) async throws {
+        try await ensureAuthorizedForScheduling()
+
+        // Keep only one active trial alarm at a time.
+        var existingTrials = AlarmPersistence.loadShadowTrials(from: userDefaults)
+        if !existingTrials.isEmpty {
+            for trial in existingTrials {
+                try? alarmManager.stop(id: trial.id)
+                try? alarmManager.cancel(id: trial.id)
+                lastKnownAlarmState.removeValue(forKey: trial.id)
+                remoteStates.removeValue(forKey: trial.id)
+            }
+
+            var pending = AlarmPersistence.loadPendingSnoozeIDs(from: userDefaults)
+            for trial in existingTrials {
+                pending.remove(trial.id)
+            }
+            AlarmPersistence.savePendingSnoozeIDs(pending, to: userDefaults)
+
+            existingTrials.removeAll()
+            AlarmPersistence.saveShadowTrials(existingTrials, to: userDefaults)
+        }
+
+        let shadowID = UUID()
+
+        var trialDraft = draft
+        let trialSharedSettings = draft.resolvedSharedSettings(defaults: defaultSharedSettings)
+        trialDraft.useDefaultSharedSettings = false
+        trialDraft.customSharedSettings = trialSharedSettings
+
+        let baseAlarm = trialDraft.toUserAlarm(
+            id: shadowID,
             existingCreatedAt: nil,
             defaultSharedSettings: defaultSharedSettings,
-            existingNextTriggerOverrideDate: trialDate,
-            existingIsVisibleInAlarmList: false,
-            existingIsEnabled: true,
             existingSnoozeCount: 0
         )
-        trialAlarm.lifecycleState = .scheduled
+        let trialDate = Date.now.addingTimeInterval(seconds)
 
-        persistCommittedAlarm(trialAlarm)
+        let config = makeConfiguration(for: baseAlarm, schedule: .fixed(trialDate), isShadowTrial: true)
+        _ = try await alarmManager.schedule(id: shadowID, configuration: config)
 
-        do {
-            let config = makeConfiguration(for: trialAlarm, schedule: .fixed(trialDate), isShadowTrial: false)
-            let remote = try await scheduleAlarmWithUpdateFallback(
-                id: trialID,
-                configuration: config,
-                isUpdate: false
-            )
-            lastKnownAlarmState[trialID] = remote.state
-            remoteStates[trialID] = remote.state
-        } catch {
-            alarms.removeAll { $0.id == trialID }
-            save()
-            lastKnownAlarmState.removeValue(forKey: trialID)
-            remoteStates.removeValue(forKey: trialID)
-            throw error
-        }
-    }
-
-    private func clearExistingHiddenTryOutAlarms() {
-        let existingTryOutAlarms = alarms.filter { !$0.isVisibleInAlarmList }
-        guard !existingTryOutAlarms.isEmpty else {
-            return
-        }
-
-        for alarm in existingTryOutAlarms {
-            deleteAlarm(alarm)
-        }
-    }
-
-    private func clearLegacyShadowTrials() {
-        let legacyTrials = AlarmPersistence.loadShadowTrials(from: userDefaults)
-        guard !legacyTrials.isEmpty else {
-            return
-        }
-
-        let legacyTrialIDs = Set(legacyTrials.map(\.id))
-
-        for trialID in legacyTrialIDs {
-            try? alarmManager.stop(id: trialID)
-            try? alarmManager.cancel(id: trialID)
-            lastKnownAlarmState.removeValue(forKey: trialID)
-            remoteStates.removeValue(forKey: trialID)
-
-            if let session = wakeUpCheckSessionsByAlarmID.removeValue(forKey: trialID) {
-                wakeUpCheckNotificationService.cancel(notificationID: session.notificationID)
-            }
-        }
-
-        persistWakeUpCheckSessions()
-
-        var pendingSnooze = AlarmPersistence.loadPendingSnoozeIDs(from: userDefaults)
-        pendingSnooze.subtract(legacyTrialIDs)
-        AlarmPersistence.savePendingSnoozeIDs(pendingSnooze, to: userDefaults)
-
-        var pendingWakeStarts = AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: userDefaults)
-        pendingWakeStarts.subtract(legacyTrialIDs)
-        AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingWakeStarts, to: userDefaults)
-
-        var pendingWakeConfirm = AlarmPersistence.loadPendingWakeUpCheckConfirmIDs(from: userDefaults)
-        pendingWakeConfirm.subtract(legacyTrialIDs)
-        AlarmPersistence.savePendingWakeUpCheckConfirmIDs(pendingWakeConfirm, to: userDefaults)
-
-        AlarmPersistence.saveShadowTrials([], to: userDefaults)
+        var trials = AlarmPersistence.loadShadowTrials(from: userDefaults)
+        trials.append(ShadowTrialAlarm(
+            id: shadowID,
+            name: baseAlarm.name,
+            snoozeEnabled: trialSharedSettings.snoozeEnabled,
+            snoozeDurationMinutes: trialSharedSettings.snoozeDurationMinutes,
+            maxSnoozes: trialSharedSettings.maxSnoozes,
+            snoozeCount: 0,
+            wakeUpCheckEnabled: trialSharedSettings.wakeUpCheckEnabled,
+            lifecycleState: .scheduled,
+            createdAt: .now,
+            updatedAt: .now
+        ))
+        AlarmPersistence.saveShadowTrials(trials, to: userDefaults)
     }
 
     func lifecycleLabel(for state: AlarmLifecycleState) -> LocalizedStringKey {
@@ -753,19 +717,6 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
         return calendar.date(byAdding: .day, value: 1, to: todayCandidate)
     }
 
-    private func primaryRuntimeSchedule(
-        for alarm: UserAlarm,
-        referenceDate: Date
-    ) -> Alarm.Schedule {
-        if !alarm.isRepeating,
-           let oneShotOverrideDate = alarm.nextTriggerOverrideDate,
-           oneShotOverrideDate > referenceDate {
-            return .fixed(oneShotOverrideDate)
-        }
-
-        return alarm.schedule
-    }
-
     private func upsertAlarm(existingAlarm: UserAlarm?, draft: AlarmDraft, clearNextOverride: Bool = false) async throws {
         try await ensureAuthorizedForScheduling()
 
@@ -778,7 +729,6 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
             defaultSharedSettings: defaultSharedSettings,
             existingScheduleConfigReferenceID: existingAlarm?.scheduleConfigReferenceID,
             existingNextTriggerOverrideDate: existingAlarm?.nextTriggerOverrideDate,
-            existingIsVisibleInAlarmList: existingAlarm?.isVisibleInAlarmList ?? true,
             existingIsEnabled: existingAlarm?.isEnabled ?? true,
             existingSkipNextUntilDate: existingAlarm?.skipNextUntilDate,
             existingSnoozeCount: existingAlarm?.snoozeCount,
@@ -1297,8 +1247,7 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
 
         if alarm.isEnabled {
             do {
-                let schedule = primaryRuntimeSchedule(for: alarm, referenceDate: referenceDate)
-                let config = makeConfiguration(for: alarm, schedule: schedule, isShadowTrial: false)
+                let config = makeConfiguration(for: alarm, schedule: alarm.schedule, isShadowTrial: false)
                 let remote = try await scheduleAlarmWithUpdateFallback(
                     id: alarm.id,
                     configuration: config,
@@ -1541,13 +1490,9 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
 
         let alarm = alarms[alarmIndex]
         let resolvedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
-        let hasPendingConfirmation = AlarmPersistence
-            .loadPendingWakeUpCheckConfirmIDs(from: userDefaults)
-            .contains(alarmID)
         let shouldStartCycle = WakeUpCheckCoordinator.shouldEnqueuePipelineOnStopIntent(
             wakeUpCheckEnabledForAlarm: resolvedSettings.wakeUpCheckEnabled,
-            hasActiveSession: previousSession != nil,
-            hasPendingConfirmation: hasPendingConfirmation
+            hasActiveSession: previousSession != nil
         )
 
         guard shouldStartCycle else {
@@ -2266,17 +2211,92 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
         persistActiveNap(nil)
     }
 
-    private func handleShadowTrials(remoteByID _: [UUID: Alarm], pendingSnoozeIDs: inout Set<UUID>) {
-        let legacyTrialIDs = Set(AlarmPersistence.loadShadowTrials(from: userDefaults).map(\.id))
-        guard !legacyTrialIDs.isEmpty else {
-            return
+    private func handleShadowTrials(remoteByID: [UUID: Alarm], pendingSnoozeIDs: inout Set<UUID>) {
+        var trials = AlarmPersistence.loadShadowTrials(from: userDefaults)
+        var changed = false
+
+        for index in trials.indices.reversed() {
+            let trialID = trials[index].id
+            let previousState = lastKnownAlarmState[trialID]
+            let currentState = remoteByID[trialID]?.state
+
+            if let currentState {
+                lastKnownAlarmState[trialID] = currentState
+            } else {
+                lastKnownAlarmState.removeValue(forKey: trialID)
+            }
+
+            if isSnoozeTransitionState(currentState) {
+                pendingSnoozeIDs.remove(trialID)
+            }
+
+            if previousState == .alerting, currentState != .alerting {
+                if pendingSnoozeIDs.contains(trialID) {
+                    if trials[index].lifecycleState != .scheduled {
+                        trials[index].lifecycleState = .scheduled
+                        trials[index].updatedAt = .now
+                        changed = true
+                    }
+                    continue
+                }
+
+                if trials[index].snoozeEnabled,
+                   trials[index].snoozeCount > 0,
+                   isSnoozeTransitionState(currentState) {
+                    if trials[index].lifecycleState != .scheduled {
+                        trials[index].lifecycleState = .scheduled
+                        trials[index].updatedAt = .now
+                        changed = true
+                    }
+                    continue
+                }
+
+                if trials[index].wakeUpCheckEnabled {
+                    if trials[index].lifecycleState != .awaitingWakeCheck {
+                        trials[index].lifecycleState = .awaitingWakeCheck
+                        trials[index].updatedAt = .now
+                        changed = true
+                    }
+                    continue
+                }
+
+                try? alarmManager.stop(id: trialID)
+                try? alarmManager.cancel(id: trialID)
+                trials.remove(at: index)
+                pendingSnoozeIDs.remove(trialID)
+                changed = true
+                continue
+            }
+
+            if let currentState {
+                switch currentState {
+                case .alerting:
+                    if trials[index].lifecycleState != .alerting {
+                        trials[index].lifecycleState = .alerting
+                        trials[index].updatedAt = .now
+                        changed = true
+                    }
+                case .scheduled, .countdown, .paused:
+                    if trials[index].lifecycleState != .scheduled {
+                        trials[index].lifecycleState = .scheduled
+                        trials[index].updatedAt = .now
+                        changed = true
+                    }
+                @unknown default:
+                    break
+                }
+            }
+
+            if currentState == nil, trials[index].lifecycleState != .awaitingWakeCheck {
+                trials.remove(at: index)
+                pendingSnoozeIDs.remove(trialID)
+                changed = true
+            }
         }
 
-        // Legacy cleanup only: try-out alarms now run through the primary
-        // `UserAlarm` path, so shadow trials must not continue a parallel wake-
-        // check lifecycle.
-        pendingSnoozeIDs.subtract(legacyTrialIDs)
-        clearLegacyShadowTrials()
+        if changed {
+            AlarmPersistence.saveShadowTrials(trials, to: userDefaults)
+        }
     }
 
     private func isSnoozeTransitionState(_ state: Alarm.State?) -> Bool {
