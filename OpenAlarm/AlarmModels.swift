@@ -291,6 +291,52 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
     var isTryOut: Bool { alarmType == .tryOut }
     var isPaused: Bool { pausedRemainingSeconds != nil }
 
+    /// Remaining seconds for a nap alarm (paused or counting down to fixedTriggerDate).
+    func remainingSeconds(referenceDate: Date = .now) -> TimeInterval {
+        if let pausedRemainingSeconds {
+            return max(0, pausedRemainingSeconds)
+        }
+        guard let target = fixedTriggerDate else { return 0 }
+        return max(0, target.timeIntervalSince(referenceDate))
+    }
+
+    /// Creates a nap-typed UserAlarm from a NapDraft.
+    static func makeNap(
+        from draft: NapDraft,
+        defaultSharedSettings: SharedAlarmSettings,
+        targetDate: Date,
+        now: Date = .now
+    ) -> UserAlarm {
+        let customSettings = draft.useDefaultSharedSettings ? defaultSharedSettings : draft.customSharedSettings
+        let id = UUID()
+        var alarm = UserAlarm(
+            id: id,
+            name: "",
+            hour: 0,
+            minute: 0,
+            repeatDays: [],
+            deleteAfterUse: true,
+            alarmType: .nap,
+            fixedTriggerDate: targetDate,
+            durationMinutes: draft.totalMinutes,
+            pausedRemainingSeconds: nil,
+            useDefaultSharedSettings: draft.useDefaultSharedSettings,
+            customSharedSettings: customSettings,
+            scheduleConfigReferenceID: id,
+            nextTriggerOverrideDate: nil,
+            isEnabled: true,
+            skipNextUntilDate: nil,
+            snoozeCount: 0,
+            temporaryScheduleOverride: nil,
+            manualScheduleQueue: [],
+            lifecycleState: .scheduled,
+            createdAt: now,
+            updatedAt: now
+        )
+        AlarmTypePolicy.normalizeOnWrite(&alarm)
+        return alarm
+    }
+
     var canonicalScheduleSpec: AlarmCanonicalScheduleSpec {
         AlarmCanonicalScheduleSpec(
             weekdayNumbers: sortedRepeatDays.map(\.rawValue),
@@ -431,34 +477,6 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         try container.encode(lifecycleState, forKey: .lifecycleState)
         try container.encode(createdAt, forKey: .createdAt)
         try container.encode(updatedAt, forKey: .updatedAt)
-    }
-}
-
-struct NapAlarmSession: Identifiable, Codable, Equatable, Sendable {
-    var id: UUID
-    var durationMinutes: Int
-    var targetDate: Date
-    var pausedRemainingSeconds: TimeInterval?
-    var useDefaultSharedSettings: Bool
-    var customSharedSettings: SharedAlarmSettings
-    var snoozeCount: Int
-    var createdAt: Date
-    var updatedAt: Date
-
-    var isPaused: Bool {
-        pausedRemainingSeconds != nil
-    }
-
-    func resolvedSharedSettings(defaults: SharedAlarmSettings) -> SharedAlarmSettings {
-        useDefaultSharedSettings ? defaults : customSharedSettings
-    }
-
-    func remainingSeconds(referenceDate: Date = .now) -> TimeInterval {
-        if let pausedRemainingSeconds {
-            return max(0, pausedRemainingSeconds)
-        }
-
-        return max(0, targetDate.timeIntervalSince(referenceDate))
     }
 }
 

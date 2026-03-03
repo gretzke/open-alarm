@@ -10,7 +10,16 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
     @Published var defaultSharedSettings: SharedAlarmSettings
     @Published var defaultNapDurationMinutes: Int
     @Published var testingModeEnabled: Bool
-    @Published private(set) var activeNap: NapAlarmSession?
+
+    /// The single active nap alarm, derived from the unified alarms array.
+    var activeNap: UserAlarm? {
+        alarms.first { $0.isNap }
+    }
+
+    /// Alarms visible in the main list (excludes nap and tryOut).
+    var regularAlarms: [UserAlarm] {
+        alarms.filter { $0.alarmType == .regular }
+    }
     @Published private(set) var permissionStatus: AlarmPermissionStatus
     @Published private(set) var notificationPermissionStatus: NotificationPermissionStatus = .notDetermined
     @Published private(set) var remoteStates: [UUID: Alarm.State] = [:]
@@ -45,7 +54,6 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
         self.defaultSharedSettings = AlarmPersistence.loadDefaultSharedSettings(from: userDefaults)
         self.defaultNapDurationMinutes = AlarmPersistence.loadDefaultNapDurationMinutes(from: userDefaults)
         self.testingModeEnabled = AlarmPersistence.loadTestingModeEnabled(from: userDefaults)
-        self.activeNap = AlarmPersistence.loadActiveNapSession(from: userDefaults)
         self.permissionStatus = self.permissionService.currentStatus()
         self.wakeUpCheckSessionsByAlarmID = Dictionary(uniqueKeysWithValues: AlarmPersistence.loadWakeUpCheckSessions(from: userDefaults).map { ($0.alarmID, $0) })
 
@@ -145,17 +153,6 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
             changed = true
         }
 
-        if var nap = activeNap, nap.useDefaultSharedSettings {
-            nap.customSharedSettings = settings
-            nap.updatedAt = .now
-            activeNap = nap
-            AlarmPersistence.saveActiveNapSession(nap, to: userDefaults)
-
-            Task { @MainActor [weak self] in
-                await self?.rescheduleActiveNap()
-            }
-        }
-
         if changed {
             alarms = sortAlarms(alarms)
             save()
@@ -221,16 +218,11 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
         let now = Date.now
         let targetDate = now.addingTimeInterval(TimeInterval(draft.totalMinutes * 60))
 
-        let nap = NapAlarmSession(
-            id: UUID(),
-            durationMinutes: draft.totalMinutes,
+        let nap = UserAlarm.makeNap(
+            from: draft,
+            defaultSharedSettings: defaultSharedSettings,
             targetDate: targetDate,
-            pausedRemainingSeconds: nil,
-            useDefaultSharedSettings: draft.useDefaultSharedSettings,
-            customSharedSettings: draft.useDefaultSharedSettings ? defaultSharedSettings : draft.customSharedSettings,
-            snoozeCount: 0,
-            createdAt: now,
-            updatedAt: now
+            now: now
         )
 
         do {
@@ -238,73 +230,79 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
             let remoteAlarm = try await alarmManager.schedule(id: nap.id, configuration: config)
             lastKnownAlarmState[nap.id] = remoteAlarm.state
             remoteStates[nap.id] = remoteAlarm.state
-            activeNap = nap
-            AlarmPersistence.saveActiveNapSession(nap, to: userDefaults)
+            alarms.append(nap)
+            alarms = sortAlarms(alarms)
+            save()
         } catch {
             throw AlarmStoreError.scheduleFailed
         }
     }
 
     func pauseNap() {
-        guard var nap = activeNap, !nap.isPaused else {
+        guard let napIndex = alarms.firstIndex(where: { $0.isNap }),
+              !alarms[napIndex].isPaused,
+              let target = alarms[napIndex].fixedTriggerDate else {
             return
         }
 
-        let remaining = max(1, nap.targetDate.timeIntervalSinceNow)
+        let remaining = max(1, target.timeIntervalSinceNow)
 
         do {
-            try alarmManager.cancel(id: nap.id)
+            try alarmManager.cancel(id: alarms[napIndex].id)
         } catch {
             return
         }
 
-        nap.pausedRemainingSeconds = remaining
-        nap.updatedAt = .now
-        activeNap = nap
-        AlarmPersistence.saveActiveNapSession(nap, to: userDefaults)
-        remoteStates.removeValue(forKey: nap.id)
-        lastKnownAlarmState[nap.id] = .paused
+        alarms[napIndex].pausedRemainingSeconds = remaining
+        alarms[napIndex].updatedAt = .now
+        save()
+        remoteStates.removeValue(forKey: alarms[napIndex].id)
+        lastKnownAlarmState[alarms[napIndex].id] = .paused
     }
 
     func resumeNap() async {
-        guard var nap = activeNap, let pausedRemaining = nap.pausedRemainingSeconds else {
+        guard let napIndex = alarms.firstIndex(where: { $0.isNap }),
+              let pausedRemaining = alarms[napIndex].pausedRemainingSeconds else {
             return
         }
 
+        let napID = alarms[napIndex].id
         let nextTarget = Date.now.addingTimeInterval(max(1, pausedRemaining))
 
         do {
-            let config = makeConfiguration(for: nap, schedule: .fixed(nextTarget))
-            let remoteAlarm = try await alarmManager.schedule(id: nap.id, configuration: config)
-            nap.targetDate = nextTarget
-            nap.pausedRemainingSeconds = nil
-            nap.updatedAt = .now
-            activeNap = nap
-            AlarmPersistence.saveActiveNapSession(nap, to: userDefaults)
-            remoteStates[nap.id] = remoteAlarm.state
-            lastKnownAlarmState[nap.id] = remoteAlarm.state
+            var updatedNap = alarms[napIndex]
+            updatedNap.fixedTriggerDate = nextTarget
+            updatedNap.pausedRemainingSeconds = nil
+            updatedNap.updatedAt = .now
+            let config = makeConfiguration(for: updatedNap, schedule: .fixed(nextTarget))
+            let remoteAlarm = try await alarmManager.schedule(id: napID, configuration: config)
+            alarms[napIndex] = updatedNap
+            save()
+            remoteStates[napID] = remoteAlarm.state
+            lastKnownAlarmState[napID] = remoteAlarm.state
         } catch {
             // Keep paused state when resume fails.
         }
     }
 
     func deleteNap() {
-        guard let nap = activeNap else {
+        guard let napIndex = alarms.firstIndex(where: { $0.isNap }) else {
             return
         }
 
-        try? alarmManager.stop(id: nap.id)
-        try? alarmManager.cancel(id: nap.id)
+        let napID = alarms[napIndex].id
+        try? alarmManager.stop(id: napID)
+        try? alarmManager.cancel(id: napID)
 
         var pending = AlarmPersistence.loadPendingSnoozeIDs(from: userDefaults)
-        if pending.remove(nap.id) != nil {
+        if pending.remove(napID) != nil {
             AlarmPersistence.savePendingSnoozeIDs(pending, to: userDefaults)
         }
 
-        activeNap = nil
-        AlarmPersistence.saveActiveNapSession(nil, to: userDefaults)
-        remoteStates.removeValue(forKey: nap.id)
-        lastKnownAlarmState.removeValue(forKey: nap.id)
+        alarms.remove(at: napIndex)
+        save()
+        remoteStates.removeValue(forKey: napID)
+        lastKnownAlarmState.removeValue(forKey: napID)
     }
 
     func createAlarm(from draft: AlarmDraft) async throws {
@@ -771,12 +769,15 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
     }
 
     private func rescheduleActiveNap() async {
-        guard let nap = activeNap, !nap.isPaused else {
+        guard let napIndex = alarms.firstIndex(where: { $0.isNap }),
+              !alarms[napIndex].isPaused,
+              let target = alarms[napIndex].fixedTriggerDate else {
             return
         }
 
+        let nap = alarms[napIndex]
         do {
-            let config = makeConfiguration(for: nap, schedule: .fixed(nap.targetDate))
+            let config = makeConfiguration(for: nap, schedule: .fixed(target))
             let remote = try await alarmManager.schedule(id: nap.id, configuration: config)
             lastKnownAlarmState[nap.id] = remote.state
             remoteStates[nap.id] = remote.state
@@ -1247,34 +1248,19 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
         configReferenceID: UUID? = nil
     ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
         let sharedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
+        let title = alarm.isNap
+            ? String(localized: "nap_default_alarm_label")
+            : resolvedAlarmTitle(from: alarm.name)
 
         return makeConfiguration(
             runtimeAlarmID: runtimeAlarmID ?? alarm.id,
             configReferenceID: configReferenceID ?? alarm.scheduleConfigReferenceID,
-            title: resolvedAlarmTitle(from: alarm.name),
+            title: title,
             schedule: schedule,
             sharedSettings: sharedSettings,
             snoozeCount: alarm.snoozeCount,
             isShadowTrial: alarm.isTryOut,
             forceDisableSnooze: forceDisableSnooze
-        )
-    }
-
-    private func makeConfiguration(
-        for nap: NapAlarmSession,
-        schedule: Alarm.Schedule
-    ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
-        let sharedSettings = nap.resolvedSharedSettings(defaults: defaultSharedSettings)
-
-        return makeConfiguration(
-            runtimeAlarmID: nap.id,
-            configReferenceID: nap.id,
-            title: String(localized: "nap_default_alarm_label"),
-            schedule: schedule,
-            sharedSettings: sharedSettings,
-            snoozeCount: nap.snoozeCount,
-            isShadowTrial: false,
-            forceDisableSnooze: false
         )
     }
 
@@ -1882,7 +1868,9 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
             changed = true
         }
 
-        _ = handleActiveNap(remoteByID: remoteByID, pendingSnoozeIDs: &pendingSnoozeIDs)
+        if handleActiveNap(remoteByID: remoteByID, pendingSnoozeIDs: &pendingSnoozeIDs, updated: &updated) {
+            changed = true
+        }
 
         if changed {
             alarms = sortAlarms(updated)
@@ -2114,71 +2102,77 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
     }
 
     @discardableResult
-    private func handleActiveNap(remoteByID: [UUID: Alarm], pendingSnoozeIDs: inout Set<UUID>) -> Bool {
-        guard var nap = activeNap else {
+    /// Reconciles the active nap alarm's state against remote AlarmKit state.
+    /// Handles remote-initiated pause/resume and expiry cleanup.
+    /// Returns true if `updated` was mutated.
+    private func handleActiveNap(
+        remoteByID: [UUID: Alarm],
+        pendingSnoozeIDs: inout Set<UUID>,
+        updated: inout [UserAlarm]
+    ) -> Bool {
+        guard let napIndex = updated.firstIndex(where: { $0.isNap }) else {
             return false
         }
 
-        let previousState = lastKnownAlarmState[nap.id]
-        let currentState = remoteByID[nap.id]?.state
+        var nap = updated[napIndex]
+        let napID = nap.id
+        let previousState = lastKnownAlarmState[napID]
+        let currentState = remoteByID[napID]?.state
 
         if let currentState {
-            lastKnownAlarmState[nap.id] = currentState
-            remoteStates[nap.id] = currentState
+            lastKnownAlarmState[napID] = currentState
+            remoteStates[napID] = currentState
         } else {
-            remoteStates.removeValue(forKey: nap.id)
+            remoteStates.removeValue(forKey: napID)
             if nap.isPaused {
-                lastKnownAlarmState[nap.id] = .paused
+                lastKnownAlarmState[napID] = .paused
             } else {
-                lastKnownAlarmState.removeValue(forKey: nap.id)
+                lastKnownAlarmState.removeValue(forKey: napID)
             }
         }
 
+        // Nap completed (alert → non-alert transition)
         if previousState == .alerting, currentState != .alerting {
-            clearActiveNap(pendingSnoozeIDs: &pendingSnoozeIDs)
+            pendingSnoozeIDs.remove(napID)
+            remoteStates.removeValue(forKey: napID)
+            lastKnownAlarmState.removeValue(forKey: napID)
+            updated.remove(at: napIndex)
             return true
         }
 
+        // Remote-initiated pause detection
         if currentState == .paused {
-            if nap.pausedRemainingSeconds == nil {
-                nap.pausedRemainingSeconds = max(1, nap.targetDate.timeIntervalSinceNow)
+            if nap.pausedRemainingSeconds == nil, let target = nap.fixedTriggerDate {
+                nap.pausedRemainingSeconds = max(1, target.timeIntervalSinceNow)
                 nap.updatedAt = .now
-                persistActiveNap(nap)
+                updated[napIndex] = nap
                 return true
             }
             return false
         }
 
+        // Remote-initiated resume detection
         if nap.isPaused, (currentState == .countdown || currentState == .scheduled) {
             nap.pausedRemainingSeconds = nil
-            nap.targetDate = max(Date.now, nap.targetDate)
+            if let target = nap.fixedTriggerDate {
+                nap.fixedTriggerDate = max(Date.now, target)
+            }
             nap.updatedAt = .now
-            persistActiveNap(nap)
+            updated[napIndex] = nap
             return true
         }
 
-        if !nap.isPaused, currentState == nil, nap.targetDate <= .now {
-            clearActiveNap(pendingSnoozeIDs: &pendingSnoozeIDs)
+        // Nap expired (target passed, no remote alarm left)
+        if !nap.isPaused, currentState == nil,
+           let target = nap.fixedTriggerDate, target <= .now {
+            pendingSnoozeIDs.remove(napID)
+            remoteStates.removeValue(forKey: napID)
+            lastKnownAlarmState.removeValue(forKey: napID)
+            updated.remove(at: napIndex)
             return true
         }
 
         return false
-    }
-
-    private func persistActiveNap(_ nap: NapAlarmSession?) {
-        activeNap = nap
-        AlarmPersistence.saveActiveNapSession(nap, to: userDefaults)
-    }
-
-    private func clearActiveNap(pendingSnoozeIDs: inout Set<UUID>) {
-        guard let nap = activeNap else {
-            return
-        }
-
-        pendingSnoozeIDs.remove(nap.id)
-        remoteStates.removeValue(forKey: nap.id)
-        lastKnownAlarmState.removeValue(forKey: nap.id)
-        persistActiveNap(nil)
     }
 
     private func isSnoozeTransitionState(_ state: Alarm.State?) -> Bool {

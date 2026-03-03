@@ -112,7 +112,7 @@ private struct AlarmHomeView: View {
                     .listRowBackground(Color.clear)
                 }
 
-                if alarmStore.alarms.isEmpty {
+                if alarmStore.regularAlarms.isEmpty {
                     Section {
                         ContentUnavailableView(
                             L10n.alarmListEmptyTitle,
@@ -126,7 +126,7 @@ private struct AlarmHomeView: View {
                     }
                 } else {
                     Section {
-                        ForEach(alarmStore.alarms) { alarm in
+                        ForEach(alarmStore.regularAlarms) { alarm in
                             AlarmRowView(
                                 alarm: alarm,
                                 now: now,
@@ -259,7 +259,7 @@ private struct NapBannerView: View {
 }
 
 private struct ActiveNapRowView: View {
-    let nap: NapAlarmSession
+    let nap: UserAlarm
     let now: Date
     let onPause: () -> Void
     let onContinue: () -> Void

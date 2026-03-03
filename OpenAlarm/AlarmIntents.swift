@@ -121,6 +121,14 @@ struct SnoozeIntent: LiveActivityIntent {
 
             alarm.snoozeCount += 1
             alarm.updatedAt = .now
+
+            // For nap alarms, update the countdown target and clear pause state.
+            if alarm.isNap {
+                let snoozeSeconds = snoozeInterval(for: effectiveSharedSettings.snoozeDurationMinutes)
+                alarm.fixedTriggerDate = Date.now.addingTimeInterval(snoozeSeconds)
+                alarm.pausedRemainingSeconds = nil
+            }
+
             alarms[index] = alarm
             AlarmPersistence.saveUserAlarms(alarms, to: defaults)
 
@@ -156,44 +164,6 @@ struct SnoozeIntent: LiveActivityIntent {
             return .result()
         }
 
-        if var nap = AlarmPersistence.loadActiveNapSession(from: defaults), nap.id == id {
-            let effectiveSharedSettings = nap.resolvedSharedSettings(defaults: defaultSharedSettings)
-
-            guard effectiveSharedSettings.canSnoozeAgain(currentCount: nap.snoozeCount) else {
-                pending.remove(id)
-                AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
-                try AlarmManager.shared.stop(id: id)
-                await reconcileSchedule()
-                return .result()
-            }
-
-            nap.snoozeCount += 1
-            nap.pausedRemainingSeconds = nil
-            nap.updatedAt = .now
-
-            let snoozeDate = Date.now.addingTimeInterval(snoozeInterval(for: effectiveSharedSettings.snoozeDurationMinutes))
-            nap.targetDate = snoozeDate
-            AlarmPersistence.saveActiveNapSession(nap, to: defaults)
-
-            do {
-                let config = makeConfiguration(for: nap, schedule: .fixed(snoozeDate), defaultSharedSettings: defaultSharedSettings)
-                _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
-                try AlarmManager.shared.stop(id: id)
-            } catch {
-                do {
-                    try AlarmManager.shared.stop(id: id)
-                    let config = makeConfiguration(for: nap, schedule: .fixed(snoozeDate), defaultSharedSettings: defaultSharedSettings)
-                    _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
-                } catch {
-                    pending.remove(id)
-                    AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
-                    try? AlarmManager.shared.countdown(id: id)
-                }
-            }
-            await reconcileSchedule()
-            return .result()
-        }
-
         pending.remove(id)
         AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
         try AlarmManager.shared.stop(id: id)
@@ -208,9 +178,12 @@ struct SnoozeIntent: LiveActivityIntent {
     ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
         let sharedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
         let showSnoozeButton = sharedSettings.canSnoozeAgain(currentCount: alarm.snoozeCount)
+        let title = alarm.isNap
+            ? String(localized: "nap_default_alarm_label")
+            : resolvedAlarmTitle(from: alarm.name)
 
         let alertPresentation = AlarmPresentation.Alert(
-            title: localizedResource(from: resolvedAlarmTitle(from: alarm.name)),
+            title: localizedResource(from: title),
             stopButton: .stopButton,
             secondaryButton: showSnoozeButton ? .snoozeButton : nil,
             secondaryButtonBehavior: showSnoozeButton ? .custom : nil
@@ -240,50 +213,6 @@ struct SnoozeIntent: LiveActivityIntent {
             schedule: schedule,
             attributes: attributes,
             stopIntent: StopIntent(alarmID: alarm.id.uuidString),
-            secondaryIntent: secondaryIntent,
-            sound: .default
-        )
-    }
-
-    private func makeConfiguration(
-        for nap: NapAlarmSession,
-        schedule: Alarm.Schedule,
-        defaultSharedSettings: SharedAlarmSettings
-    ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
-        let sharedSettings = nap.resolvedSharedSettings(defaults: defaultSharedSettings)
-        let showSnoozeButton = sharedSettings.canSnoozeAgain(currentCount: nap.snoozeCount)
-
-        let alertPresentation = AlarmPresentation.Alert(
-            title: localizedResource(from: String(localized: "nap_default_alarm_label")),
-            stopButton: .stopButton,
-            secondaryButton: showSnoozeButton ? .snoozeButton : nil,
-            secondaryButtonBehavior: showSnoozeButton ? .custom : nil
-        )
-
-        let presentation = AlarmPresentation(alert: alertPresentation)
-        let attributes = AlarmAttributes(
-            presentation: presentation,
-            metadata: OpenAlarmMetadata(source: nap.id.uuidString, isShadowTrial: false),
-            tintColor: Color(red: 100 / 255, green: 210 / 255, blue: 255 / 255)
-        )
-
-        let secondaryIntent: (any LiveActivityIntent)? = if showSnoozeButton {
-            SnoozeIntent(alarmID: nap.id.uuidString)
-        } else {
-            nil
-        }
-
-        let countdownDuration: Alarm.CountdownDuration? = if showSnoozeButton {
-            .init(preAlert: nil, postAlert: snoozeInterval(for: sharedSettings.snoozeDurationMinutes))
-        } else {
-            nil
-        }
-
-        return .init(
-            countdownDuration: countdownDuration,
-            schedule: schedule,
-            attributes: attributes,
-            stopIntent: StopIntent(alarmID: nap.id.uuidString),
             secondaryIntent: secondaryIntent,
             sound: .default
         )

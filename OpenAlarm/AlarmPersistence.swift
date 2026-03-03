@@ -10,7 +10,6 @@ enum AlarmPersistence {
     static let wakeUpCheckSessionsKey = "OPENALARM_WAKE_CHECK_SESSIONS_V1"
     static let testingModeEnabledKey = "OPENALARM_TESTING_MODE_ENABLED_V1"
     static let defaultNapDurationMinutesKey = "OPENALARM_DEFAULT_NAP_DURATION_MINUTES_V1"
-    static let activeNapSessionKey = "OPENALARM_ACTIVE_NAP_SESSION_V1"
 
     static func loadUserAlarms(from defaults: UserDefaults = .standard) -> [UserAlarm] {
         guard let data = defaults.data(forKey: userAlarmsKey) else {
@@ -140,31 +139,5 @@ enum AlarmPersistence {
 
     static func saveDefaultNapDurationMinutes(_ minutes: Int, to defaults: UserDefaults = .standard) {
         defaults.set(max(1, minutes), forKey: defaultNapDurationMinutesKey)
-    }
-
-    static func loadActiveNapSession(from defaults: UserDefaults = .standard) -> NapAlarmSession? {
-        guard let data = defaults.data(forKey: activeNapSessionKey) else {
-            return nil
-        }
-
-        do {
-            return try JSONDecoder().decode(NapAlarmSession.self, from: data)
-        } catch {
-            return nil
-        }
-    }
-
-    static func saveActiveNapSession(_ nap: NapAlarmSession?, to defaults: UserDefaults = .standard) {
-        guard let nap else {
-            defaults.removeObject(forKey: activeNapSessionKey)
-            return
-        }
-
-        do {
-            let data = try JSONEncoder().encode(nap)
-            defaults.set(data, forKey: activeNapSessionKey)
-        } catch {
-            defaults.removeObject(forKey: activeNapSessionKey)
-        }
     }
 }
