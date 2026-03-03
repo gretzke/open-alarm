@@ -205,7 +205,7 @@ enum WakeUpCheckStopIntentArmService {
         let presentation = AlarmPresentation(alert: alertPresentation)
         let attributes = AlarmAttributes(
             presentation: presentation,
-            metadata: OpenAlarmMetadata(source: alarm.scheduleConfigReferenceID.uuidString, isShadowTrial: false),
+            metadata: OpenAlarmMetadata(source: alarm.scheduleConfigReferenceID.uuidString, isShadowTrial: alarm.isTryOut),
             tintColor: OAColor.actionCyan
         )
 

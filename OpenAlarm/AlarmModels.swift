@@ -622,3 +622,31 @@ extension Collection where Element == AlarmWeekday {
             .joined(separator: " ")
     }
 }
+
+// MARK: - Typed runtime schedule resolver
+
+/// Resolves the correct `Alarm.Schedule` for runtime scheduling based on alarm type.
+///
+/// Regular alarms use the canonical relative schedule (hour/minute/weekdays).
+/// Nap and tryOut alarms use their `fixedTriggerDate` as a one-shot fixed schedule.
+/// This prevents one-shot types from being re-armed with a wrong relative schedule
+/// during runtime convergence or wake-check completion.
+enum AlarmScheduleResolver {
+    /// Returns the appropriate runtime schedule for an alarm.
+    ///
+    /// - For nap/tryOut: returns `.fixed(fixedTriggerDate)` when available.
+    /// - For regular (or nap/tryOut without fixedTriggerDate): returns `alarm.schedule`.
+    static func runtimeSchedule(for alarm: UserAlarm) -> Alarm.Schedule {
+        switch alarm.alarmType {
+        case .nap, .tryOut:
+            if let fixedDate = alarm.fixedTriggerDate {
+                return .fixed(fixedDate)
+            }
+            // Fallback: should not happen for well-formed nap/tryOut, but
+            // degrade gracefully to canonical schedule.
+            return alarm.schedule
+        case .regular:
+            return alarm.schedule
+        }
+    }
+}

@@ -286,23 +286,45 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
     }
 
     func deleteNap() {
-        guard let napIndex = alarms.firstIndex(where: { $0.isNap }) else {
+        let napAlarms = alarms.filter { $0.isNap }
+        guard !napAlarms.isEmpty else {
             return
         }
 
-        let napID = alarms[napIndex].id
-        try? alarmManager.stop(id: napID)
-        try? alarmManager.cancel(id: napID)
+        var pendingSnooze = AlarmPersistence.loadPendingSnoozeIDs(from: userDefaults)
+        var pendingWakeStarts = AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: userDefaults)
+        var pendingWakeConfirm = AlarmPersistence.loadPendingWakeUpCheckConfirmIDs(from: userDefaults)
+        var wakeSessionsChanged = false
 
-        var pending = AlarmPersistence.loadPendingSnoozeIDs(from: userDefaults)
-        if pending.remove(napID) != nil {
-            AlarmPersistence.savePendingSnoozeIDs(pending, to: userDefaults)
+        // Singleton hardening: remove ALL nap entries, not just the first.
+        for nap in napAlarms {
+            let napID = nap.id
+            try? alarmManager.stop(id: napID)
+            try? alarmManager.cancel(id: napID)
+
+            _ = pendingSnooze.remove(napID)
+            _ = pendingWakeStarts.remove(napID)
+            _ = pendingWakeConfirm.remove(napID)
+
+            if let session = wakeUpCheckSessionsByAlarmID.removeValue(forKey: napID) {
+                wakeUpCheckNotificationService.cancel(notificationID: session.notificationID)
+                wakeSessionsChanged = true
+            }
+
+            remoteStates.removeValue(forKey: napID)
+            lastKnownAlarmState.removeValue(forKey: napID)
         }
 
-        alarms.remove(at: napIndex)
+        alarms.removeAll { $0.isNap }
+
+        AlarmPersistence.savePendingSnoozeIDs(pendingSnooze, to: userDefaults)
+        AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingWakeStarts, to: userDefaults)
+        AlarmPersistence.savePendingWakeUpCheckConfirmIDs(pendingWakeConfirm, to: userDefaults)
+        if wakeSessionsChanged {
+            persistWakeUpCheckSessions()
+        }
+
         save()
-        remoteStates.removeValue(forKey: napID)
-        lastKnownAlarmState.removeValue(forKey: napID)
     }
 
     func createAlarm(from draft: AlarmDraft) async throws {
@@ -1040,10 +1062,75 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
     /// opportunity (app open, callback stream, refresh) to keep scheduling
     /// deterministic even after missed callbacks or device restarts.
     private func reconcileAllAlarmSchedules(referenceDate: Date = .now) async {
+        // Stale one-shot cleanup: remove expired nap/tryOut alarms that have no
+        // runtime entry and whose fixedTriggerDate has passed. This catches cases
+        // where the app was not running when the alarm fired (cold path).
+        cleanupStaleOneShotAlarms(referenceDate: referenceDate)
+
         let alarmIDs = alarms.map(\.id)
         for alarmID in alarmIDs {
             await reconcileSchedulingForAlarm(alarmID, referenceDate: referenceDate)
         }
+    }
+
+    /// Removes expired nap/tryOut alarms that have no runtime entry.
+    ///
+    /// This handles the cold-start case where a one-shot alarm fired while the
+    /// app was not running, so the normal alerting→non-alerting state transition
+    /// was never observed.
+    private func cleanupStaleOneShotAlarms(referenceDate: Date = .now) {
+        let runtimeIDs = runtimeAlarmIDsSnapshot() ?? []
+
+        let staleOneShots = alarms.filter { alarm in
+            guard alarm.alarmType == .nap || alarm.alarmType == .tryOut else {
+                return false
+            }
+            guard let fixedDate = alarm.fixedTriggerDate, fixedDate <= referenceDate else {
+                return false
+            }
+            // If runtime still has the alarm (e.g. alerting), don't clean up yet.
+            return !runtimeIDs.contains(alarm.id)
+        }
+
+        guard !staleOneShots.isEmpty else {
+            return
+        }
+
+        var pendingSnooze = AlarmPersistence.loadPendingSnoozeIDs(from: userDefaults)
+        var pendingWakeStarts = AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: userDefaults)
+        var pendingWakeConfirm = AlarmPersistence.loadPendingWakeUpCheckConfirmIDs(from: userDefaults)
+        var wakeSessionsChanged = false
+
+        let staleIDs = Set(staleOneShots.map(\.id))
+
+        for alarm in staleOneShots {
+            let id = alarm.id
+            try? alarmManager.stop(id: id)
+            try? alarmManager.cancel(id: id)
+
+            _ = pendingSnooze.remove(id)
+            _ = pendingWakeStarts.remove(id)
+            _ = pendingWakeConfirm.remove(id)
+
+            if let session = wakeUpCheckSessionsByAlarmID.removeValue(forKey: id) {
+                wakeUpCheckNotificationService.cancel(notificationID: session.notificationID)
+                wakeSessionsChanged = true
+            }
+
+            remoteStates.removeValue(forKey: id)
+            lastKnownAlarmState.removeValue(forKey: id)
+        }
+
+        alarms.removeAll { staleIDs.contains($0.id) }
+
+        AlarmPersistence.savePendingSnoozeIDs(pendingSnooze, to: userDefaults)
+        AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingWakeStarts, to: userDefaults)
+        AlarmPersistence.savePendingWakeUpCheckConfirmIDs(pendingWakeConfirm, to: userDefaults)
+        if wakeSessionsChanged {
+            persistWakeUpCheckSessions()
+        }
+
+        save()
     }
 
     private struct AlarmDeterministicReconcilePlan {
@@ -1219,9 +1306,15 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
             return
         }
 
+        // Paused naps must not be re-armed by reconcile; resume handles re-scheduling.
+        if alarm.isPaused {
+            return
+        }
+
         if alarm.isEnabled {
             do {
-                let config = makeConfiguration(for: alarm, schedule: alarm.schedule)
+                let resolvedSchedule = AlarmScheduleResolver.runtimeSchedule(for: alarm)
+                let config = makeConfiguration(for: alarm, schedule: resolvedSchedule)
                 let remote = try await scheduleAlarmWithUpdateFallback(
                     id: alarm.id,
                     configuration: config,
@@ -1629,7 +1722,8 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
             save()
 
             do {
-                let config = makeConfiguration(for: alarm, schedule: alarm.schedule)
+                let resolvedSchedule = AlarmScheduleResolver.runtimeSchedule(for: alarm)
+                let config = makeConfiguration(for: alarm, schedule: resolvedSchedule)
                 let remote = try await scheduleAlarmWithUpdateFallback(
                     id: alarm.id,
                     configuration: config,
