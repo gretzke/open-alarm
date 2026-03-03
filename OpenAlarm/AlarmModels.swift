@@ -13,6 +13,25 @@ struct OpenAlarmMetadata: AlarmMetadata {
     }
 }
 
+enum AlarmType: String, Codable, CaseIterable, Sendable {
+    case regular
+    case nap
+    case tryOut
+}
+
+enum AlarmTypePolicy {
+    /// Normalizes alarm fields on write based on alarm type.
+    /// Forces `deleteAfterUse = true` for nap and tryOut types.
+    static func normalizeOnWrite(_ alarm: inout UserAlarm) {
+        switch alarm.alarmType {
+        case .nap, .tryOut:
+            alarm.deleteAfterUse = true
+        case .regular:
+            break
+        }
+    }
+}
+
 enum AlarmLifecycleState: String, Codable, CaseIterable, Sendable {
     case scheduled
     case alerting
@@ -174,6 +193,10 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
     var minute: Int
     var repeatDays: [AlarmWeekday]
     var deleteAfterUse: Bool
+    var alarmType: AlarmType
+    var fixedTriggerDate: Date?
+    var durationMinutes: Int?
+    var pausedRemainingSeconds: TimeInterval?
 
     var useDefaultSharedSettings: Bool
     var customSharedSettings: SharedAlarmSettings
@@ -211,6 +234,10 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         minute: Int,
         repeatDays: [AlarmWeekday],
         deleteAfterUse: Bool,
+        alarmType: AlarmType = .regular,
+        fixedTriggerDate: Date? = nil,
+        durationMinutes: Int? = nil,
+        pausedRemainingSeconds: TimeInterval? = nil,
         useDefaultSharedSettings: Bool,
         customSharedSettings: SharedAlarmSettings,
         scheduleConfigReferenceID: UUID,
@@ -230,6 +257,10 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         self.minute = minute
         self.repeatDays = repeatDays.sorted { $0.rawValue < $1.rawValue }
         self.deleteAfterUse = deleteAfterUse
+        self.alarmType = alarmType
+        self.fixedTriggerDate = fixedTriggerDate
+        self.durationMinutes = durationMinutes
+        self.pausedRemainingSeconds = pausedRemainingSeconds
         self.useDefaultSharedSettings = useDefaultSharedSettings
         self.customSharedSettings = customSharedSettings
         self.scheduleConfigReferenceID = scheduleConfigReferenceID
@@ -255,6 +286,10 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
     var isFullyDisabled: Bool {
         !isEnabled && skipNextUntilDate == nil
     }
+
+    var isNap: Bool { alarmType == .nap }
+    var isTryOut: Bool { alarmType == .tryOut }
+    var isPaused: Bool { pausedRemainingSeconds != nil }
 
     var canonicalScheduleSpec: AlarmCanonicalScheduleSpec {
         AlarmCanonicalScheduleSpec(
@@ -310,6 +345,10 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         case minute
         case repeatDays
         case deleteAfterUse
+        case alarmType
+        case fixedTriggerDate
+        case durationMinutes
+        case pausedRemainingSeconds
         case wakeUpCheckEnabled // legacy migration key
         case wakeUpCheckDelayMinutes // legacy migration key
         case useDefaultSharedSettings
@@ -336,6 +375,10 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         repeatDays = (try container.decodeIfPresent([AlarmWeekday].self, forKey: .repeatDays) ?? [])
             .sorted { $0.rawValue < $1.rawValue }
         deleteAfterUse = try container.decodeIfPresent(Bool.self, forKey: .deleteAfterUse) ?? true
+        alarmType = try container.decodeIfPresent(AlarmType.self, forKey: .alarmType) ?? .regular
+        fixedTriggerDate = try container.decodeIfPresent(Date.self, forKey: .fixedTriggerDate)
+        durationMinutes = try container.decodeIfPresent(Int.self, forKey: .durationMinutes)
+        pausedRemainingSeconds = try container.decodeIfPresent(Double.self, forKey: .pausedRemainingSeconds)
 
         customSharedSettings = try container.decodeIfPresent(SharedAlarmSettings.self, forKey: .customSharedSettings) ?? .featureDefaults
         useDefaultSharedSettings = try container.decodeIfPresent(Bool.self, forKey: .useDefaultSharedSettings) ?? true
@@ -372,6 +415,10 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         try container.encode(minute, forKey: .minute)
         try container.encode(repeatDays, forKey: .repeatDays)
         try container.encode(deleteAfterUse, forKey: .deleteAfterUse)
+        try container.encode(alarmType, forKey: .alarmType)
+        try container.encodeIfPresent(fixedTriggerDate, forKey: .fixedTriggerDate)
+        try container.encodeIfPresent(durationMinutes, forKey: .durationMinutes)
+        try container.encodeIfPresent(pausedRemainingSeconds, forKey: .pausedRemainingSeconds)
         try container.encode(useDefaultSharedSettings, forKey: .useDefaultSharedSettings)
         try container.encode(customSharedSettings, forKey: .customSharedSettings)
         try container.encode(scheduleConfigReferenceID, forKey: .scheduleConfigReferenceID)
@@ -517,7 +564,8 @@ struct AlarmDraft: Equatable {
         existingSkipNextUntilDate: Date? = nil,
         existingSnoozeCount: Int?,
         existingTemporaryScheduleOverride: AlarmTemporaryScheduleOverride? = nil,
-        existingManualScheduleQueue: [AlarmManualScheduleEntry] = []
+        existingManualScheduleQueue: [AlarmManualScheduleEntry] = [],
+        alarmType: AlarmType = .regular
     ) -> UserAlarm {
         let timeComponents = Calendar.autoupdatingCurrent.dateComponents([.hour, .minute], from: time)
         let hour = timeComponents.hour ?? 7
@@ -531,6 +579,7 @@ struct AlarmDraft: Equatable {
             minute: minute,
             repeatDays: Array(repeatDays),
             deleteAfterUse: deleteAfterUse,
+            alarmType: alarmType,
             useDefaultSharedSettings: useDefaultSharedSettings,
             customSharedSettings: persistedCustomSharedSettings,
             scheduleConfigReferenceID: existingScheduleConfigReferenceID ?? id,

@@ -131,7 +131,6 @@ struct SnoozeIntent: LiveActivityIntent {
                 let config = makeConfiguration(
                     for: alarm,
                     schedule: .fixed(snoozeDate),
-                    isShadowTrial: false,
                     defaultSharedSettings: defaultSharedSettings
                 )
                 _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
@@ -143,7 +142,6 @@ struct SnoozeIntent: LiveActivityIntent {
                     let config = makeConfiguration(
                         for: alarm,
                         schedule: .fixed(snoozeDate),
-                        isShadowTrial: false,
                         defaultSharedSettings: defaultSharedSettings
                     )
                     _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
@@ -151,49 +149,6 @@ struct SnoozeIntent: LiveActivityIntent {
                     pending.remove(id)
                     AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
                     // Last fallback: keep snooze behavior even if config replacement failed.
-                    try? AlarmManager.shared.countdown(id: id)
-                }
-            }
-            await reconcileSchedule()
-            return .result()
-        }
-
-        var trials = AlarmPersistence.loadShadowTrials(from: defaults)
-        if let index = trials.firstIndex(where: { $0.id == id }) {
-            var trial = trials[index]
-
-            guard trial.canSnoozeAgain else {
-                pending.remove(id)
-                AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
-                try AlarmManager.shared.stop(id: id)
-                try AlarmManager.shared.cancel(id: id)
-                trials.remove(at: index)
-                AlarmPersistence.saveShadowTrials(trials, to: defaults)
-                await reconcileSchedule()
-                return .result()
-            }
-
-            trial.snoozeCount += 1
-            trial.updatedAt = .now
-            trials[index] = trial
-            AlarmPersistence.saveShadowTrials(trials, to: defaults)
-
-            let snoozeDate = Date.now.addingTimeInterval(snoozeInterval(for: trial.snoozeDurationMinutes))
-
-            do {
-                // Preferred path: replace configuration first, then dismiss current alert.
-                let config = makeConfiguration(for: trial, schedule: .fixed(snoozeDate))
-                _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
-                try AlarmManager.shared.stop(id: id)
-            } catch {
-                do {
-                    // Recovery path: stop current alert first, then reschedule with updated config.
-                    try AlarmManager.shared.stop(id: id)
-                    let config = makeConfiguration(for: trial, schedule: .fixed(snoozeDate))
-                    _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
-                } catch {
-                    pending.remove(id)
-                    AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
                     try? AlarmManager.shared.countdown(id: id)
                 }
             }
@@ -249,7 +204,6 @@ struct SnoozeIntent: LiveActivityIntent {
     private func makeConfiguration(
         for alarm: UserAlarm,
         schedule: Alarm.Schedule,
-        isShadowTrial: Bool,
         defaultSharedSettings: SharedAlarmSettings
     ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
         let sharedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
@@ -265,7 +219,7 @@ struct SnoozeIntent: LiveActivityIntent {
         let presentation = AlarmPresentation(alert: alertPresentation)
         let attributes = AlarmAttributes(
             presentation: presentation,
-            metadata: OpenAlarmMetadata(source: alarm.id.uuidString, isShadowTrial: isShadowTrial),
+            metadata: OpenAlarmMetadata(source: alarm.id.uuidString, isShadowTrial: alarm.isTryOut),
             tintColor: Color(red: 100 / 255, green: 210 / 255, blue: 255 / 255)
         )
 
@@ -286,48 +240,6 @@ struct SnoozeIntent: LiveActivityIntent {
             schedule: schedule,
             attributes: attributes,
             stopIntent: StopIntent(alarmID: alarm.id.uuidString),
-            secondaryIntent: secondaryIntent,
-            sound: .default
-        )
-    }
-
-    private func makeConfiguration(
-        for trial: ShadowTrialAlarm,
-        schedule: Alarm.Schedule
-    ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
-        let showSnoozeButton = trial.canSnoozeAgain
-
-        let alertPresentation = AlarmPresentation.Alert(
-            title: localizedResource(from: resolvedAlarmTitle(from: trial.name)),
-            stopButton: .stopButton,
-            secondaryButton: showSnoozeButton ? .snoozeButton : nil,
-            secondaryButtonBehavior: showSnoozeButton ? .custom : nil
-        )
-
-        let presentation = AlarmPresentation(alert: alertPresentation)
-        let attributes = AlarmAttributes(
-            presentation: presentation,
-            metadata: OpenAlarmMetadata(source: trial.id.uuidString, isShadowTrial: true),
-            tintColor: Color(red: 100 / 255, green: 210 / 255, blue: 255 / 255)
-        )
-
-        let secondaryIntent: (any LiveActivityIntent)? = if showSnoozeButton {
-            SnoozeIntent(alarmID: trial.id.uuidString)
-        } else {
-            nil
-        }
-
-        let countdownDuration: Alarm.CountdownDuration? = if showSnoozeButton {
-            .init(preAlert: nil, postAlert: snoozeInterval(for: trial.snoozeDurationMinutes))
-        } else {
-            nil
-        }
-
-        return .init(
-            countdownDuration: countdownDuration,
-            schedule: schedule,
-            attributes: attributes,
-            stopIntent: StopIntent(alarmID: trial.id.uuidString),
             secondaryIntent: secondaryIntent,
             sound: .default
         )
