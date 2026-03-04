@@ -872,6 +872,82 @@ final class AlarmScheduleReconcilerTests: XCTestCase {
         XCTAssertFalse(harness.runtime.containsRuntimeAlarmScheduled(for: mondayCanonical))
     }
 
+    // MARK: - Foreground reconcile skip-when-healthy regression
+
+    func testForegroundReconcileDoesNotResetCountdownAlarm() {
+        // Regression test: when the app is open, the reconcile loop fires on
+        // every AlarmKit state change.  If an alarm is in countdown (imminent
+        // firing), reconcile must NOT re-schedule it -- doing so resets the
+        // countdown and prevents the alarm from ever reaching alerting.
+        let calendar = fixedUTCGregorianCalendar()
+        let now = makeUTCDate(year: 2026, month: 3, day: 4, hour: 6, minute: 59, calendar: calendar)
+        let canonicalTrigger = makeUTCDate(year: 2026, month: 3, day: 4, hour: 7, minute: 0, calendar: calendar)
+
+        var harness = AlarmStoreOverrideIntegrationHarness(
+            calendar: calendar,
+            alarmID: UUID(uuidString: "AAAA1111-2222-3333-4444-555566667777")!,
+            configReferenceID: UUID(uuidString: "BBBB1111-2222-3333-4444-555566667777")!,
+            weekdayNumbers: [1, 2, 3, 4, 5, 6, 7],
+            hour: 7,
+            minute: 0
+        )
+
+        // Seed the alarm in runtime with .scheduled state (normal initial scheduling).
+        harness.seedCanonicalRuntime(triggerDate: canonicalTrigger)
+        XCTAssertTrue(harness.runtime.containsRuntimeAlarm(id: harness.alarm.id))
+
+        // Simulate AlarmKit transitioning the alarm to .countdown (1 minute before fire).
+        harness.runtime.setState(.countdown, for: harness.alarm.id)
+        XCTAssertEqual(harness.runtime.byID[harness.alarm.id]?.state, .countdown)
+
+        // Record the schedule call count before reconcile.
+        let scheduleCountBefore = harness.runtime.scheduleCallCount
+
+        // Run reconcile (as triggered by foreground alarmUpdates callback).
+        harness.reconcileAll(referenceDate: now)
+
+        // The alarm must still be in .countdown -- reconcile should have skipped it.
+        XCTAssertEqual(
+            harness.runtime.byID[harness.alarm.id]?.state,
+            .countdown,
+            "Reconcile must not reset a countdown alarm back to scheduled"
+        )
+
+        // Verify no additional schedule() call was made for this alarm.
+        XCTAssertEqual(
+            harness.runtime.scheduleCallCount,
+            scheduleCountBefore,
+            "Reconcile should not re-arm an alarm that is already in countdown"
+        )
+    }
+
+    func testForegroundReconcileDoesRearmMissingAlarm() {
+        // Complementary test: if an alarm is NOT in runtime (e.g. after a
+        // crash/restart), reconcile MUST re-schedule it.
+        let calendar = fixedUTCGregorianCalendar()
+        let now = makeUTCDate(year: 2026, month: 3, day: 4, hour: 6, minute: 0, calendar: calendar)
+
+        var harness = AlarmStoreOverrideIntegrationHarness(
+            calendar: calendar,
+            alarmID: UUID(uuidString: "CCCC1111-2222-3333-4444-555566667777")!,
+            configReferenceID: UUID(uuidString: "DDDD1111-2222-3333-4444-555566667777")!,
+            weekdayNumbers: [1, 2, 3, 4, 5, 6, 7],
+            hour: 7,
+            minute: 0
+        )
+
+        // Alarm is enabled but has no runtime entry (cold start / crash recovery).
+        XCTAssertFalse(harness.runtime.containsRuntimeAlarm(id: harness.alarm.id))
+
+        harness.reconcileAll(referenceDate: now)
+
+        // Reconcile should have created a runtime entry.
+        XCTAssertTrue(
+            harness.runtime.containsRuntimeAlarm(id: harness.alarm.id),
+            "Reconcile must re-arm an alarm that is missing from runtime"
+        )
+    }
+
     func testWakeUpCheckDelayOptionsExposeExpectedUserChoices() {
         XCTAssertEqual(
             WakeUpCheckTimingPolicy.checkDelayOptionsMinutes,
@@ -1388,16 +1464,24 @@ private struct AlarmStoreOverrideIntegrationHarness {
         }
 
         if alarm.isEnabled {
-            runtime.schedule(
-                id: alarm.id,
-                triggerDate: AlarmSchedulePlanner.nextCanonicalOccurrence(
-                    after: referenceDate,
-                    schedule: alarm.canonicalScheduleSpec,
-                    calendar: calendar
+            // Mirror production guard: skip re-scheduling when the alarm is
+            // already in a healthy forward-progress state.
+            if let existing = runtime.byID[alarm.id],
+               existing.state == .scheduled || existing.state == .countdown {
+                lastKnownAlarmState[alarm.id] = existing.state
+                remoteStates[alarm.id] = existing.state
+            } else {
+                runtime.schedule(
+                    id: alarm.id,
+                    triggerDate: AlarmSchedulePlanner.nextCanonicalOccurrence(
+                        after: referenceDate,
+                        schedule: alarm.canonicalScheduleSpec,
+                        calendar: calendar
+                    )
                 )
-            )
-            lastKnownAlarmState[alarm.id] = .scheduled
-            remoteStates[alarm.id] = .scheduled
+                lastKnownAlarmState[alarm.id] = .scheduled
+                remoteStates[alarm.id] = .scheduled
+            }
         } else {
             runtime.stop(id: alarm.id)
             runtime.cancel(id: alarm.id)
@@ -1565,6 +1649,13 @@ private struct AlarmStoreOverrideIntegrationHarness {
     }
 
     private mutating func scheduleManualRuntimeEntry(_ manual: AlarmManualScheduleEntry) {
+        // Mirror production guard: skip re-scheduling healthy manual entries.
+        if let existing = runtime.byID[manual.id],
+           existing.state == .scheduled || existing.state == .countdown {
+            lastKnownAlarmState[manual.id] = existing.state
+            return
+        }
+
         runtime.schedule(id: manual.id, triggerDate: manual.triggerDate)
 
         if runtime.containsRuntimeAlarm(id: manual.id) {
@@ -1665,6 +1756,7 @@ private struct RuntimeAlarmHarness {
     }
 
     private(set) var byID: [UUID: RuntimeAlarm] = [:]
+    private(set) var scheduleCallCount: Int = 0
     private var cancelNoOpIDs: Set<UUID> = []
     private var droppedScheduleAttemptsByTriggerDate: [Date: Int] = [:]
 
@@ -1677,6 +1769,8 @@ private struct RuntimeAlarmHarness {
     }
 
     mutating func schedule(id: UUID, triggerDate: Date?) {
+        scheduleCallCount += 1
+
         if let triggerDate,
            let remainingAttempts = droppedScheduleAttemptsByTriggerDate[triggerDate],
            remainingAttempts > 0 {

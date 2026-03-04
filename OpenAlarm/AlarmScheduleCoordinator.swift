@@ -327,6 +327,20 @@ final class AlarmScheduleCoordinator {
         }
 
         if alarm.isEnabled {
+            // Skip re-scheduling when the alarm is already healthy in the
+            // runtime (scheduled or counting down toward firing).  Re-arming
+            // a countdown alarm resets it back to scheduled, which prevents
+            // it from ever reaching the alerting state while the app is in
+            // the foreground -- the reconcile loop is triggered by every
+            // AlarmKit state-change callback.
+            if isRuntimeAlarmHealthy(alarm.id) {
+                if let runtimeState = runtimeAlarmState(alarm.id) {
+                    updateLastKnownState(alarm.id, runtimeState)
+                    updateRemoteState(alarm.id, runtimeState)
+                }
+                return
+            }
+
             do {
                 let resolvedSchedule = AlarmScheduleResolver.runtimeSchedule(for: alarm)
                 let config = makeConfiguration(for: alarm, schedule: resolvedSchedule)
@@ -388,6 +402,15 @@ final class AlarmScheduleCoordinator {
         _ manual: AlarmManualScheduleEntry,
         for alarm: UserAlarm
     ) async {
+        // Same healthy-alarm guard as canonical scheduling: do not re-arm a
+        // manual queue entry that is already progressing toward fire.
+        if isRuntimeAlarmHealthy(manual.id) {
+            if let runtimeState = runtimeAlarmState(manual.id) {
+                updateLastKnownState(manual.id, runtimeState)
+            }
+            return
+        }
+
         do {
             let config = makeConfiguration(
                 for: alarm,
@@ -455,6 +478,32 @@ final class AlarmScheduleCoordinator {
     }
 
     // MARK: - Runtime state query
+
+    /// Returns the current AlarmKit runtime state for a single alarm, or nil
+    /// if the alarm is not present in the runtime.
+    private func runtimeAlarmState(_ alarmID: UUID) -> Alarm.State? {
+        guard let runtimeAlarms = try? alarmManager.alarms else {
+            return nil
+        }
+        return runtimeAlarms.first(where: { $0.id == alarmID })?.state
+    }
+
+    /// Returns true when the alarm is present in the AlarmKit runtime and in a
+    /// healthy forward-progress state (.scheduled or .countdown).  Re-scheduling
+    /// such an alarm would reset the countdown and prevent it from firing.
+    private func isRuntimeAlarmHealthy(_ alarmID: UUID) -> Bool {
+        guard let state = runtimeAlarmState(alarmID) else {
+            return false
+        }
+        switch state {
+        case .scheduled, .countdown:
+            return true
+        case .alerting, .paused:
+            return false
+        @unknown default:
+            return false
+        }
+    }
 
     private func runtimeAlarmIDsSnapshot() -> Set<UUID>? {
         guard let runtimeAlarms = try? alarmManager.alarms else {
