@@ -1028,6 +1028,55 @@ final class AlarmScheduleReconcilerTests: XCTestCase {
         )
     }
 
+    func testForegroundReconcileDoesRearmScheduledAlarmAfterEdit() {
+        // Regression test for the inverse regression: a `.scheduled` alarm must NOT
+        // be treated as healthy-skip.  When the user edits the alarm (new trigger
+        // time / config), the runtime still holds the old `.scheduled` entry.
+        // Reconcile must overwrite it with the new schedule so the alarm fires at
+        // the correct time.
+        //
+        // If `.scheduled` were in the healthy guard, reconcile would silently skip
+        // it and the alarm would fire at the stale old time -- or not at all if
+        // the old trigger has already passed.
+        let calendar = fixedUTCGregorianCalendar()
+        let now = makeUTCDate(year: 2026, month: 3, day: 4, hour: 6, minute: 0, calendar: calendar)
+        let staleOldTrigger = makeUTCDate(year: 2026, month: 3, day: 4, hour: 7, minute: 0, calendar: calendar)
+        let newTrigger = makeUTCDate(year: 2026, month: 3, day: 4, hour: 8, minute: 0, calendar: calendar)
+
+        var harness = AlarmStoreOverrideIntegrationHarness(
+            calendar: calendar,
+            alarmID: UUID(uuidString: "EFEF1111-2222-3333-4444-555566667777")!,
+            configReferenceID: UUID(uuidString: "A1A11111-2222-3333-4444-555566667777")!,
+            weekdayNumbers: [1, 2, 3, 4, 5, 6, 7],
+            // Alarm config is now 08:00 (user edited it after it was already scheduled at 07:00)
+            hour: 8,
+            minute: 0
+        )
+
+        // Seed a stale runtime entry at the OLD time (07:00) as `.scheduled`.
+        harness.runtime.schedule(id: harness.alarm.id, triggerDate: staleOldTrigger)
+        XCTAssertEqual(harness.runtime.byID[harness.alarm.id]?.state, .scheduled)
+        XCTAssertEqual(harness.runtime.byID[harness.alarm.id]?.triggerDate, staleOldTrigger)
+
+        let scheduleCountBefore = harness.runtime.scheduleCallCount
+
+        // Reconcile should detect the stale scheduled entry and re-arm at 08:00.
+        harness.reconcileAll(referenceDate: now)
+
+        XCTAssertGreaterThan(
+            harness.runtime.scheduleCallCount,
+            scheduleCountBefore,
+            "Reconcile must call schedule() to overwrite a stale .scheduled entry after alarm edit"
+        )
+
+        // The runtime trigger date must now reflect the updated config (08:00).
+        XCTAssertEqual(
+            harness.runtime.byID[harness.alarm.id]?.triggerDate,
+            newTrigger,
+            "Runtime trigger must be updated to the new alarm time after edit"
+        )
+    }
+
     func testWakeUpCheckDelayOptionsExposeExpectedUserChoices() {
         XCTAssertEqual(
             WakeUpCheckTimingPolicy.checkDelayOptionsMinutes,
@@ -1544,12 +1593,13 @@ private struct AlarmStoreOverrideIntegrationHarness {
         }
 
         if alarm.isEnabled {
-            // Mirror production guard: skip re-scheduling when the alarm is
-            // already in a healthy forward-progress state (.scheduled,
-            // .countdown, .alerting, .paused).  Re-arming any of these would
-            // either reset the countdown or silence an active alert.
+            // Mirror production guard: skip re-scheduling only when the alarm is
+            // in an active/imminent state (.countdown, .alerting, .paused).
+            // .scheduled is intentionally excluded — the trigger date or config
+            // may have changed (user edit), so reconcile must be allowed to
+            // overwrite it with the updated schedule.
             if let existing = runtime.byID[alarm.id],
-               existing.state == .scheduled || existing.state == .countdown
+               existing.state == .countdown
                || existing.state == .alerting || existing.state == .paused {
                 lastKnownAlarmState[alarm.id] = existing.state
                 remoteStates[alarm.id] = existing.state

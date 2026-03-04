@@ -488,23 +488,29 @@ final class AlarmScheduleCoordinator {
         return runtimeAlarms.first(where: { $0.id == alarmID })?.state
     }
 
-    /// Returns true when the alarm is present in the AlarmKit runtime and in a
-    /// healthy forward-progress state that must not be interrupted by re-scheduling.
+    /// Returns true when the alarm is in a runtime state where re-scheduling must
+    /// be suppressed to avoid interrupting active/imminent behaviour.
     ///
-    /// States guarded:
-    /// - `.scheduled` / `.countdown` — alarm is armed and counting down; re-arming
-    ///   resets it back to .scheduled, preventing it from ever reaching alerting
-    ///   while the app is in the foreground.
+    /// Guarded states (re-arming these causes regressions):
+    /// - `.countdown` — alarm is imminent; re-arming resets it to .scheduled and
+    ///   prevents it from ever reaching alerting while the app is in the foreground.
     /// - `.alerting` — alarm is actively ringing; re-scheduling immediately silences
-    ///   the audible alert (the original foreground regression this guard fixes).
+    ///   the audible alert.
     /// - `.paused` — user has snoozed; re-arming would discard the snooze window.
+    ///
+    /// NOT guarded:
+    /// - `.scheduled` — just queued at a future time; must NOT be skipped because
+    ///   the trigger date or config may have changed (e.g. user edited the alarm).
+    ///   Re-arming with the new config is safe and necessary.
     private func isRuntimeAlarmHealthy(_ alarmID: UUID) -> Bool {
         guard let state = runtimeAlarmState(alarmID) else {
             return false
         }
         switch state {
-        case .scheduled, .countdown, .alerting, .paused:
+        case .countdown, .alerting, .paused:
             return true
+        case .scheduled:
+            return false
         @unknown default:
             return false
         }
