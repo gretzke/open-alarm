@@ -921,6 +921,86 @@ final class AlarmScheduleReconcilerTests: XCTestCase {
         )
     }
 
+    func testForegroundReconcileDoesNotRescheduleAlertingAlarm() {
+        // Regression test: when the alarm is actively ringing (.alerting), the
+        // reconcile loop (fired by the same AlarmKit callback) must NOT re-arm
+        // it. Re-arming immediately silences the audible alert.
+        let calendar = fixedUTCGregorianCalendar()
+        let now = makeUTCDate(year: 2026, month: 3, day: 4, hour: 7, minute: 0, calendar: calendar)
+        let canonicalTrigger = makeUTCDate(year: 2026, month: 3, day: 4, hour: 7, minute: 0, calendar: calendar)
+
+        var harness = AlarmStoreOverrideIntegrationHarness(
+            calendar: calendar,
+            alarmID: UUID(uuidString: "EEEE1111-2222-3333-4444-555566667777")!,
+            configReferenceID: UUID(uuidString: "FFFF1111-2222-3333-4444-555566667777")!,
+            weekdayNumbers: [1, 2, 3, 4, 5, 6, 7],
+            hour: 7,
+            minute: 0
+        )
+
+        // Seed and then simulate AlarmKit transitioning the alarm to .alerting.
+        harness.seedCanonicalRuntime(triggerDate: canonicalTrigger)
+        harness.runtime.setState(.alerting, for: harness.alarm.id)
+        XCTAssertEqual(harness.runtime.byID[harness.alarm.id]?.state, .alerting)
+
+        let scheduleCountBefore = harness.runtime.scheduleCallCount
+
+        // Run reconcile (triggered by foreground alarmUpdates callback on state change).
+        harness.reconcileAll(referenceDate: now)
+
+        // The alarm must still be in .alerting -- reconcile should not have touched it.
+        XCTAssertEqual(
+            harness.runtime.byID[harness.alarm.id]?.state,
+            .alerting,
+            "Reconcile must not re-arm an alerting alarm (would silence the audible alert)"
+        )
+
+        XCTAssertEqual(
+            harness.runtime.scheduleCallCount,
+            scheduleCountBefore,
+            "Reconcile should not call schedule() on an alarm that is already alerting"
+        )
+    }
+
+    func testForegroundReconcileDoesNotReschedulePausedAlarm() {
+        // Regression test: a paused (snoozed) alarm must not be re-armed by
+        // reconcile, which would discard the snooze window.
+        let calendar = fixedUTCGregorianCalendar()
+        let now = makeUTCDate(year: 2026, month: 3, day: 4, hour: 7, minute: 1, calendar: calendar)
+        let canonicalTrigger = makeUTCDate(year: 2026, month: 3, day: 4, hour: 7, minute: 0, calendar: calendar)
+
+        var harness = AlarmStoreOverrideIntegrationHarness(
+            calendar: calendar,
+            alarmID: UUID(uuidString: "ABAB1111-2222-3333-4444-555566667777")!,
+            configReferenceID: UUID(uuidString: "CDCD1111-2222-3333-4444-555566667777")!,
+            weekdayNumbers: [1, 2, 3, 4, 5, 6, 7],
+            hour: 7,
+            minute: 0
+        )
+
+        // Seed and then simulate AlarmKit transitioning the alarm to .paused (snoozed).
+        harness.seedCanonicalRuntime(triggerDate: canonicalTrigger)
+        harness.runtime.setState(.paused, for: harness.alarm.id)
+        XCTAssertEqual(harness.runtime.byID[harness.alarm.id]?.state, .paused)
+
+        let scheduleCountBefore = harness.runtime.scheduleCallCount
+
+        harness.reconcileAll(referenceDate: now)
+
+        // The alarm must remain paused -- reconcile should not have re-armed it.
+        XCTAssertEqual(
+            harness.runtime.byID[harness.alarm.id]?.state,
+            .paused,
+            "Reconcile must not re-arm a paused (snoozed) alarm"
+        )
+
+        XCTAssertEqual(
+            harness.runtime.scheduleCallCount,
+            scheduleCountBefore,
+            "Reconcile should not call schedule() on an alarm that is already paused"
+        )
+    }
+
     func testForegroundReconcileDoesRearmMissingAlarm() {
         // Complementary test: if an alarm is NOT in runtime (e.g. after a
         // crash/restart), reconcile MUST re-schedule it.
@@ -1465,9 +1545,12 @@ private struct AlarmStoreOverrideIntegrationHarness {
 
         if alarm.isEnabled {
             // Mirror production guard: skip re-scheduling when the alarm is
-            // already in a healthy forward-progress state.
+            // already in a healthy forward-progress state (.scheduled,
+            // .countdown, .alerting, .paused).  Re-arming any of these would
+            // either reset the countdown or silence an active alert.
             if let existing = runtime.byID[alarm.id],
-               existing.state == .scheduled || existing.state == .countdown {
+               existing.state == .scheduled || existing.state == .countdown
+               || existing.state == .alerting || existing.state == .paused {
                 lastKnownAlarmState[alarm.id] = existing.state
                 remoteStates[alarm.id] = existing.state
             } else {
@@ -1649,9 +1732,11 @@ private struct AlarmStoreOverrideIntegrationHarness {
     }
 
     private mutating func scheduleManualRuntimeEntry(_ manual: AlarmManualScheduleEntry) {
-        // Mirror production guard: skip re-scheduling healthy manual entries.
+        // Mirror production guard: skip re-scheduling healthy manual entries
+        // (.scheduled, .countdown, .alerting, .paused).
         if let existing = runtime.byID[manual.id],
-           existing.state == .scheduled || existing.state == .countdown {
+           existing.state == .scheduled || existing.state == .countdown
+           || existing.state == .alerting || existing.state == .paused {
             lastKnownAlarmState[manual.id] = existing.state
             return
         }

@@ -28,6 +28,13 @@ let package = Package(
                 "OpenAlarmSchedulingCore"
             ],
             path: "OpenAlarmSchedulingCoreChecks"
+        ),
+        .testTarget(
+            name: "OpenAlarmSchedulingCoreTests",
+            dependencies: [
+                "OpenAlarmSchedulingCore"
+            ],
+            path: "OpenAlarmSchedulingCoreTests"
         )
     ]
 )
