@@ -623,6 +623,33 @@ extension Collection where Element == AlarmWeekday {
     }
 }
 
+// MARK: - Temporary schedule override helpers
+
+extension UserAlarm {
+    /// Clears temporary schedule override state (skip-next, modify-next) and
+    /// optionally restores the enabled flag. Shared by both `AlarmStore` and
+    /// `AlarmScheduleCoordinator` so the mutation lives on the value type.
+    mutating func clearTemporaryScheduleOverride(
+        restoreEnabledState: Bool?,
+        clearManualQueue: Bool,
+        updatedAt: Date
+    ) {
+        if let restoreEnabledState {
+            isEnabled = restoreEnabledState
+        }
+
+        nextTriggerOverrideDate = nil
+        skipNextUntilDate = nil
+        temporaryScheduleOverride = nil
+
+        if clearManualQueue {
+            manualScheduleQueue.removeAll()
+        }
+
+        self.updatedAt = updatedAt
+    }
+}
+
 // MARK: - Typed runtime schedule resolver
 
 /// Resolves the correct `Alarm.Schedule` for runtime scheduling based on alarm type.

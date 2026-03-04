@@ -36,6 +36,7 @@
 		F1CC7D2E7D1CC6F5D537C625 /* AlarmScheduleReconciler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06DDC0185B5B0D8A1400C98B /* AlarmScheduleReconciler.swift */; };
 		FB2461D5447424A95E288109 /* WakeUpCheckStopIntentArmService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0AF3F0DE1850AE6E1938DA9 /* WakeUpCheckStopIntentArmService.swift */; };
 		C2A1B3D4E5F6A7B8C9D0E1F3 /* WakeUpCheckPipelineController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3B2C4E5F6A7B8C9D0E1F2A4 /* WakeUpCheckPipelineController.swift */; };
+		E4C3D5F6A7B8C9D0E1F2A3B5 /* AlarmScheduleCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5D4E6F7B8C9D0E1F2A3B4C6 /* AlarmScheduleCoordinator.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -83,6 +84,7 @@
 		F68BF27EA97B5D8C42193398 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		FA3152F133E737A1C6EF2905 /* NapEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NapEditorView.swift; sourceTree = "<group>"; };
 		D3B2C4E5F6A7B8C9D0E1F2A4 /* WakeUpCheckPipelineController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeUpCheckPipelineController.swift; sourceTree = "<group>"; };
+		A5D4E6F7B8C9D0E1F2A3B4C6 /* AlarmScheduleCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmScheduleCoordinator.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -120,6 +122,7 @@
 				A7C07703BA4BEC265B421B03 /* AlarmModels.swift */,
 				F1A2B3C4D5E6F7A8B9C0D1E2 /* AlarmConfigurationFactory.swift */,
 				83400772796DC9406DADEF9F /* AlarmPermissionService.swift */,
+				A5D4E6F7B8C9D0E1F2A3B4C6 /* AlarmScheduleCoordinator.swift */,
 				A0F3414FB10A9E51937B6877 /* AlarmPersistence.swift */,
 				1528047A29F027B683B920FE /* AlarmScheduleReconcileEntrypoint.swift */,
 				06DDC0185B5B0D8A1400C98B /* AlarmScheduleReconciler.swift */,
@@ -282,6 +285,7 @@
 				99FFE75EAF79B740FE9D2225 /* WakeUpCheckNotificationService.swift in Sources */,
 				FB2461D5447424A95E288109 /* WakeUpCheckStopIntentArmService.swift in Sources */,
 				C2A1B3D4E5F6A7B8C9D0E1F3 /* WakeUpCheckPipelineController.swift in Sources */,
+				E4C3D5F6A7B8C9D0E1F2A3B5 /* AlarmScheduleCoordinator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
