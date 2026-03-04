@@ -29,6 +29,7 @@
 		A6D55657E1563EC89C608EFD /* OpenAlarmNotificationDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0213A81B71B2B9C6B189C61F /* OpenAlarmNotificationDelegate.swift */; };
 		BDD2C5EBBA247FBB4FD16F4D /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 2E7F4014449CC01093832222 /* InfoPlist.strings */; };
 		BF8889E27B6255835899C3B5 /* AlarmModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7C07703BA4BEC265B421B03 /* AlarmModels.swift */; };
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* AlarmConfigurationFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6F7A8B9C0D1E2 /* AlarmConfigurationFactory.swift */; };
 		D0827BEDA4B4C360461E9F23 /* AlarmPersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0F3414FB10A9E51937B6877 /* AlarmPersistence.swift */; };
 		DDD615542DED46BA648B2FE7 /* AlarmScheduleReconcilerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C0AC8200730558CC6EC3B15 /* AlarmScheduleReconcilerTests.swift */; };
 		E072A215F811DC860E8ED2F1 /* OnboardingEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6981BF284D917EBC650816B /* OnboardingEngine.swift */; };
@@ -68,6 +69,7 @@
 		A0F3414FB10A9E51937B6877 /* AlarmPersistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmPersistence.swift; sourceTree = "<group>"; };
 		A6981BF284D917EBC650816B /* OnboardingEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingEngine.swift; sourceTree = "<group>"; };
 		A7C07703BA4BEC265B421B03 /* AlarmModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmModels.swift; sourceTree = "<group>"; };
+		F1A2B3C4D5E6F7A8B9C0D1E2 /* AlarmConfigurationFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmConfigurationFactory.swift; sourceTree = "<group>"; };
 		B0511AEB1608CC1DFD19C495 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		B5B9304B4982E495CBDABF6C /* OpenAlarmTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OpenAlarmTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B70862277833BF001ABA7BBE /* AlarmStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmStore.swift; sourceTree = "<group>"; };
@@ -114,6 +116,7 @@
 				3C5513FF1DE8CF198A077C38 /* AlarmEditorView.swift */,
 				85010326D24CEF7C1A38D50D /* AlarmIntents.swift */,
 				A7C07703BA4BEC265B421B03 /* AlarmModels.swift */,
+				F1A2B3C4D5E6F7A8B9C0D1E2 /* AlarmConfigurationFactory.swift */,
 				83400772796DC9406DADEF9F /* AlarmPermissionService.swift */,
 				A0F3414FB10A9E51937B6877 /* AlarmPersistence.swift */,
 				1528047A29F027B683B920FE /* AlarmScheduleReconcileEntrypoint.swift */,
@@ -255,6 +258,7 @@
 				4349AE16DB928CA08CA1900B /* AlarmEditorView.swift in Sources */,
 				05162562A0170BE9098361EE /* AlarmIntents.swift in Sources */,
 				BF8889E27B6255835899C3B5 /* AlarmModels.swift in Sources */,
+				A1B2C3D4E5F6A7B8C9D0E1F2 /* AlarmConfigurationFactory.swift in Sources */,
 				0B5A2C2BC6692B00E79A988E /* AlarmPermissionService.swift in Sources */,
 				D0827BEDA4B4C360461E9F23 /* AlarmPersistence.swift in Sources */,
 				10DC781930D22D3C916F3AB3 /* AlarmScheduleReconcileEntrypoint.swift in Sources */,

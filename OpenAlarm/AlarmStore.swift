@@ -1350,69 +1350,13 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
         runtimeAlarmID: UUID? = nil,
         configReferenceID: UUID? = nil
     ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
-        let sharedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
-        let title = alarm.isNap
-            ? String(localized: "nap_default_alarm_label")
-            : resolvedAlarmTitle(from: alarm.name)
-
-        return makeConfiguration(
-            runtimeAlarmID: runtimeAlarmID ?? alarm.id,
-            configReferenceID: configReferenceID ?? alarm.scheduleConfigReferenceID,
-            title: title,
+        AlarmConfigurationFactory.makeConfiguration(
+            for: alarm,
             schedule: schedule,
-            sharedSettings: sharedSettings,
-            snoozeCount: alarm.snoozeCount,
-            isShadowTrial: alarm.isTryOut,
-            forceDisableSnooze: forceDisableSnooze
-        )
-    }
-
-    private func makeConfiguration(
-        runtimeAlarmID: UUID,
-        configReferenceID: UUID,
-        title: String,
-        schedule: Alarm.Schedule,
-        sharedSettings: SharedAlarmSettings,
-        snoozeCount: Int,
-        isShadowTrial: Bool,
-        forceDisableSnooze: Bool
-    ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
-        let showSnoozeButton = !forceDisableSnooze && sharedSettings.canSnoozeAgain(currentCount: snoozeCount)
-
-        let alertPresentation = AlarmPresentation.Alert(
-            title: localizedResource(from: title),
-            stopButton: .stopButton,
-            secondaryButton: showSnoozeButton ? .snoozeButton : nil,
-            secondaryButtonBehavior: showSnoozeButton ? .custom : nil
-        )
-
-        let presentation = AlarmPresentation(alert: alertPresentation)
-
-        let attributes = AlarmAttributes(
-            presentation: presentation,
-            metadata: OpenAlarmMetadata(source: configReferenceID.uuidString, isShadowTrial: isShadowTrial),
-            tintColor: OAColor.actionCyan
-        )
-
-        let secondaryIntent: (any LiveActivityIntent)? = if showSnoozeButton {
-            SnoozeIntent(alarmID: runtimeAlarmID.uuidString)
-        } else {
-            nil
-        }
-
-        let countdownDuration: Alarm.CountdownDuration? = if showSnoozeButton {
-            .init(preAlert: nil, postAlert: snoozeInterval(for: sharedSettings.snoozeDurationMinutes))
-        } else {
-            nil
-        }
-
-        return .init(
-            countdownDuration: countdownDuration,
-            schedule: schedule,
-            attributes: attributes,
-            stopIntent: StopIntent(alarmID: runtimeAlarmID.uuidString),
-            secondaryIntent: secondaryIntent,
-            sound: .default
+            defaultSharedSettings: defaultSharedSettings,
+            forceDisableSnooze: forceDisableSnooze,
+            runtimeAlarmID: runtimeAlarmID,
+            configReferenceID: configReferenceID
         )
     }
 
@@ -2297,25 +2241,6 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
             }
         }
         return changed
-    }
-
-    private func snoozeInterval(for minutes: Int) -> TimeInterval {
-        if minutes == 0 {
-            return 5
-        }
-        return TimeInterval(minutes * 60)
-    }
-
-    private func resolvedAlarmTitle(from name: String) -> String {
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty {
-            return NSLocalizedString("alarm_editor_default_label", comment: "")
-        }
-        return trimmed
-    }
-
-    private func localizedResource(from text: String) -> LocalizedStringResource {
-        LocalizedStringResource(String.LocalizationValue(text))
     }
 
     private func sortAlarms(_ alarms: [UserAlarm]) -> [UserAlarm] {

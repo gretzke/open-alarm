@@ -124,7 +124,7 @@ struct SnoozeIntent: LiveActivityIntent {
 
             // For nap alarms, update the countdown target and clear pause state.
             if alarm.isNap {
-                let snoozeSeconds = snoozeInterval(for: effectiveSharedSettings.snoozeDurationMinutes)
+                let snoozeSeconds = AlarmConfigurationFactory.snoozeInterval(for: effectiveSharedSettings.snoozeDurationMinutes)
                 alarm.fixedTriggerDate = Date.now.addingTimeInterval(snoozeSeconds)
                 alarm.pausedRemainingSeconds = nil
             }
@@ -132,11 +132,11 @@ struct SnoozeIntent: LiveActivityIntent {
             alarms[index] = alarm
             AlarmPersistence.saveUserAlarms(alarms, to: defaults)
 
-            let snoozeDate = Date.now.addingTimeInterval(snoozeInterval(for: effectiveSharedSettings.snoozeDurationMinutes))
+            let snoozeDate = Date.now.addingTimeInterval(AlarmConfigurationFactory.snoozeInterval(for: effectiveSharedSettings.snoozeDurationMinutes))
 
             do {
                 // Preferred path: replace configuration first, then dismiss current alert.
-                let config = makeConfiguration(
+                let config = AlarmConfigurationFactory.makeConfiguration(
                     for: alarm,
                     schedule: .fixed(snoozeDate),
                     defaultSharedSettings: defaultSharedSettings
@@ -147,7 +147,7 @@ struct SnoozeIntent: LiveActivityIntent {
                 do {
                     // Recovery path: stop current alert first, then reschedule with updated config.
                     try AlarmManager.shared.stop(id: id)
-                    let config = makeConfiguration(
+                    let config = AlarmConfigurationFactory.makeConfiguration(
                         for: alarm,
                         schedule: .fixed(snoozeDate),
                         defaultSharedSettings: defaultSharedSettings
@@ -171,69 +171,5 @@ struct SnoozeIntent: LiveActivityIntent {
         return .result()
     }
 
-    private func makeConfiguration(
-        for alarm: UserAlarm,
-        schedule: Alarm.Schedule,
-        defaultSharedSettings: SharedAlarmSettings
-    ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
-        let sharedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
-        let showSnoozeButton = sharedSettings.canSnoozeAgain(currentCount: alarm.snoozeCount)
-        let title = alarm.isNap
-            ? String(localized: "nap_default_alarm_label")
-            : resolvedAlarmTitle(from: alarm.name)
 
-        let alertPresentation = AlarmPresentation.Alert(
-            title: localizedResource(from: title),
-            stopButton: .stopButton,
-            secondaryButton: showSnoozeButton ? .snoozeButton : nil,
-            secondaryButtonBehavior: showSnoozeButton ? .custom : nil
-        )
-
-        let presentation = AlarmPresentation(alert: alertPresentation)
-        let attributes = AlarmAttributes(
-            presentation: presentation,
-            metadata: OpenAlarmMetadata(source: alarm.id.uuidString, isShadowTrial: alarm.isTryOut),
-            tintColor: Color(red: 100 / 255, green: 210 / 255, blue: 255 / 255)
-        )
-
-        let secondaryIntent: (any LiveActivityIntent)? = if showSnoozeButton {
-            SnoozeIntent(alarmID: alarm.id.uuidString)
-        } else {
-            nil
-        }
-
-        let countdownDuration: Alarm.CountdownDuration? = if showSnoozeButton {
-            .init(preAlert: nil, postAlert: snoozeInterval(for: sharedSettings.snoozeDurationMinutes))
-        } else {
-            nil
-        }
-
-        return .init(
-            countdownDuration: countdownDuration,
-            schedule: schedule,
-            attributes: attributes,
-            stopIntent: StopIntent(alarmID: alarm.id.uuidString),
-            secondaryIntent: secondaryIntent,
-            sound: .default
-        )
-    }
-
-    private func snoozeInterval(for minutes: Int) -> TimeInterval {
-        if minutes == 0 {
-            return 5
-        }
-        return TimeInterval(minutes * 60)
-    }
-
-    private func resolvedAlarmTitle(from name: String) -> String {
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty {
-            return NSLocalizedString("alarm_editor_default_label", comment: "")
-        }
-        return trimmed
-    }
-
-    private func localizedResource(from text: String) -> LocalizedStringResource {
-        LocalizedStringResource(String.LocalizationValue(text))
-    }
 }

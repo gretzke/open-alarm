@@ -176,7 +176,7 @@ enum WakeUpCheckStopIntentArmService {
         for alarm: UserAlarm,
         session: WakeUpCheckSessionState
     ) async throws {
-        let configuration = wakeCheckRuntimeConfiguration(
+        let configuration = AlarmConfigurationFactory.wakeCheckConfiguration(
             for: alarm,
             deadlineAt: session.deadlineAt
         )
@@ -189,45 +189,5 @@ enum WakeUpCheckStopIntentArmService {
         }
     }
 
-    private static func wakeCheckRuntimeConfiguration(
-        for alarm: UserAlarm,
-        deadlineAt: Date
-    ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
-        // Wake-check alarms intentionally have no snooze affordance. Repeat-until-
-        // confirm behavior is owned by the wake-check pipeline/session lifecycle.
-        let alertPresentation = AlarmPresentation.Alert(
-            title: localizedResource(from: resolvedAlarmTitle(from: alarm.name)),
-            stopButton: .stopButton,
-            secondaryButton: nil,
-            secondaryButtonBehavior: nil
-        )
 
-        let presentation = AlarmPresentation(alert: alertPresentation)
-        let attributes = AlarmAttributes(
-            presentation: presentation,
-            metadata: OpenAlarmMetadata(source: alarm.scheduleConfigReferenceID.uuidString, isShadowTrial: alarm.isTryOut),
-            tintColor: OAColor.actionCyan
-        )
-
-        return .init(
-            countdownDuration: nil,
-            schedule: .fixed(deadlineAt),
-            attributes: attributes,
-            stopIntent: StopIntent(alarmID: alarm.id.uuidString),
-            secondaryIntent: nil,
-            sound: .default
-        )
-    }
-
-    private static func resolvedAlarmTitle(from name: String) -> String {
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty {
-            return NSLocalizedString("alarm_editor_default_label", comment: "")
-        }
-        return trimmed
-    }
-
-    private static func localizedResource(from text: String) -> LocalizedStringResource {
-        LocalizedStringResource(String.LocalizationValue(text))
-    }
 }
