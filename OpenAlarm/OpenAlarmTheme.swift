@@ -84,6 +84,16 @@ private struct OAGlassButtonChromeModifier: ViewModifier {
     }
 }
 
+struct GlassButtonWithAccentBorderStyle: ButtonStyle {
+    var accentColor: Color = OAColor.actionCyan
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .oaGlassButtonChrome()
+            .opacity(configuration.isPressed ? 0.7 : 1.0)
+    }
+}
+
 extension View {
     func oaGlassCard() -> some View {
         modifier(OAGlassCardModifier())
@@ -101,3 +111,9 @@ extension View {
         modifier(OAGlassButtonChromeModifier(tint: tint.opacity(0.28), cornerRadius: cornerRadius))
     }
 }
+extension ButtonStyle where Self == GlassButtonWithAccentBorderStyle {
+    static var glassAccentBorder: GlassButtonWithAccentBorderStyle {
+        GlassButtonWithAccentBorderStyle()
+    }
+}
+

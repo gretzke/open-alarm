@@ -151,7 +151,7 @@ struct SharedAlarmSettingsEditor: View {
                         .font(.headline.weight(.semibold))
                         .frame(maxWidth: .infinity, minHeight: 52)
             }
-            .buttonStyle(GlassProminentButtonStyle())
+            .buttonStyle(.glassProminent)
                     .tint(OAColor.actionCyan)
                     .disabled(isSchedulingTryOut)
 
@@ -425,7 +425,7 @@ private struct WakeCheckPermissionPrePromptView: View {
                     .font(.headline.weight(.semibold))
                     .frame(maxWidth: .infinity, minHeight: 52)
             }
-            .buttonStyle(GlassProminentButtonStyle())
+            .buttonStyle(.glassProminent)
                 .tint(OAColor.actionCyan)
                 .accessibilityIdentifier("wake_check_permission_next")
         }
@@ -465,7 +465,7 @@ struct WakeCheckPermissionDeniedView: View {
                     .font(.headline.weight(.semibold))
                     .frame(maxWidth: .infinity, minHeight: 52)
                 }
-                .buttonStyle(GlassProminentButtonStyle())
+                .buttonStyle(.glassProminent)
                 .tint(OAColor.actionCyan)
                 .accessibilityIdentifier("wake_check_permission_open_settings")
 
@@ -494,59 +494,49 @@ private struct SharedSettingsSelectionSheetView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                GlassEffectContainer(spacing: 10) {
-                    VStack(spacing: 10) {
-                        ForEach(options, id: \.self) { option in
-                            let isSelected = option == selected
+            ScrollViewReader { proxy in
+                ScrollView {
+                    GlassEffectContainer(spacing: 10) {
+                        VStack(spacing: 10) {
+                            ForEach(options, id: \.self) { option in
+                                let isSelected = option == selected
 
-                            Button {
-                                onSelect(option)
-                            } label: {
-                                HStack {
-                                    Text(format(option))
-                                        .foregroundStyle(OAColor.textPrimary)
-                                    Spacer(minLength: 0)
-                                    if isSelected {
-                                        Image(systemName: "checkmark")
-                                            .foregroundStyle(OAColor.actionCyan)
+                                Button {
+                                    onSelect(option)
+                                } label: {
+                                    HStack {
+                                        Text(format(option))
+                                            .foregroundStyle(OAColor.textPrimary)
+                                        Spacer(minLength: 0)
+                                        if isSelected {
+                                            Image(systemName: "checkmark")
+                                                .foregroundStyle(OAColor.actionCyan)
+                                        }
                                     }
+                                    .padding(.horizontal, 16)
+                                    .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+                                    .contentShape(Rectangle())
                                 }
-                                .padding(.horizontal, 16)
-                                .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
-                                .contentShape(Rectangle())
-                                .overlay {
-                                    RoundedRectangle(cornerRadius: OARadius.button, style: .continuous)
-                                        .stroke(
-                                            selectionItemBorderColor(isSelected: isSelected),
-                                            lineWidth: isSelected ? 1.05 : 0.9
-                                        )
-                                }
+                                .buttonStyle(.glassAccentBorder)
+                                .tint(OAColor.actionCyan)
+                                .id(option)
                             }
-                            .frame(maxWidth: .infinity)
-                            .buttonStyle(GlassButtonStyle())
+                        }
+                    }
+                    .padding(20)
+                }
+                .background(Color.clear)
+                .onAppear {
+                    // Scroll to selected option with a slight delay to ensure layout is ready
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        withAnimation {
+                            proxy.scrollTo(selected, anchor: .center)
                         }
                     }
                 }
-                .padding(20)
             }
-            .background(Color.clear)
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
         }
-    }
-
-    private func selectionItemBorderColor(isSelected: Bool) -> Color {
-        if isSelected {
-            return OAColor.actionCyan.opacity(0.62)
-        }
-
-        // Keep item edges readable against dark backgrounds. On modern glass
-        // systems we lean on the glass stroke tint; otherwise use a neutral line.
-        if #available(iOS 26.0, *) {
-            return OAColor.glassStroke.opacity(0.95)
-        }
-
-        return Color.white.opacity(0.30)
     }
 }
