@@ -28,7 +28,7 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
     private let permissionService: AlarmPermissionService
     private let notificationPermissionService: NotificationPermissionService
     private let wakeUpCheckNotificationService: WakeUpCheckNotificationService
-    private let userDefaults: UserDefaults
+    private let persistence: AlarmPersistence
 
     private var alarmUpdatesTask: Task<Void, Never>?
     private var lastKnownAlarmState: [UUID: Alarm.State] = [:]
@@ -50,19 +50,19 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
         self.permissionService = permissionService ?? AlarmPermissionService(manager: alarmManager)
         self.notificationPermissionService = notificationPermissionService ?? NotificationPermissionService()
         self.wakeUpCheckNotificationService = wakeUpCheckNotificationService ?? WakeUpCheckNotificationService()
-        self.userDefaults = userDefaults
-        self.defaultSharedSettings = AlarmPersistence.loadDefaultSharedSettings(from: userDefaults)
-        self.defaultNapDurationMinutes = AlarmPersistence.loadDefaultNapDurationMinutes(from: userDefaults)
-        self.testingModeEnabled = AlarmPersistence.loadTestingModeEnabled(from: userDefaults)
+        self.persistence = AlarmPersistence(defaults: userDefaults)
+        self.defaultSharedSettings = persistence.loadDefaultSharedSettings()
+        self.defaultNapDurationMinutes = persistence.loadDefaultNapDurationMinutes()
+        self.testingModeEnabled = persistence.loadTestingModeEnabled()
         self.permissionStatus = self.permissionService.currentStatus()
-        self.wakeUpCheckSessionsByAlarmID = Dictionary(uniqueKeysWithValues: AlarmPersistence.loadWakeUpCheckSessions(from: userDefaults).map { ($0.alarmID, $0) })
+        self.wakeUpCheckSessionsByAlarmID = Dictionary(uniqueKeysWithValues: persistence.loadWakeUpCheckSessions().map { ($0.alarmID, $0) })
 
         // Legacy migration: previous builds stored wake-check defaults separately.
-        if let legacyWakeDefaults = AlarmPersistence.loadLegacyDefaultWakeUpCheckDefaults(from: userDefaults) {
+        if let legacyWakeDefaults = persistence.loadLegacyDefaultWakeUpCheckDefaults() {
             self.defaultSharedSettings.wakeUpCheckEnabled = legacyWakeDefaults.enabledByDefault
             self.defaultSharedSettings.wakeUpCheckDelayMinutes = legacyWakeDefaults.clampedDelayMinutes
-            AlarmPersistence.saveDefaultSharedSettings(self.defaultSharedSettings, to: userDefaults)
-            AlarmPersistence.clearLegacyDefaultWakeUpCheckDefaults(from: userDefaults)
+            persistence.saveDefaultSharedSettings(self.defaultSharedSettings)
+            persistence.clearLegacyDefaultWakeUpCheckDefaults()
         }
 
         self.wakeUpCheckNotificationService.ensureCategoryRegistered()
@@ -144,7 +144,7 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
         }
 
         defaultSharedSettings = settings
-        AlarmPersistence.saveDefaultSharedSettings(settings, to: userDefaults)
+        persistence.saveDefaultSharedSettings(settings)
 
         var changed = false
         for index in alarms.indices where alarms[index].useDefaultSharedSettings {
@@ -168,7 +168,7 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
         if defaults.wakeUpCheckEnabled {
             defaults.wakeUpCheckEnabled = false
             defaultSharedSettings = defaults
-            AlarmPersistence.saveDefaultSharedSettings(defaults, to: userDefaults)
+            persistence.saveDefaultSharedSettings(defaults)
         }
 
         var changed = false
@@ -198,7 +198,7 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
         }
 
         testingModeEnabled = enabled
-        AlarmPersistence.saveTestingModeEnabled(enabled, to: userDefaults)
+        persistence.saveTestingModeEnabled(enabled)
     }
 
     func updateDefaultNapDurationMinutes(_ minutes: Int) {
@@ -208,7 +208,7 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
         }
 
         defaultNapDurationMinutes = next
-        AlarmPersistence.saveDefaultNapDurationMinutes(next, to: userDefaults)
+        persistence.saveDefaultNapDurationMinutes(next)
     }
 
     func createNap(from draft: NapDraft) async throws {
@@ -291,9 +291,6 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
             return
         }
 
-        var pendingSnooze = AlarmPersistence.loadPendingSnoozeIDs(from: userDefaults)
-        var pendingWakeStarts = AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: userDefaults)
-        var pendingWakeConfirm = AlarmPersistence.loadPendingWakeUpCheckConfirmIDs(from: userDefaults)
         var wakeSessionsChanged = false
 
         // Singleton hardening: remove ALL nap entries, not just the first.
@@ -302,9 +299,7 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
             try? alarmManager.stop(id: napID)
             try? alarmManager.cancel(id: napID)
 
-            _ = pendingSnooze.remove(napID)
-            _ = pendingWakeStarts.remove(napID)
-            _ = pendingWakeConfirm.remove(napID)
+            persistence.removePendingIDFromAll(napID)
 
             if let session = wakeUpCheckSessionsByAlarmID.removeValue(forKey: napID) {
                 wakeUpCheckNotificationService.cancel(notificationID: session.notificationID)
@@ -317,9 +312,6 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
 
         alarms.removeAll { $0.isNap }
 
-        AlarmPersistence.savePendingSnoozeIDs(pendingSnooze, to: userDefaults)
-        AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingWakeStarts, to: userDefaults)
-        AlarmPersistence.savePendingWakeUpCheckConfirmIDs(pendingWakeConfirm, to: userDefaults)
         if wakeSessionsChanged {
             persistWakeUpCheckSessions()
         }
@@ -445,20 +437,7 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
                 persistWakeUpCheckSessions()
             }
 
-            var pending = AlarmPersistence.loadPendingSnoozeIDs(from: userDefaults)
-            if pending.remove(updatedAlarm.id) != nil {
-                AlarmPersistence.savePendingSnoozeIDs(pending, to: userDefaults)
-            }
-
-            var pendingStarts = AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: userDefaults)
-            if pendingStarts.remove(updatedAlarm.id) != nil {
-                AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingStarts, to: userDefaults)
-            }
-
-            var pendingConfirm = AlarmPersistence.loadPendingWakeUpCheckConfirmIDs(from: userDefaults)
-            if pendingConfirm.remove(updatedAlarm.id) != nil {
-                AlarmPersistence.savePendingWakeUpCheckConfirmIDs(pendingConfirm, to: userDefaults)
-            }
+            persistence.removePendingIDFromAll(updatedAlarm.id)
         }
 
         updatedAlarm.lifecycleState = .scheduled
@@ -488,20 +467,7 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
             persistWakeUpCheckSessions()
         }
 
-        var pending = AlarmPersistence.loadPendingSnoozeIDs(from: userDefaults)
-        if pending.remove(alarm.id) != nil {
-            AlarmPersistence.savePendingSnoozeIDs(pending, to: userDefaults)
-        }
-
-        var pendingWakeStarts = AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: userDefaults)
-        if pendingWakeStarts.remove(alarm.id) != nil {
-            AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingWakeStarts, to: userDefaults)
-        }
-
-        var pendingWakeConfirm = AlarmPersistence.loadPendingWakeUpCheckConfirmIDs(from: userDefaults)
-        if pendingWakeConfirm.remove(alarm.id) != nil {
-            AlarmPersistence.savePendingWakeUpCheckConfirmIDs(pendingWakeConfirm, to: userDefaults)
-        }
+        persistence.removePendingIDFromAll(alarm.id)
 
         save()
     }
@@ -765,10 +731,7 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
                 persistWakeUpCheckSessions()
             }
 
-            var pendingWakeStarts = AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: userDefaults)
-            if pendingWakeStarts.remove(id) != nil {
-                AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingWakeStarts, to: userDefaults)
-            }
+            persistence.removePendingID(id, from: .wakeStart)
         }
 
         persistCommittedAlarm(nextAlarm)
@@ -1106,9 +1069,6 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
             return
         }
 
-        var pendingSnooze = AlarmPersistence.loadPendingSnoozeIDs(from: userDefaults)
-        var pendingWakeStarts = AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: userDefaults)
-        var pendingWakeConfirm = AlarmPersistence.loadPendingWakeUpCheckConfirmIDs(from: userDefaults)
         var wakeSessionsChanged = false
 
         let staleIDs = Set(staleOneShots.map(\.id))
@@ -1118,9 +1078,7 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
             try? alarmManager.stop(id: id)
             try? alarmManager.cancel(id: id)
 
-            _ = pendingSnooze.remove(id)
-            _ = pendingWakeStarts.remove(id)
-            _ = pendingWakeConfirm.remove(id)
+            persistence.removePendingIDFromAll(id)
 
             if let session = wakeUpCheckSessionsByAlarmID.removeValue(forKey: id) {
                 wakeUpCheckNotificationService.cancel(notificationID: session.notificationID)
@@ -1133,9 +1091,6 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
 
         alarms.removeAll { staleIDs.contains($0.id) }
 
-        AlarmPersistence.savePendingSnoozeIDs(pendingSnooze, to: userDefaults)
-        AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingWakeStarts, to: userDefaults)
-        AlarmPersistence.savePendingWakeUpCheckConfirmIDs(pendingWakeConfirm, to: userDefaults)
         if wakeSessionsChanged {
             persistWakeUpCheckSessions()
         }
@@ -1392,7 +1347,7 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
     }
 
     private func persistWakeUpCheckSessions() {
-        AlarmPersistence.saveWakeUpCheckSessions(Array(wakeUpCheckSessionsByAlarmID.values), to: userDefaults)
+        persistence.saveWakeUpCheckSessions(Array(wakeUpCheckSessionsByAlarmID.values))
     }
 
     private func wakeUpCheckPipelineAlarmIDs(
@@ -1417,8 +1372,8 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
         target: AlarmScheduleReconcileTarget,
         referenceDate: Date
     ) async {
-        var pendingConfirmIDs = AlarmPersistence.loadPendingWakeUpCheckConfirmIDs(from: userDefaults)
-        var pendingStartIDs = AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: userDefaults)
+        var pendingConfirmIDs = persistence.loadPendingWakeUpCheckConfirmIDs()
+        var pendingStartIDs = persistence.loadPendingWakeUpCheckStartIDs()
 
         let targetAlarmIDs = wakeUpCheckPipelineAlarmIDs(
             for: target,
@@ -1441,8 +1396,8 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
             }
         }
 
-        AlarmPersistence.savePendingWakeUpCheckConfirmIDs(pendingConfirmIDs, to: userDefaults)
-        AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingStartIDs, to: userDefaults)
+        persistence.savePendingWakeUpCheckConfirmIDs(pendingConfirmIDs)
+        persistence.savePendingWakeUpCheckStartIDs(pendingStartIDs)
     }
 
     private func clearAllWakeUpCheckSessions(restoreSchedules: Bool = false) {
@@ -1465,16 +1420,16 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
             }
         }
 
-        var pendingStarts = AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: userDefaults)
+        var pendingStarts = persistence.loadPendingWakeUpCheckStartIDs()
         if !pendingStarts.isEmpty {
             pendingStarts.removeAll()
-            AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingStarts, to: userDefaults)
+            persistence.savePendingWakeUpCheckStartIDs(pendingStarts)
         }
 
-        var pendingConfirm = AlarmPersistence.loadPendingWakeUpCheckConfirmIDs(from: userDefaults)
+        var pendingConfirm = persistence.loadPendingWakeUpCheckConfirmIDs()
         if !pendingConfirm.isEmpty {
             pendingConfirm.removeAll()
-            AlarmPersistence.savePendingWakeUpCheckConfirmIDs(pendingConfirm, to: userDefaults)
+            persistence.savePendingWakeUpCheckConfirmIDs(pendingConfirm)
         }
     }
 
@@ -1654,20 +1609,7 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
         remoteStates.removeValue(forKey: alarmID)
         lastKnownAlarmState.removeValue(forKey: alarmID)
 
-        var pendingSnooze = AlarmPersistence.loadPendingSnoozeIDs(from: userDefaults)
-        if pendingSnooze.remove(alarmID) != nil {
-            AlarmPersistence.savePendingSnoozeIDs(pendingSnooze, to: userDefaults)
-        }
-
-        var pendingWakeStarts = AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: userDefaults)
-        if pendingWakeStarts.remove(alarmID) != nil {
-            AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingWakeStarts, to: userDefaults)
-        }
-
-        var pendingWakeConfirm = AlarmPersistence.loadPendingWakeUpCheckConfirmIDs(from: userDefaults)
-        if pendingWakeConfirm.remove(alarmID) != nil {
-            AlarmPersistence.savePendingWakeUpCheckConfirmIDs(pendingWakeConfirm, to: userDefaults)
-        }
+        persistence.removePendingIDFromAll(alarmID)
 
         if alarm.isRepeating, alarm.isEnabled {
             alarm.lifecycleState = .scheduled
@@ -1710,7 +1652,7 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
         let remoteByID = Dictionary(uniqueKeysWithValues: incoming.map { ($0.id, $0) })
         let referenceDate = Date.now
 
-        var pendingSnoozeIDs = AlarmPersistence.loadPendingSnoozeIDs(from: userDefaults)
+        var pendingSnoozeIDs = persistence.loadPendingSnoozeIDs()
         let originalPending = pendingSnoozeIDs
 
         var updated = alarms
@@ -1897,15 +1839,8 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
                 lastKnownAlarmState.removeValue(forKey: id)
                 pendingSnoozeIDs.remove(id)
 
-                var pendingWakeStarts = AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: userDefaults)
-                if pendingWakeStarts.remove(id) != nil {
-                    AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingWakeStarts, to: userDefaults)
-                }
-
-                var pendingWakeConfirm = AlarmPersistence.loadPendingWakeUpCheckConfirmIDs(from: userDefaults)
-                if pendingWakeConfirm.remove(id) != nil {
-                    AlarmPersistence.savePendingWakeUpCheckConfirmIDs(pendingWakeConfirm, to: userDefaults)
-                }
+                persistence.removePendingID(id, from: .wakeStart)
+                persistence.removePendingID(id, from: .wakeConfirm)
 
                 if let session = wakeUpCheckSessionsByAlarmID.removeValue(forKey: id) {
                     wakeUpCheckNotificationService.cancel(notificationID: session.notificationID)
@@ -1926,7 +1861,7 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
         }
 
         if pendingSnoozeIDs != originalPending {
-            AlarmPersistence.savePendingSnoozeIDs(pendingSnoozeIDs, to: userDefaults)
+            persistence.savePendingSnoozeIDs(pendingSnoozeIDs)
         }
     }
 
@@ -2228,7 +2163,7 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
     }
 
     private func mergeSnoozeCountsFromPersistence(into alarms: inout [UserAlarm]) -> Bool {
-        let persisted = Dictionary(uniqueKeysWithValues: AlarmPersistence.loadUserAlarms(from: userDefaults).map { ($0.id, $0.snoozeCount) })
+        let persisted = Dictionary(uniqueKeysWithValues: persistence.loadUserAlarms().map { ($0.id, $0.snoozeCount) })
 
         var changed = false
         for index in alarms.indices {
@@ -2256,11 +2191,11 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
     }
 
     private func load() {
-        alarms = sortAlarms(AlarmPersistence.loadUserAlarms(from: userDefaults))
+        alarms = sortAlarms(persistence.loadUserAlarms())
     }
 
     private func save() {
-        AlarmPersistence.saveUserAlarms(alarms, to: userDefaults)
+        persistence.saveUserAlarms(alarms)
     }
 }
 

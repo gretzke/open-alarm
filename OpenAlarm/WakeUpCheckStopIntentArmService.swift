@@ -21,15 +21,17 @@ enum WakeUpCheckStopIntentArmService {
         defaults: UserDefaults = .standard,
         referenceDate: Date = .now
     ) async -> Bool {
-        let defaultSharedSettings = AlarmPersistence.loadDefaultSharedSettings(from: defaults)
-        let alarms = AlarmPersistence.loadUserAlarms(from: defaults)
+        let persistence = AlarmPersistence(defaults: defaults)
+
+        let defaultSharedSettings = persistence.loadDefaultSharedSettings()
+        let alarms = persistence.loadUserAlarms()
 
         guard let alarm = alarms.first(where: { $0.id == alarmID }) else {
             return false
         }
 
         let resolvedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
-        let persistedSessions = AlarmPersistence.loadWakeUpCheckSessions(from: defaults)
+        let persistedSessions = persistence.loadWakeUpCheckSessions()
         let previousSession = persistedSessions.first(where: { $0.alarmID == alarmID })
 
         let shouldStartCycle = WakeUpCheckCoordinator.shouldEnqueuePipelineOnStopIntent(
@@ -62,7 +64,7 @@ enum WakeUpCheckStopIntentArmService {
         persistArmingAttemptSession(
             nextSession,
             replacingAlarmID: alarmID,
-            defaults: defaults
+            persistence: persistence
         )
 
         let notificationService = WakeUpCheckNotificationService(center: notificationCenter)
@@ -86,13 +88,13 @@ enum WakeUpCheckStopIntentArmService {
             markSessionAwaitingConfirmation(
                 alarmID: alarmID,
                 notificationID: nextSession.notificationID,
-                defaults: defaults,
+                persistence: persistence,
                 now: .now
             )
             markAlarmAwaitingWakeCheck(
                 alarmID: alarmID,
                 referenceDate: referenceDate,
-                defaults: defaults
+                persistence: persistence
             )
             return true
         } catch {
@@ -105,7 +107,7 @@ enum WakeUpCheckStopIntentArmService {
             rollbackSessionAfterFailure(
                 alarmID: alarmID,
                 previousSession: previousSession,
-                defaults: defaults
+                persistence: persistence
             )
             return false
         }
@@ -114,36 +116,36 @@ enum WakeUpCheckStopIntentArmService {
     private static func persistArmingAttemptSession(
         _ nextSession: WakeUpCheckSessionState,
         replacingAlarmID: UUID,
-        defaults: UserDefaults
+        persistence: AlarmPersistence
     ) {
-        var sessions = AlarmPersistence.loadWakeUpCheckSessions(from: defaults)
+        var sessions = persistence.loadWakeUpCheckSessions()
         sessions.removeAll(where: { $0.alarmID == replacingAlarmID })
         sessions.append(nextSession)
-        AlarmPersistence.saveWakeUpCheckSessions(sessions, to: defaults)
+        persistence.saveWakeUpCheckSessions(sessions)
     }
 
     private static func rollbackSessionAfterFailure(
         alarmID: UUID,
         previousSession: WakeUpCheckSessionState?,
-        defaults: UserDefaults
+        persistence: AlarmPersistence
     ) {
-        var sessions = AlarmPersistence.loadWakeUpCheckSessions(from: defaults)
+        var sessions = persistence.loadWakeUpCheckSessions()
         sessions.removeAll(where: { $0.alarmID == alarmID })
 
         if let previousSession {
             sessions.append(previousSession)
         }
 
-        AlarmPersistence.saveWakeUpCheckSessions(sessions, to: defaults)
+        persistence.saveWakeUpCheckSessions(sessions)
     }
 
     private static func markSessionAwaitingConfirmation(
         alarmID: UUID,
         notificationID: String,
-        defaults: UserDefaults,
+        persistence: AlarmPersistence,
         now: Date
     ) {
-        var sessions = AlarmPersistence.loadWakeUpCheckSessions(from: defaults)
+        var sessions = persistence.loadWakeUpCheckSessions()
         guard let sessionIndex = sessions.firstIndex(where: {
             $0.alarmID == alarmID && $0.notificationID == notificationID
         }) else {
@@ -154,22 +156,22 @@ enum WakeUpCheckStopIntentArmService {
             sessions[sessionIndex],
             now: now
         )
-        AlarmPersistence.saveWakeUpCheckSessions(sessions, to: defaults)
+        persistence.saveWakeUpCheckSessions(sessions)
     }
 
     private static func markAlarmAwaitingWakeCheck(
         alarmID: UUID,
         referenceDate: Date,
-        defaults: UserDefaults
+        persistence: AlarmPersistence
     ) {
-        var alarms = AlarmPersistence.loadUserAlarms(from: defaults)
+        var alarms = persistence.loadUserAlarms()
         guard let alarmIndex = alarms.firstIndex(where: { $0.id == alarmID }) else {
             return
         }
 
         alarms[alarmIndex].lifecycleState = .awaitingWakeCheck
         alarms[alarmIndex].updatedAt = referenceDate
-        AlarmPersistence.saveUserAlarms(alarms, to: defaults)
+        persistence.saveUserAlarms(alarms)
     }
 
     private static func scheduleWakeCheckRuntimeAlarm(

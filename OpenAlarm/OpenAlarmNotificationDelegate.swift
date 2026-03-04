@@ -41,13 +41,14 @@ final class OpenAlarmNotificationDelegate: NSObject, UIApplicationDelegate, UNUs
         // - Persisting a tiny confirmation marker keeps the callback deterministic,
         //   then AlarmStore performs the heavier wake-check teardown/scheduling work
         //   on the main app actor during normal reconciliation.
+        let persistence = AlarmPersistence.shared
         let pendingWakeQueues = WakeUpCheckCoordinator.pendingWakeQueuesAfterConfirmAction(
             alarmID: alarmID,
-            pendingStartIDs: AlarmPersistence.loadPendingWakeUpCheckStartIDs(),
-            pendingConfirmIDs: AlarmPersistence.loadPendingWakeUpCheckConfirmIDs()
+            pendingStartIDs: persistence.loadPendingWakeUpCheckStartIDs(),
+            pendingConfirmIDs: persistence.loadPendingWakeUpCheckConfirmIDs()
         )
-        AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingWakeQueues.pendingStartIDs)
-        AlarmPersistence.savePendingWakeUpCheckConfirmIDs(pendingWakeQueues.pendingConfirmIDs)
+        persistence.savePendingWakeUpCheckStartIDs(pendingWakeQueues.pendingStartIDs)
+        persistence.savePendingWakeUpCheckConfirmIDs(pendingWakeQueues.pendingConfirmIDs)
 
         // Best effort immediate shutdown for already-armed wake-check alarms.
         try? AlarmManager.shared.stop(id: alarmID)

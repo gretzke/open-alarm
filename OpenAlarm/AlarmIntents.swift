@@ -25,19 +25,18 @@ struct StopIntent: LiveActivityIntent {
         }
 
         let defaults = UserDefaults.standard
-        var pending = AlarmPersistence.loadPendingSnoozeIDs(from: defaults)
-        if pending.remove(id) != nil {
-            AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
-        }
+        let persistence = AlarmPersistence(defaults: defaults)
 
-        let defaultSharedSettings = AlarmPersistence.loadDefaultSharedSettings(from: defaults)
-        let alarms = AlarmPersistence.loadUserAlarms(from: defaults)
+        persistence.removePendingID(id, from: .snooze)
+
+        let defaultSharedSettings = persistence.loadDefaultSharedSettings()
+        let alarms = persistence.loadUserAlarms()
         let hasWakeCheckEnabled = alarms
             .first(where: { $0.id == id })?
             .resolvedSharedSettings(defaults: defaultSharedSettings)
             .wakeUpCheckEnabled ?? false
-        let hasActiveWakeCheckSession = AlarmPersistence
-            .loadWakeUpCheckSessions(from: defaults)
+        let hasActiveWakeCheckSession = persistence
+            .loadWakeUpCheckSessions()
             .contains(where: { $0.alarmID == id })
 
         let shouldEnqueueWakeCheckStart = WakeUpCheckCoordinator.shouldEnqueuePipelineOnStopIntent(
@@ -46,9 +45,9 @@ struct StopIntent: LiveActivityIntent {
         )
 
         if shouldEnqueueWakeCheckStart {
-            var pendingStarts = AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: defaults)
+            var pendingStarts = persistence.loadPendingWakeUpCheckStartIDs()
             pendingStarts.insert(id)
-            AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingStarts, to: defaults)
+            persistence.savePendingWakeUpCheckStartIDs(pendingStarts)
         }
 
         try? AlarmManager.shared.stop(id: id)
@@ -62,11 +61,11 @@ struct StopIntent: LiveActivityIntent {
                 defaults: defaults
             )
             let pendingStartsAfterImmediateArming = WakeUpCheckCoordinator.pendingStartIDsAfterImmediateStopIntentArming(
-                pendingStartIDs: AlarmPersistence.loadPendingWakeUpCheckStartIDs(from: defaults),
+                pendingStartIDs: persistence.loadPendingWakeUpCheckStartIDs(),
                 alarmID: id,
                 didArmImmediately: didArmWakeCheckImmediately
             )
-            AlarmPersistence.savePendingWakeUpCheckStartIDs(pendingStartsAfterImmediateArming, to: defaults)
+            persistence.savePendingWakeUpCheckStartIDs(pendingStartsAfterImmediateArming)
         }
 
         await AlarmScheduleReconcileEntrypoint.reconcile(trigger: .stopIntent(id))
@@ -100,20 +99,22 @@ struct SnoozeIntent: LiveActivityIntent {
         }
 
         let defaults = UserDefaults.standard
-        let defaultSharedSettings = AlarmPersistence.loadDefaultSharedSettings(from: defaults)
+        let persistence = AlarmPersistence(defaults: defaults)
 
-        var pending = AlarmPersistence.loadPendingSnoozeIDs(from: defaults)
+        let defaultSharedSettings = persistence.loadDefaultSharedSettings()
+
+        var pending = persistence.loadPendingSnoozeIDs()
         pending.insert(id)
-        AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
+        persistence.savePendingSnoozeIDs(pending)
 
-        var alarms = AlarmPersistence.loadUserAlarms(from: defaults)
+        var alarms = persistence.loadUserAlarms()
         if let index = alarms.firstIndex(where: { $0.id == id }) {
             var alarm = alarms[index]
             let effectiveSharedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
 
             guard effectiveSharedSettings.canSnoozeAgain(currentCount: alarm.snoozeCount) else {
                 pending.remove(id)
-                AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
+                persistence.savePendingSnoozeIDs(pending)
                 try AlarmManager.shared.stop(id: id)
                 await reconcileSchedule()
                 return .result()
@@ -130,7 +131,7 @@ struct SnoozeIntent: LiveActivityIntent {
             }
 
             alarms[index] = alarm
-            AlarmPersistence.saveUserAlarms(alarms, to: defaults)
+            persistence.saveUserAlarms(alarms)
 
             let snoozeDate = Date.now.addingTimeInterval(AlarmConfigurationFactory.snoozeInterval(for: effectiveSharedSettings.snoozeDurationMinutes))
 
@@ -155,7 +156,7 @@ struct SnoozeIntent: LiveActivityIntent {
                     _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
                 } catch {
                     pending.remove(id)
-                    AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
+                    persistence.savePendingSnoozeIDs(pending)
                     // Last fallback: keep snooze behavior even if config replacement failed.
                     try? AlarmManager.shared.countdown(id: id)
                 }
@@ -165,7 +166,7 @@ struct SnoozeIntent: LiveActivityIntent {
         }
 
         pending.remove(id)
-        AlarmPersistence.savePendingSnoozeIDs(pending, to: defaults)
+        persistence.savePendingSnoozeIDs(pending)
         try AlarmManager.shared.stop(id: id)
         await reconcileSchedule()
         return .result()
