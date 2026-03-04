@@ -1,6 +1,8 @@
 .DS_Store
 build/
+.build/
 DerivedData/
+docs/plans/
 xcuserdata/
 *.swp
 
