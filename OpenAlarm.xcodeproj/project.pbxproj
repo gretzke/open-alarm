@@ -35,6 +35,7 @@
 		E072A215F811DC860E8ED2F1 /* OnboardingEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6981BF284D917EBC650816B /* OnboardingEngine.swift */; };
 		F1CC7D2E7D1CC6F5D537C625 /* AlarmScheduleReconciler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06DDC0185B5B0D8A1400C98B /* AlarmScheduleReconciler.swift */; };
 		FB2461D5447424A95E288109 /* WakeUpCheckStopIntentArmService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0AF3F0DE1850AE6E1938DA9 /* WakeUpCheckStopIntentArmService.swift */; };
+		C2A1B3D4E5F6A7B8C9D0E1F3 /* WakeUpCheckPipelineController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3B2C4E5F6A7B8C9D0E1F2A4 /* WakeUpCheckPipelineController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -81,6 +82,7 @@
 		E9ACF85F89CF9D011BF26A5E /* OpenAlarm.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OpenAlarm.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F68BF27EA97B5D8C42193398 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		FA3152F133E737A1C6EF2905 /* NapEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NapEditorView.swift; sourceTree = "<group>"; };
+		D3B2C4E5F6A7B8C9D0E1F2A4 /* WakeUpCheckPipelineController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeUpCheckPipelineController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -139,6 +141,7 @@
 				568AC6EB43A9044628BFB421 /* WakeUpCheckModels.swift */,
 				7049E02D02264E608DE04480 /* WakeUpCheckNotificationService.swift */,
 				E0AF3F0DE1850AE6E1938DA9 /* WakeUpCheckStopIntentArmService.swift */,
+				D3B2C4E5F6A7B8C9D0E1F2A4 /* WakeUpCheckPipelineController.swift */,
 				FD7B31457CC502B622019E4F /* Resources */,
 			);
 			path = OpenAlarm;
@@ -278,6 +281,7 @@
 				8399559AD42B82F57361E9E3 /* WakeUpCheckModels.swift in Sources */,
 				99FFE75EAF79B740FE9D2225 /* WakeUpCheckNotificationService.swift in Sources */,
 				FB2461D5447424A95E288109 /* WakeUpCheckStopIntentArmService.swift in Sources */,
+				C2A1B3D4E5F6A7B8C9D0E1F3 /* WakeUpCheckPipelineController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
