@@ -155,12 +155,6 @@ final class AlarmStore: ObservableObject {
             self.alarms.removeAll { staleIDs.contains($0.id) }
             self.save()
         }
-        scheduleCoordinator.sortAndSave = { [weak self] in
-            guard let self else { return }
-            self.alarms = self.sortAlarms(self.alarms)
-            self.save()
-        }
-
         // Wire wake-up check controller callbacks that depend on the coordinator.
         wakeUpCheckController.owningAlarmID = { [weak self] id in
             self?.scheduleCoordinator.owningAlarmID(for: id)

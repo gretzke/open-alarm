@@ -32,7 +32,6 @@ final class AlarmScheduleCoordinator {
     var updateLastKnownState: ((UUID, Alarm.State?) -> Void)!
     var updateRemoteState: ((UUID, Alarm.State?) -> Void)!
     var removeStaleAlarms: ((Set<UUID>) -> Void)!
-    var sortAndSave: (() -> Void)!
 
     // MARK: - Init
 
@@ -457,7 +456,7 @@ final class AlarmScheduleCoordinator {
 
     // MARK: - Runtime state query
 
-    func runtimeAlarmIDsSnapshot() -> Set<UUID>? {
+    private func runtimeAlarmIDsSnapshot() -> Set<UUID>? {
         guard let runtimeAlarms = try? alarmManager.alarms else {
             return nil
         }
