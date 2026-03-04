@@ -254,7 +254,7 @@ extension AlarmStore {
 
     func rescheduleAlarmsUsingDefaultSharedSettings() async {
         for alarm in alarms where alarm.useDefaultSharedSettings {
-            await AlarmScheduleReconcileEntrypoint.reconcileSchedule(alarmID: alarm.id)
+            await AlarmScheduleReconcileEntrypoint.reconcileSchedule(alarmID: alarm.id, forceRearm: true)
         }
     }
 }

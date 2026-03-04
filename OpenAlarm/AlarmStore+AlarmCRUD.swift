@@ -63,7 +63,7 @@ extension AlarmStore {
         persistCommittedAlarm(current)
 
         await cancelRuntimeAlarms(ids: staleManualIDs.subtracting(Set(current.manualScheduleQueue.map(\.id))))
-        await AlarmScheduleReconcileEntrypoint.reconcileSchedule(alarmID: current.id)
+        await AlarmScheduleReconcileEntrypoint.reconcileSchedule(alarmID: current.id, forceRearm: true)
     }
 
     func setAlarmEnabled(_ alarm: UserAlarm, enabled: Bool, skipNext: Bool?) async throws {
@@ -91,7 +91,7 @@ extension AlarmStore {
         persistCommittedAlarm(updatedAlarm)
 
         await cancelRuntimeAlarms(ids: staleManualIDs.subtracting(Set(updatedAlarm.manualScheduleQueue.map(\.id))))
-        await AlarmScheduleReconcileEntrypoint.reconcileSchedule(alarmID: updatedAlarm.id)
+        await AlarmScheduleReconcileEntrypoint.reconcileSchedule(alarmID: updatedAlarm.id, forceRearm: true)
     }
 
     func deleteAlarm(_ alarm: UserAlarm) {
@@ -206,7 +206,7 @@ extension AlarmStore {
         persistCommittedAlarm(nextAlarm)
 
         await cancelRuntimeAlarms(ids: staleManualIDs.subtracting(Set(nextAlarm.manualScheduleQueue.map(\.id))))
-        await AlarmScheduleReconcileEntrypoint.reconcileSchedule(alarmID: id)
+        await AlarmScheduleReconcileEntrypoint.reconcileSchedule(alarmID: id, forceRearm: true)
     }
 
     private func extractOverrideTimeComponents(from draft: AlarmDraft, fallback alarm: UserAlarm) -> (hour: Int, minute: Int) {

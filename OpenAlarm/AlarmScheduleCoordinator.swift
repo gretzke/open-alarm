@@ -69,7 +69,7 @@ final class AlarmScheduleCoordinator {
     /// scheduling state. This is intentionally called at every lifecycle
     /// opportunity (app open, callback stream, refresh) to keep scheduling
     /// deterministic even after missed callbacks or device restarts.
-    private func reconcileAllAlarmSchedules(referenceDate: Date = .now) async {
+    private func reconcileAllAlarmSchedules(referenceDate: Date = .now, forceRearm: Bool = false) async {
         // Stale one-shot cleanup: remove expired nap/tryOut alarms that have no
         // runtime entry and whose fixedTriggerDate has passed. This catches cases
         // where the app was not running when the alarm fired (cold path).
@@ -77,7 +77,7 @@ final class AlarmScheduleCoordinator {
 
         let alarmIDs = allAlarmIDs()
         for alarmID in alarmIDs {
-            await reconcileSchedulingForAlarm(alarmID, referenceDate: referenceDate)
+            await reconcileSchedulingForAlarm(alarmID, referenceDate: referenceDate, forceRearm: forceRearm)
         }
     }
 
@@ -158,7 +158,7 @@ final class AlarmScheduleCoordinator {
     /// Barrier A: deterministic planning from persisted canonical+override state.
     /// Barrier B: commit planned state (`save`) before runtime side-effects.
     /// Barrier C: converge runtime toward committed state (with repair retries).
-    private func reconcileSchedulingForAlarm(_ alarmID: UUID, referenceDate: Date = .now) async {
+    private func reconcileSchedulingForAlarm(_ alarmID: UUID, referenceDate: Date = .now, forceRearm: Bool = false) async {
         guard let existingAlarm = findAlarm(alarmID) else {
             return
         }
@@ -182,7 +182,8 @@ final class AlarmScheduleCoordinator {
         await runtimeConvergenceBarrier(
             for: committedAlarm,
             staleManualRuntimeIDs: planning.staleManualRuntimeIDs,
-            referenceDate: referenceDate
+            referenceDate: referenceDate,
+            forceRearm: forceRearm
         )
     }
 
@@ -274,7 +275,8 @@ final class AlarmScheduleCoordinator {
     private func runtimeConvergenceBarrier(
         for alarm: UserAlarm,
         staleManualRuntimeIDs: Set<UUID>,
-        referenceDate: Date
+        referenceDate: Date,
+        forceRearm: Bool = false
     ) async {
         await cancelRuntimeAlarms(ids: staleManualRuntimeIDs)
 
@@ -328,17 +330,21 @@ final class AlarmScheduleCoordinator {
 
         if alarm.isEnabled {
             // Skip re-scheduling when the alarm is already healthy in the
-            // runtime (scheduled or counting down toward firing).  Re-arming
-            // a countdown alarm resets it back to scheduled, which prevents
-            // it from ever reaching the alerting state while the app is in
-            // the foreground -- the reconcile loop is triggered by every
-            // AlarmKit state-change callback.
+            // runtime (scheduled, counting down, alerting, or paused/snoozed).
+            // Re-arming any of these resets state and prevents firing or
+            // discards snooze windows.
+            //
+            // The only exception is forceRearm + .scheduled: CRUD edits need
+            // to overwrite a stale .scheduled entry with the new config.
             if isRuntimeAlarmHealthy(alarm.id) {
-                if let runtimeState = runtimeAlarmState(alarm.id) {
-                    updateLastKnownState(alarm.id, runtimeState)
-                    updateRemoteState(alarm.id, runtimeState)
+                let shouldBypass = forceRearm && runtimeAlarmState(alarm.id) == .scheduled
+                if !shouldBypass {
+                    if let runtimeState = runtimeAlarmState(alarm.id) {
+                        updateLastKnownState(alarm.id, runtimeState)
+                        updateRemoteState(alarm.id, runtimeState)
+                    }
+                    return
                 }
-                return
             }
 
             do {
@@ -492,25 +498,23 @@ final class AlarmScheduleCoordinator {
     /// be suppressed to avoid interrupting active/imminent behaviour.
     ///
     /// Guarded states (re-arming these causes regressions):
+    /// - `.scheduled` — alarm is queued at a future time; the busy reconcile loop
+    ///   from `alarmUpdates` callbacks would continuously re-arm and prevent the
+    ///   `.scheduled` → `.countdown` transition from ever being reached.
+    ///   CRUD edits use `forceRearm: true` to bypass this guard for `.scheduled`
+    ///   only, ensuring edited alarms still get their new config applied.
     /// - `.countdown` — alarm is imminent; re-arming resets it to .scheduled and
     ///   prevents it from ever reaching alerting while the app is in the foreground.
     /// - `.alerting` — alarm is actively ringing; re-scheduling immediately silences
     ///   the audible alert.
     /// - `.paused` — user has snoozed; re-arming would discard the snooze window.
-    ///
-    /// NOT guarded:
-    /// - `.scheduled` — just queued at a future time; must NOT be skipped because
-    ///   the trigger date or config may have changed (e.g. user edited the alarm).
-    ///   Re-arming with the new config is safe and necessary.
     private func isRuntimeAlarmHealthy(_ alarmID: UUID) -> Bool {
         guard let state = runtimeAlarmState(alarmID) else {
             return false
         }
         switch state {
-        case .countdown, .alerting, .paused:
+        case .scheduled, .countdown, .alerting, .paused:
             return true
-        case .scheduled:
-            return false
         @unknown default:
             return false
         }
@@ -617,7 +621,7 @@ final class AlarmScheduleCoordinator {
 // MARK: - AlarmScheduleReconcileHandling
 
 extension AlarmScheduleCoordinator: AlarmScheduleReconcileHandling {
-    func reconcileSchedule(target: AlarmScheduleReconcileTarget, referenceDate: Date) async {
+    func reconcileSchedule(target: AlarmScheduleReconcileTarget, referenceDate: Date, forceRearm: Bool) async {
         await wakeUpCheckController.reconcileWakeUpCheckPipeline(target: target, referenceDate: referenceDate)
 
         switch target {
@@ -625,10 +629,10 @@ extension AlarmScheduleCoordinator: AlarmScheduleReconcileHandling {
             guard let alarmID = owningAlarmID(for: runtimeAlarmID) else {
                 return
             }
-            await reconcileSchedulingForAlarm(alarmID, referenceDate: referenceDate)
+            await reconcileSchedulingForAlarm(alarmID, referenceDate: referenceDate, forceRearm: forceRearm)
 
         case .allAlarms:
-            await reconcileAllAlarmSchedules(referenceDate: referenceDate)
+            await reconcileAllAlarmSchedules(referenceDate: referenceDate, forceRearm: forceRearm)
         }
     }
 }

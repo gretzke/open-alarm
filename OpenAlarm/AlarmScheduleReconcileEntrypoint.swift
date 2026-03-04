@@ -2,7 +2,7 @@ import Foundation
 
 @MainActor
 protocol AlarmScheduleReconcileHandling: AnyObject {
-    func reconcileSchedule(target: AlarmScheduleReconcileTarget, referenceDate: Date) async
+    func reconcileSchedule(target: AlarmScheduleReconcileTarget, referenceDate: Date, forceRearm: Bool) async
 }
 
 @MainActor
@@ -25,13 +25,14 @@ enum AlarmScheduleReconcileEntrypoint {
 
     static func reconcileSchedule(
         alarmID: UUID,
-        referenceDate: Date = .now
+        referenceDate: Date = .now,
+        forceRearm: Bool = false
     ) async {
-        await reconcile(target: .alarm(alarmID), referenceDate: referenceDate)
+        await reconcile(target: .alarm(alarmID), referenceDate: referenceDate, forceRearm: forceRearm)
     }
 
     static func reconcileAllSchedules(referenceDate: Date = .now) async {
-        await reconcile(target: .allAlarms, referenceDate: referenceDate)
+        await reconcile(target: .allAlarms, referenceDate: referenceDate, forceRearm: false)
     }
 
     static func reconcile(
@@ -40,19 +41,21 @@ enum AlarmScheduleReconcileEntrypoint {
     ) async {
         await reconcile(
             target: AlarmScheduleReconcileRouting.target(for: trigger),
-            referenceDate: referenceDate
+            referenceDate: referenceDate,
+            forceRearm: false
         )
     }
 
     private static func reconcile(
         target: AlarmScheduleReconcileTarget,
-        referenceDate: Date
+        referenceDate: Date,
+        forceRearm: Bool
     ) async {
         guard let handler else {
             // App or store not ready yet. Intents should silently no-op.
             return
         }
 
-        await handler.reconcileSchedule(target: target, referenceDate: referenceDate)
+        await handler.reconcileSchedule(target: target, referenceDate: referenceDate, forceRearm: forceRearm)
     }
 }

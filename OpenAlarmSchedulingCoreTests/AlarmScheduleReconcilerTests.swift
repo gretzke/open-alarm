@@ -1029,15 +1029,13 @@ final class AlarmScheduleReconcilerTests: XCTestCase {
     }
 
     func testForegroundReconcileDoesRearmScheduledAlarmAfterEdit() {
-        // Regression test for the inverse regression: a `.scheduled` alarm must NOT
-        // be treated as healthy-skip.  When the user edits the alarm (new trigger
-        // time / config), the runtime still holds the old `.scheduled` entry.
-        // Reconcile must overwrite it with the new schedule so the alarm fires at
-        // the correct time.
+        // Regression test for the inverse regression: when the user edits the
+        // alarm (new trigger time/config), CRUD reconcile must overwrite the
+        // stale `.scheduled` runtime entry with the new schedule.
         //
-        // If `.scheduled` were in the healthy guard, reconcile would silently skip
-        // it and the alarm would fire at the stale old time -- or not at all if
-        // the old trigger has already passed.
+        // `.scheduled` IS in the healthy guard (prevents busy re-arm loop from
+        // callbacks), but CRUD uses `forceRearm: true` to bypass the guard for
+        // `.scheduled` only, ensuring edited alarms get their new config applied.
         let calendar = fixedUTCGregorianCalendar()
         let now = makeUTCDate(year: 2026, month: 3, day: 4, hour: 6, minute: 0, calendar: calendar)
         let staleOldTrigger = makeUTCDate(year: 2026, month: 3, day: 4, hour: 7, minute: 0, calendar: calendar)
@@ -1060,13 +1058,13 @@ final class AlarmScheduleReconcilerTests: XCTestCase {
 
         let scheduleCountBefore = harness.runtime.scheduleCallCount
 
-        // Reconcile should detect the stale scheduled entry and re-arm at 08:00.
-        harness.reconcileAll(referenceDate: now)
+        // CRUD reconcile (forceRearm: true) should detect the stale scheduled entry and re-arm at 08:00.
+        harness.reconcileForCRUD(alarmID: harness.alarm.id, referenceDate: now)
 
         XCTAssertGreaterThan(
             harness.runtime.scheduleCallCount,
             scheduleCountBefore,
-            "Reconcile must call schedule() to overwrite a stale .scheduled entry after alarm edit"
+            "CRUD reconcile must call schedule() to overwrite a stale .scheduled entry after alarm edit"
         )
 
         // The runtime trigger date must now reflect the updated config (08:00).
@@ -1074,6 +1072,197 @@ final class AlarmScheduleReconcilerTests: XCTestCase {
             harness.runtime.byID[harness.alarm.id]?.triggerDate,
             newTrigger,
             "Runtime trigger must be updated to the new alarm time after edit"
+        )
+    }
+
+    // MARK: - Regression tests: callback reconcile must not stomp non-canonical schedules
+
+    func testCallbackReconcileDoesNotOverwriteScheduledAlarm() {
+        // Regression test for regressions 1 & 4: the alarmUpdates callback
+        // triggers reconcileAllSchedules which must NOT re-arm a .scheduled
+        // alarm. The busy re-arm loop prevented alarms from ever reaching
+        // .countdown → .alerting.
+        let calendar = fixedUTCGregorianCalendar()
+        let now = makeUTCDate(year: 2026, month: 3, day: 5, hour: 6, minute: 0, calendar: calendar)
+        let canonicalTrigger = makeUTCDate(year: 2026, month: 3, day: 5, hour: 7, minute: 0, calendar: calendar)
+
+        var harness = AlarmStoreOverrideIntegrationHarness(
+            calendar: calendar,
+            alarmID: UUID(uuidString: "11111111-AAAA-BBBB-CCCC-DDDDDDDDDDDD")!,
+            configReferenceID: UUID(uuidString: "22222222-AAAA-BBBB-CCCC-DDDDDDDDDDDD")!,
+            weekdayNumbers: [1, 2, 3, 4, 5, 6, 7],
+            hour: 7,
+            minute: 0
+        )
+
+        harness.seedCanonicalRuntime(triggerDate: canonicalTrigger)
+        XCTAssertEqual(harness.runtime.byID[harness.alarm.id]?.state, .scheduled)
+
+        let scheduleCountBefore = harness.runtime.scheduleCallCount
+
+        // Simulate callback-triggered reconcile (forceRearm: false).
+        harness.reconcileAll(referenceDate: now)
+
+        // The alarm must remain .scheduled without being re-armed.
+        XCTAssertEqual(
+            harness.runtime.byID[harness.alarm.id]?.state,
+            .scheduled,
+            "Callback reconcile must not re-arm a .scheduled alarm"
+        )
+        XCTAssertEqual(
+            harness.runtime.scheduleCallCount,
+            scheduleCountBefore,
+            "Callback reconcile should not call schedule() on an already-.scheduled alarm"
+        )
+    }
+
+    func testCRUDReconcileReArmsScheduledAlarmWithForceRearm() {
+        // Verify that CRUD operations (forceRearm: true) DO re-arm a .scheduled
+        // alarm so edits take effect.
+        let calendar = fixedUTCGregorianCalendar()
+        let now = makeUTCDate(year: 2026, month: 3, day: 5, hour: 6, minute: 0, calendar: calendar)
+        let staleOldTrigger = makeUTCDate(year: 2026, month: 3, day: 5, hour: 7, minute: 0, calendar: calendar)
+        let newTrigger = makeUTCDate(year: 2026, month: 3, day: 5, hour: 9, minute: 0, calendar: calendar)
+
+        var harness = AlarmStoreOverrideIntegrationHarness(
+            calendar: calendar,
+            alarmID: UUID(uuidString: "33333333-AAAA-BBBB-CCCC-DDDDDDDDDDDD")!,
+            configReferenceID: UUID(uuidString: "44444444-AAAA-BBBB-CCCC-DDDDDDDDDDDD")!,
+            weekdayNumbers: [1, 2, 3, 4, 5, 6, 7],
+            hour: 9,
+            minute: 0
+        )
+
+        harness.runtime.schedule(id: harness.alarm.id, triggerDate: staleOldTrigger)
+        XCTAssertEqual(harness.runtime.byID[harness.alarm.id]?.triggerDate, staleOldTrigger)
+
+        let scheduleCountBefore = harness.runtime.scheduleCallCount
+
+        // CRUD reconcile (forceRearm: true) should re-arm.
+        harness.reconcileForCRUD(alarmID: harness.alarm.id, referenceDate: now)
+
+        XCTAssertGreaterThan(
+            harness.runtime.scheduleCallCount,
+            scheduleCountBefore,
+            "CRUD reconcile must re-arm a .scheduled alarm to apply new config"
+        )
+        XCTAssertEqual(
+            harness.runtime.byID[harness.alarm.id]?.triggerDate,
+            newTrigger,
+            "CRUD reconcile must update trigger date to new config"
+        )
+    }
+
+    func testSnoozeScheduleNotOverwrittenByCallbackReconcile() {
+        // Regression test for regression 2: after SnoozeIntent schedules the
+        // alarm at snooze time, the callback-triggered reconcile must NOT
+        // overwrite the snooze schedule with the canonical schedule.
+        let calendar = fixedUTCGregorianCalendar()
+        let now = makeUTCDate(year: 2026, month: 3, day: 5, hour: 7, minute: 0, calendar: calendar)
+        let snoozeTrigger = makeUTCDate(year: 2026, month: 3, day: 5, hour: 7, minute: 5, calendar: calendar)
+
+        var harness = AlarmStoreOverrideIntegrationHarness(
+            calendar: calendar,
+            alarmID: UUID(uuidString: "55555555-AAAA-BBBB-CCCC-DDDDDDDDDDDD")!,
+            configReferenceID: UUID(uuidString: "66666666-AAAA-BBBB-CCCC-DDDDDDDDDDDD")!,
+            weekdayNumbers: [1, 2, 3, 4, 5, 6, 7],
+            hour: 7,
+            minute: 0
+        )
+
+        // Simulate: alarm was snoozed, now scheduled at snooze time.
+        harness.runtime.schedule(id: harness.alarm.id, triggerDate: snoozeTrigger)
+        XCTAssertEqual(harness.runtime.byID[harness.alarm.id]?.state, .scheduled)
+        XCTAssertEqual(harness.runtime.byID[harness.alarm.id]?.triggerDate, snoozeTrigger)
+
+        let scheduleCountBefore = harness.runtime.scheduleCallCount
+
+        // Callback reconcile must NOT overwrite snooze schedule.
+        harness.reconcileAll(referenceDate: now)
+
+        XCTAssertEqual(
+            harness.runtime.byID[harness.alarm.id]?.triggerDate,
+            snoozeTrigger,
+            "Callback reconcile must not overwrite snooze schedule with canonical schedule"
+        )
+        XCTAssertEqual(
+            harness.runtime.scheduleCallCount,
+            scheduleCountBefore,
+            "Callback reconcile should not call schedule() on a snoozed alarm in .scheduled state"
+        )
+    }
+
+    func testRecurringAlarmScheduledStateNotResetByCallbackReconcile() {
+        // Regression test for regression 4: recurring alarm re-armed after
+        // firing must not be continuously re-armed by callback reconcile.
+        let calendar = fixedUTCGregorianCalendar()
+        let now = makeUTCDate(year: 2026, month: 3, day: 5, hour: 7, minute: 1, calendar: calendar)
+        let nextCanonical = makeUTCDate(year: 2026, month: 3, day: 6, hour: 7, minute: 0, calendar: calendar)
+
+        var harness = AlarmStoreOverrideIntegrationHarness(
+            calendar: calendar,
+            alarmID: UUID(uuidString: "77777777-AAAA-BBBB-CCCC-DDDDDDDDDDDD")!,
+            configReferenceID: UUID(uuidString: "88888888-AAAA-BBBB-CCCC-DDDDDDDDDDDD")!,
+            weekdayNumbers: [1, 2, 3, 4, 5, 6, 7],
+            hour: 7,
+            minute: 0
+        )
+
+        // After firing, recurring alarm is re-armed for the next day.
+        harness.runtime.schedule(id: harness.alarm.id, triggerDate: nextCanonical)
+        XCTAssertEqual(harness.runtime.byID[harness.alarm.id]?.state, .scheduled)
+
+        let scheduleCountBefore = harness.runtime.scheduleCallCount
+
+        // Simulate multiple callback reconciles (as happens in production).
+        for _ in 0..<5 {
+            harness.reconcileAll(referenceDate: now)
+        }
+
+        XCTAssertEqual(
+            harness.runtime.scheduleCallCount,
+            scheduleCountBefore,
+            "Callback reconcile must not re-arm a recurring alarm that is already .scheduled"
+        )
+        XCTAssertEqual(
+            harness.runtime.byID[harness.alarm.id]?.triggerDate,
+            nextCanonical,
+            "Trigger date must remain at next canonical occurrence"
+        )
+    }
+
+    func testForceRearmDoesNotBypassCountdownGuard() {
+        // Safety: forceRearm must only bypass .scheduled, not .countdown/.alerting/.paused.
+        let calendar = fixedUTCGregorianCalendar()
+        let now = makeUTCDate(year: 2026, month: 3, day: 5, hour: 6, minute: 59, calendar: calendar)
+        let canonicalTrigger = makeUTCDate(year: 2026, month: 3, day: 5, hour: 7, minute: 0, calendar: calendar)
+
+        var harness = AlarmStoreOverrideIntegrationHarness(
+            calendar: calendar,
+            alarmID: UUID(uuidString: "99999999-AAAA-BBBB-CCCC-DDDDDDDDDDDD")!,
+            configReferenceID: UUID(uuidString: "AAAAAAAA-AAAA-BBBB-CCCC-DDDDDDDDDDDD")!,
+            weekdayNumbers: [1, 2, 3, 4, 5, 6, 7],
+            hour: 7,
+            minute: 0
+        )
+
+        harness.seedCanonicalRuntime(triggerDate: canonicalTrigger)
+        harness.runtime.setState(.countdown, for: harness.alarm.id)
+
+        let scheduleCountBefore = harness.runtime.scheduleCallCount
+
+        // Even with forceRearm, .countdown must not be re-armed.
+        harness.reconcileForCRUD(alarmID: harness.alarm.id, referenceDate: now)
+
+        XCTAssertEqual(
+            harness.runtime.byID[harness.alarm.id]?.state,
+            .countdown,
+            "forceRearm must not bypass .countdown guard"
+        )
+        XCTAssertEqual(
+            harness.runtime.scheduleCallCount,
+            scheduleCountBefore,
+            "forceRearm must not cause schedule() call for .countdown alarm"
         )
     }
 
@@ -1438,12 +1627,21 @@ private struct AlarmStoreOverrideIntegrationHarness {
     mutating func reconcile(trigger: AlarmScheduleReconcileTrigger, referenceDate: Date) {
         reconcileSchedule(
             target: AlarmScheduleReconcileRouting.target(for: trigger),
-            referenceDate: referenceDate
+            referenceDate: referenceDate,
+            forceRearm: false
         )
     }
 
     mutating func reconcileAll(referenceDate: Date) {
-        reconcileSchedule(target: .allAlarms, referenceDate: referenceDate)
+        reconcileSchedule(target: .allAlarms, referenceDate: referenceDate, forceRearm: false)
+    }
+
+    mutating func reconcileAllForceRearm(referenceDate: Date) {
+        reconcileSchedule(target: .allAlarms, referenceDate: referenceDate, forceRearm: true)
+    }
+
+    mutating func reconcileForCRUD(alarmID: UUID, referenceDate: Date) {
+        reconcileSchedule(target: .alarm(alarmID), referenceDate: referenceDate, forceRearm: true)
     }
 
     mutating func applyRemoteSnapshot(referenceDate: Date) {
@@ -1452,17 +1650,18 @@ private struct AlarmStoreOverrideIntegrationHarness {
 
     private mutating func reconcileSchedule(
         target: AlarmScheduleReconcileTarget,
-        referenceDate: Date
+        referenceDate: Date,
+        forceRearm: Bool = false
     ) {
         switch target {
         case let .alarm(runtimeAlarmID):
             guard let alarmID = owningAlarmID(for: runtimeAlarmID) else {
                 return
             }
-            reconcileSchedulingForAlarm(alarmID, referenceDate: referenceDate)
+            reconcileSchedulingForAlarm(alarmID, referenceDate: referenceDate, forceRearm: forceRearm)
 
         case .allAlarms:
-            reconcileSchedulingForAlarm(alarm.id, referenceDate: referenceDate)
+            reconcileSchedulingForAlarm(alarm.id, referenceDate: referenceDate, forceRearm: forceRearm)
         }
     }
 
@@ -1480,7 +1679,7 @@ private struct AlarmStoreOverrideIntegrationHarness {
         var didMutatePersistedState: Bool
     }
 
-    private mutating func reconcileSchedulingForAlarm(_ alarmID: UUID, referenceDate: Date) {
+    private mutating func reconcileSchedulingForAlarm(_ alarmID: UUID, referenceDate: Date, forceRearm: Bool = false) {
         guard alarm.id == alarmID else {
             return
         }
@@ -1498,7 +1697,8 @@ private struct AlarmStoreOverrideIntegrationHarness {
         reconcileBarrierTrace.append("C")
         runtimeConvergenceBarrier(
             staleManualRuntimeIDs: planning.staleManualRuntimeIDs,
-            referenceDate: referenceDate
+            referenceDate: referenceDate,
+            forceRearm: forceRearm
         )
     }
 
@@ -1580,7 +1780,8 @@ private struct AlarmStoreOverrideIntegrationHarness {
 
     private mutating func runtimeConvergenceBarrier(
         staleManualRuntimeIDs: Set<UUID>,
-        referenceDate: Date
+        referenceDate: Date,
+        forceRearm: Bool = false
     ) {
         cancelRuntimeAlarms(ids: staleManualRuntimeIDs)
 
@@ -1593,28 +1794,31 @@ private struct AlarmStoreOverrideIntegrationHarness {
         }
 
         if alarm.isEnabled {
-            // Mirror production guard: skip re-scheduling only when the alarm is
-            // in an active/imminent state (.countdown, .alerting, .paused).
-            // .scheduled is intentionally excluded — the trigger date or config
-            // may have changed (user edit), so reconcile must be allowed to
-            // overwrite it with the updated schedule.
+            // Mirror production guard: skip re-scheduling when the alarm is
+            // already in a healthy runtime state (.scheduled, .countdown,
+            // .alerting, .paused).  CRUD edits use forceRearm to bypass
+            // the .scheduled guard only.
             if let existing = runtime.byID[alarm.id],
-               existing.state == .countdown
+               existing.state == .scheduled || existing.state == .countdown
                || existing.state == .alerting || existing.state == .paused {
-                lastKnownAlarmState[alarm.id] = existing.state
-                remoteStates[alarm.id] = existing.state
-            } else {
-                runtime.schedule(
-                    id: alarm.id,
-                    triggerDate: AlarmSchedulePlanner.nextCanonicalOccurrence(
-                        after: referenceDate,
-                        schedule: alarm.canonicalScheduleSpec,
-                        calendar: calendar
-                    )
-                )
-                lastKnownAlarmState[alarm.id] = .scheduled
-                remoteStates[alarm.id] = .scheduled
+                let shouldBypass = forceRearm && existing.state == .scheduled
+                if !shouldBypass {
+                    lastKnownAlarmState[alarm.id] = existing.state
+                    remoteStates[alarm.id] = existing.state
+                    return
+                }
             }
+            // Fall through: re-arm with canonical schedule
+            runtime.schedule(
+                id: alarm.id,
+                triggerDate: AlarmSchedulePlanner.nextCanonicalOccurrence(
+                    after: referenceDate,
+                    schedule: alarm.canonicalScheduleSpec,
+                    calendar: calendar
+                )
+            )
+            lastKnownAlarmState[alarm.id] = .scheduled
+            remoteStates[alarm.id] = .scheduled
         } else {
             runtime.stop(id: alarm.id)
             runtime.cancel(id: alarm.id)

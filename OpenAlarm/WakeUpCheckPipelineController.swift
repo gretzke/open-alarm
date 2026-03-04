@@ -75,12 +75,30 @@ final class WakeUpCheckPipelineController {
         persistence.saveWakeUpCheckSessions(Array(sessionsByAlarmID.values))
     }
 
+    /// Merges any sessions written to persistence by out-of-band paths
+    /// (e.g. `WakeUpCheckStopIntentArmService`) into the in-memory map.
+    /// Existing in-memory sessions are preserved (intent path writes are
+    /// only picked up when no in-memory entry exists yet).
+    private func syncSessionsFromPersistence() {
+        let persisted = persistence.loadWakeUpCheckSessions()
+        for session in persisted {
+            if sessionsByAlarmID[session.alarmID] == nil {
+                sessionsByAlarmID[session.alarmID] = session
+            }
+        }
+    }
+
     // MARK: - Pipeline entry point
 
     func reconcileWakeUpCheckPipeline(
         target: AlarmScheduleReconcileTarget,
         referenceDate: Date
     ) async {
+        // Sync sessions from persistence to pick up out-of-band writes (e.g.
+        // from WakeUpCheckStopIntentArmService which writes directly to
+        // persistence when AlarmStore is not alive).
+        syncSessionsFromPersistence()
+
         var pendingConfirmIDs = persistence.loadPendingWakeUpCheckConfirmIDs()
         var pendingStartIDs = persistence.loadPendingWakeUpCheckStartIDs()
 

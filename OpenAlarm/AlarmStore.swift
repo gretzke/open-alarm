@@ -358,7 +358,7 @@ final class AlarmStore: ObservableObject {
         }
         wakeUpCheckController.triggerReconcileForAlarm = { alarmID in
             Task { @MainActor in
-                await AlarmScheduleReconcileEntrypoint.reconcileSchedule(alarmID: alarmID)
+                await AlarmScheduleReconcileEntrypoint.reconcileSchedule(alarmID: alarmID, forceRearm: true)
             }
         }
     }
