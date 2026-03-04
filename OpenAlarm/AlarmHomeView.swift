@@ -300,15 +300,9 @@ private struct AlarmRowView: View {
     let onDisableCompletelySelected: () -> Void
     let onToggle: (Bool) -> Void
 
-    private let mondayFirstWeekdays: [(AlarmWeekday, String)] = [
-        (.monday, "M"),
-        (.tuesday, "T"),
-        (.wednesday, "W"),
-        (.thursday, "T"),
-        (.friday, "F"),
-        (.saturday, "S"),
-        (.sunday, "S")
-    ]
+    private var localeOrderedWeekdays: [AlarmWeekday] {
+        AlarmWeekday.orderedForCurrentLocale()
+    }
 
     private var calendar: Calendar {
         .autoupdatingCurrent
@@ -394,8 +388,8 @@ private struct AlarmRowView: View {
         let activeDays = Set(alarm.repeatDays)
 
         return HStack(spacing: 6) {
-            ForEach(mondayFirstWeekdays, id: \.0) { day, symbol in
-                Text(symbol)
+            ForEach(localeOrderedWeekdays) { day in
+                Text(day.veryShortSymbol())
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(activeDays.contains(day) ? OAColor.textPrimary : OAColor.textSecondary.opacity(0.65))
                     .frame(minWidth: 12)
@@ -427,6 +421,9 @@ private struct AlarmRowView: View {
         .buttonStyle(GlassButtonStyle())
     }
 
+    // NOTE: This logic duplicates AlarmSchedulePlanner.nextCanonicalOccurrence but
+    // operates on a UserAlarm rather than an AlarmCanonicalScheduleSpec, so a direct
+    // call is not signature-compatible without an adapter.
     private func nextRepeatingDate(after referenceDate: Date) -> Date? {
         let searchStart = referenceDate.addingTimeInterval(1)
 
