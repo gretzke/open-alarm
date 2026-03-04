@@ -1,8 +1,7 @@
 import AlarmKit
 import AppIntents
+import Combine
 import Foundation
-import SwiftUI
-import UIKit
 
 @MainActor
 final class AlarmStore: ObservableObject {
@@ -255,13 +254,6 @@ final class AlarmStore: ObservableObject {
         }
 
         return hasWakeUpCheckEnabledConfigurationWithNotificationRequirement
-    }
-
-    func openSettings() {
-        guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else {
-            return
-        }
-        UIApplication.shared.open(settingsURL)
     }
 
     func updateDefaultSharedSettings(_ settings: SharedAlarmSettings) {
@@ -636,43 +628,6 @@ final class AlarmStore: ObservableObject {
         _ = try await alarmManager.schedule(id: tryOutID, configuration: config)
 
         persistCommittedAlarm(tryOutAlarm)
-    }
-
-    func lifecycleLabel(for state: AlarmLifecycleState) -> LocalizedStringKey {
-        switch state {
-        case .scheduled:
-            return L10n.alarmStateScheduled
-        case .alerting:
-            return L10n.alarmStateAlerting
-        case .awaitingWakeCheck:
-            return L10n.alarmStateAwaitingWakeCheck
-        case .completed:
-            return L10n.alarmStateCompleted
-        }
-    }
-
-    func permissionStatusLabel() -> LocalizedStringKey {
-        switch permissionStatus {
-        case .authorized:
-            return L10n.settingsPermissionAuthorized
-        case .notDetermined:
-            return L10n.settingsPermissionNotDetermined
-        case .denied:
-            return L10n.settingsPermissionDenied
-        }
-    }
-
-    func userFacingErrorMessage(for error: Error) -> LocalizedStringKey {
-        guard let storeError = error as? AlarmStoreError else {
-            return L10n.alarmEditorErrorGeneric
-        }
-
-        switch storeError {
-        case .permissionDenied:
-            return L10n.alarmEditorErrorPermissionDenied
-        case .scheduleFailed:
-            return L10n.alarmEditorErrorGeneric
-        }
     }
 
     private var hasWakeUpCheckEnabledConfigurationWithNotificationRequirement: Bool {
