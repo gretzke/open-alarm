@@ -6,6 +6,8 @@ final class AlarmPersistence: Sendable {
 
     private static let logger = Logger(subsystem: "com.openalarm", category: "AlarmPersistence")
 
+    // UserDefaults is thread-safe per Apple documentation; nonisolated(unsafe)
+    // satisfies Sendable without unnecessary overhead.
     private nonisolated(unsafe) let defaults: UserDefaults
 
     private let userAlarmsKey = "OPENALARM_USER_ALARMS_V1"
