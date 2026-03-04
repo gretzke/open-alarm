@@ -1079,10 +1079,20 @@ final class AlarmStore: ObservableObject, AlarmScheduleReconcileHandling {
     /// app was not running, so the normal alerting→non-alerting state transition
     /// was never observed.
     private func cleanupStaleOneShotAlarms(referenceDate: Date = .now) {
-        let runtimeIDs = runtimeAlarmIDsSnapshot() ?? []
+        // If the runtime snapshot fails, bail out entirely rather than treating
+        // the failure as an empty set—which would incorrectly mark every
+        // one-shot alarm as stale and delete it.
+        guard let runtimeIDs = runtimeAlarmIDsSnapshot() else {
+            return
+        }
 
         let staleOneShots = alarms.filter { alarm in
             guard alarm.alarmType == .nap || alarm.alarmType == .tryOut else {
+                return false
+            }
+            // Paused naps/tryOuts should not be auto-deleted; the user
+            // explicitly paused them and may resume later.
+            guard !alarm.isPaused else {
                 return false
             }
             guard let fixedDate = alarm.fixedTriggerDate, fixedDate <= referenceDate else {
