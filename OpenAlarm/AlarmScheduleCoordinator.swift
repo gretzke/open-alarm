@@ -97,6 +97,7 @@ final class AlarmScheduleCoordinator {
         }
 
         let alarms = allAlarms()
+        let pendingWakeCheckStartIDs = persistence.loadPendingWakeUpCheckStartIDs()
 
         let staleOneShots = alarms.filter { alarm in
             guard alarm.alarmType == .nap || alarm.alarmType == .tryOut else {
@@ -111,7 +112,20 @@ final class AlarmScheduleCoordinator {
                 return false
             }
             // If runtime still has the alarm (e.g. alerting), don't clean up yet.
-            return !runtimeIDs.contains(alarm.id)
+            if runtimeIDs.contains(alarm.id) {
+                return false
+            }
+            // Don't delete alarms that are mid-wake-check arming or already
+            // awaiting confirmation.  The StopIntent arm service writes a
+            // pending start marker before scheduling the deadline alarm; a
+            // concurrent alarmUpdates reconcile can race here between stop()
+            // and the deadline re-schedule.
+            if pendingWakeCheckStartIDs.contains(alarm.id)
+                || wakeUpCheckController.sessionsByAlarmID[alarm.id] != nil
+                || alarm.lifecycleState == .awaitingWakeCheck {
+                return false
+            }
+            return true
         }
 
         guard !staleOneShots.isEmpty else {
@@ -301,12 +315,34 @@ final class AlarmScheduleCoordinator {
             // Wake-check pipeline owns runtime scheduling while a session exists.
             // Keep recurring reconciliation deterministic, but do not re-arm
             // canonical repeating schedule until confirmation completes.
-            let deadlineDate = max(referenceDate.addingTimeInterval(1), wakeSession.deadlineAt)
+            //
+            // Apply the same healthy-alarm guard as canonical scheduling:
+            // do not re-arm a deadline alarm that is already progressing
+            // toward fire.  Without this, the alarmUpdates reconcile loop
+            // continuously re-schedules the deadline alarm, resetting it
+            // back to .scheduled and preventing it from ever reaching
+            // .countdown → .alerting.
+            if isRuntimeAlarmHealthy(alarm.id) {
+                if let runtimeState = runtimeAlarmState(alarm.id) {
+                    updateLastKnownState(alarm.id, runtimeState)
+                    updateRemoteState(alarm.id, runtimeState)
+                }
+                return
+            }
+
+            // If the deadline has already passed, the alarm already fired.
+            // The StopIntent handles advancing to the next cycle via
+            // armIfPossible.  Re-arming here with a fallback now+1s date
+            // would create a spurious alarm that races with the StopIntent,
+            // causing double session creation and eventual pipeline teardown.
+            guard wakeSession.deadlineAt > referenceDate else {
+                return
+            }
 
             do {
                 let config = makeConfiguration(
                     for: alarm,
-                    schedule: .fixed(deadlineDate),
+                    schedule: .fixed(wakeSession.deadlineAt),
                     forceDisableSnooze: WakeUpCheckCoordinator.wakeCheckAlarmsDisableSnooze
                 )
                 let remote = try await scheduleAlarmWithUpdateFallback(

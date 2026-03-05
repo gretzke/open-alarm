@@ -127,3 +127,7 @@
 "action_delete" = "Delete";
 "action_pause" = "Pause";
 "action_continue" = "Continue";
+
+"wake_check_confirm_title" = "Are you awake?";
+"wake_check_confirm_subtitle" = "Backup alarm rings in";
+"wake_check_confirm_action" = "I'm awake";

@@ -18,40 +18,43 @@ final class OpenAlarmNotificationDelegate: NSObject, UIApplicationDelegate, UNUs
 
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        if notification.request.content.categoryIdentifier == WakeUpCheckNotificationConstants.categoryID {
+            enqueueConfirmationUI(from: notification.request.content.userInfo)
+            completionHandler([])
+            return
+        }
+
+        completionHandler([.banner, .sound, .list])
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         defer { completionHandler() }
 
-        guard response.actionIdentifier == WakeUpCheckAction.confirmAwake.rawValue else {
+        guard response.notification.request.content.categoryIdentifier == WakeUpCheckNotificationConstants.categoryID else {
             return
         }
 
-        guard let rawAlarmID = response.notification.request.content.userInfo[WakeUpCheckNotificationConstants.alarmIDUserInfoKey] as? String,
+        enqueueConfirmationUI(from: response.notification.request.content.userInfo)
+    }
+
+    private func enqueueConfirmationUI(from userInfo: [AnyHashable: Any]) {
+        guard let rawAlarmID = userInfo[WakeUpCheckNotificationConstants.alarmIDUserInfoKey] as? String,
               let alarmID = UUID(uuidString: rawAlarmID) else {
             return
         }
 
-        // TODO(wake-check-phase2): Replace this direct "confirm awake" enqueue with an
-        // app-driven challenge completion handoff once challenge UI is implemented.
-        //
-        // Why this still writes only durable queue state here:
-        // - Notification action callbacks and AppIntents run under tight compute-time
-        //   limits and can be terminated before multi-step async work converges.
-        // - Persisting a tiny confirmation marker keeps the callback deterministic,
-        //   then AlarmStore performs the heavier wake-check teardown/scheduling work
-        //   on the main app actor during normal reconciliation.
         let persistence = AlarmPersistence.shared
-        let pendingWakeQueues = WakeUpCheckCoordinator.pendingWakeQueuesAfterConfirmAction(
-            alarmID: alarmID,
-            pendingStartIDs: persistence.loadPendingWakeUpCheckStartIDs(),
-            pendingConfirmIDs: persistence.loadPendingWakeUpCheckConfirmIDs()
-        )
-        persistence.savePendingWakeUpCheckStartIDs(pendingWakeQueues.pendingStartIDs)
-        persistence.savePendingWakeUpCheckConfirmIDs(pendingWakeQueues.pendingConfirmIDs)
+        var pendingIDs = persistence.loadPendingWakeUpCheckShowConfirmUIIDs()
+        pendingIDs.insert(alarmID)
+        persistence.savePendingWakeUpCheckShowConfirmUIIDs(pendingIDs)
 
-        // Best effort immediate shutdown for already-armed wake-check alarms.
-        try? AlarmManager.shared.stop(id: alarmID)
-        try? AlarmManager.shared.cancel(id: alarmID)
+        NotificationCenter.default.post(name: .wakeUpCheckConfirmationRequested, object: nil)
     }
 }

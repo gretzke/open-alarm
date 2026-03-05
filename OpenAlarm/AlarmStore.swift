@@ -3,12 +3,21 @@ import AppIntents
 import Combine
 import Foundation
 
+extension Notification.Name {
+    static let wakeUpCheckConfirmationRequested = Notification.Name("wakeUpCheckConfirmationRequested")
+}
+
+struct WakeUpCheckConfirmationPresentation: Identifiable {
+    let id: UUID
+}
+
 @MainActor
 final class AlarmStore: ObservableObject {
     @Published internal var alarms: [UserAlarm] = []
     @Published var defaultSharedSettings: SharedAlarmSettings
     @Published var defaultNapDurationMinutes: Int
     @Published var testingModeEnabled: Bool
+    @Published var wakeUpCheckConfirmationPresentation: WakeUpCheckConfirmationPresentation?
 
     /// The single active nap alarm, derived from the unified alarms array.
     var activeNap: UserAlarm? {
@@ -81,6 +90,16 @@ final class AlarmStore: ObservableObject {
         observeAlarmUpdates()
         refreshFromSystem()
 
+        NotificationCenter.default.addObserver(
+            forName: .wakeUpCheckConfirmationRequested,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.consumePendingWakeUpCheckConfirmationUI()
+            }
+        }
+
         Task { @MainActor [weak self] in
             await self?.refreshNotificationPermissionStatus()
             await AlarmScheduleReconcileEntrypoint.reconcile(trigger: .appLaunch)
@@ -99,6 +118,7 @@ final class AlarmStore: ObservableObject {
         Task { @MainActor [weak self] in
             await self?.refreshNotificationPermissionStatus()
             await AlarmScheduleReconcileEntrypoint.reconcile(trigger: .appLaunch)
+            self?.consumePendingWakeUpCheckConfirmationUI()
         }
     }
 
@@ -436,6 +456,56 @@ final class AlarmStore: ObservableObject {
             persistence.saveDefaultSharedSettings(self.defaultSharedSettings)
             persistence.clearLegacyDefaultWakeUpCheckDefaults()
         }
+    }
+
+    // MARK: - Wake-up check confirmation UI
+
+    func consumePendingWakeUpCheckConfirmationUI() {
+        var pendingIDs = persistence.loadPendingWakeUpCheckShowConfirmUIIDs()
+        guard let alarmID = pendingIDs.first else { return }
+
+        guard wakeUpCheckController.sessionsByAlarmID[alarmID] != nil else {
+            pendingIDs.remove(alarmID)
+            persistence.savePendingWakeUpCheckShowConfirmUIIDs(pendingIDs)
+            return
+        }
+
+        pendingIDs.remove(alarmID)
+        persistence.savePendingWakeUpCheckShowConfirmUIIDs(pendingIDs)
+        wakeUpCheckConfirmationPresentation = WakeUpCheckConfirmationPresentation(id: alarmID)
+    }
+
+    func confirmWakeUpCheck(for alarmID: UUID) async {
+        wakeUpCheckConfirmationPresentation = nil
+        await wakeUpCheckController.completeWakeUpCheck(for: alarmID)
+    }
+
+    func applyWakeUpCheckGracePeriodIfNeeded(for alarmID: UUID) async -> Date? {
+        guard var session = wakeUpCheckController.sessionsByAlarmID[alarmID] else { return nil }
+
+        let now = Date.now
+        let remaining = session.deadlineAt.timeIntervalSince(now)
+
+        guard remaining < 60 else { return session.deadlineAt }
+
+        let newDeadline = now.addingTimeInterval(60)
+        session.deadlineAt = newDeadline
+        session.updatedAt = now
+        wakeUpCheckController.setSession(session, for: alarmID)
+        wakeUpCheckController.persistSessions()
+
+        let config = scheduleCoordinator.makeConfiguration(
+            for: alarms.first { $0.id == alarmID } ?? alarms[0],
+            schedule: .fixed(newDeadline),
+            forceDisableSnooze: WakeUpCheckCoordinator.wakeCheckAlarmsDisableSnooze
+        )
+        _ = try? await scheduleCoordinator.scheduleAlarmWithUpdateFallback(
+            id: alarmID,
+            configuration: config,
+            isUpdate: true
+        )
+
+        return newDeadline
     }
 }
 

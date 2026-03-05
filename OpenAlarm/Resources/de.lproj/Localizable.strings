@@ -127,3 +127,7 @@
 "action_delete" = "Löschen";
 "action_pause" = "Pausieren";
 "action_continue" = "Fortsetzen";
+
+"wake_check_confirm_title" = "Bist du wach?";
+"wake_check_confirm_subtitle" = "Backup-Alarm klingelt in";
+"wake_check_confirm_action" = "Ich bin wach";

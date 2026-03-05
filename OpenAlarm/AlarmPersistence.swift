@@ -14,6 +14,7 @@ final class AlarmPersistence: Sendable {
     private let pendingSnoozeIDsKey = "OPENALARM_PENDING_SNOOZE_IDS_V1"
     private let pendingWakeUpCheckStartIDsKey = "OPENALARM_PENDING_WAKE_CHECK_START_IDS_V1"
     private let pendingWakeUpCheckConfirmIDsKey = "OPENALARM_PENDING_WAKE_CHECK_CONFIRM_IDS_V1"
+    private let pendingWakeUpCheckShowConfirmUIIDsKey = "OPENALARM_PENDING_WAKE_CHECK_SHOW_CONFIRM_UI_IDS_V1"
     private let defaultSharedSettingsKey = "OPENALARM_DEFAULT_SHARED_SETTINGS_V1"
     private let defaultWakeUpCheckDefaultsKey = "OPENALARM_DEFAULT_WAKE_CHECK_DEFAULTS_V1"
     private let wakeUpCheckSessionsKey = "OPENALARM_WAKE_CHECK_SESSIONS_V1"
@@ -30,6 +31,7 @@ final class AlarmPersistence: Sendable {
         case snooze
         case wakeStart
         case wakeConfirm
+        case wakeShowConfirmUI
     }
 
     /// Removes `id` from the given pending set. Returns `true` if the set was changed.
@@ -47,7 +49,7 @@ final class AlarmPersistence: Sendable {
     @discardableResult
     func removePendingIDFromAll(_ id: UUID) -> Bool {
         var changed = false
-        for key in [PendingIDKey.snooze, .wakeStart, .wakeConfirm] {
+        for key in [PendingIDKey.snooze, .wakeStart, .wakeConfirm, .wakeShowConfirmUI] {
             if removePendingID(id, from: key) {
                 changed = true
             }
@@ -116,6 +118,16 @@ final class AlarmPersistence: Sendable {
 
     func savePendingWakeUpCheckConfirmIDs(_ ids: Set<UUID>) {
         saveUUIDSet(ids, forKey: pendingWakeUpCheckConfirmIDsKey)
+    }
+
+    // MARK: - Pending Wake-Up Check Show Confirm UI IDs
+
+    func loadPendingWakeUpCheckShowConfirmUIIDs() -> Set<UUID> {
+        loadUUIDSet(forKey: pendingWakeUpCheckShowConfirmUIIDsKey)
+    }
+
+    func savePendingWakeUpCheckShowConfirmUIIDs(_ ids: Set<UUID>) {
+        saveUUIDSet(ids, forKey: pendingWakeUpCheckShowConfirmUIIDsKey)
     }
 
     // MARK: - Default Shared Settings
@@ -215,6 +227,7 @@ final class AlarmPersistence: Sendable {
         case .snooze: pendingSnoozeIDsKey
         case .wakeStart: pendingWakeUpCheckStartIDsKey
         case .wakeConfirm: pendingWakeUpCheckConfirmIDsKey
+        case .wakeShowConfirmUI: pendingWakeUpCheckShowConfirmUIIDsKey
         }
     }
 

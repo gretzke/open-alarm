@@ -427,8 +427,13 @@ extension AlarmStore {
         changed: inout Bool
     ) {
         if wakeCheckEnabled {
-            if alarm.lifecycleState != .scheduled {
-                alarm.lifecycleState = .scheduled
+            // Mark as awaitingWakeCheck so cleanupStaleOneShotAlarms does not
+            // delete the alarm before StopIntent has a chance to arm the
+            // wake-check pipeline.  The alarmUpdates callback can fire before
+            // StopIntent writes its pending-start marker, so .scheduled would
+            // leave the alarm unprotected against stale one-shot cleanup.
+            if alarm.lifecycleState != .awaitingWakeCheck {
+                alarm.lifecycleState = .awaitingWakeCheck
                 changed = true
             }
             return

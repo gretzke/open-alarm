@@ -119,4 +119,8 @@ enum L10n {
     static let actionDelete: LocalizedStringKey = "action_delete"
     static let actionPause: LocalizedStringKey = "action_pause"
     static let actionContinue: LocalizedStringKey = "action_continue"
+
+    static let wakeCheckConfirmTitle: LocalizedStringKey = "wake_check_confirm_title"
+    static let wakeCheckConfirmSubtitle: LocalizedStringKey = "wake_check_confirm_subtitle"
+    static let wakeCheckConfirmAction: LocalizedStringKey = "wake_check_confirm_action"
 }

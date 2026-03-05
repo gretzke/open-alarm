@@ -43,6 +43,10 @@ struct AppRootView: View {
                 }
             )
         }
+        .fullScreenCover(item: $alarmStore.wakeUpCheckConfirmationPresentation) { presentation in
+            WakeUpCheckConfirmationView(alarmID: presentation.id)
+                .environmentObject(alarmStore)
+        }
     }
 
     private func evaluateWakeCheckPermissionGuard() {
