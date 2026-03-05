@@ -3,51 +3,51 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0137578A7C3DB65015FC02BE /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22E4F6FF18C9BE1617CD7543 /* OnboardingFlowView.swift */; };
 		05162562A0170BE9098361EE /* AlarmIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85010326D24CEF7C1A38D50D /* AlarmIntents.swift */; };
 		0B5A2C2BC6692B00E79A988E /* AlarmPermissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83400772796DC9406DADEF9F /* AlarmPermissionService.swift */; };
+		0B94972715ED422EAA18A64B /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B69D30D8FB6982C26A6AE32D /* MainTabView.swift */; };
 		1068E5E14AAA376BDD6E846B /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0511AEB1608CC1DFD19C495 /* L10n.swift */; };
 		10DC781930D22D3C916F3AB3 /* AlarmScheduleReconcileEntrypoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1528047A29F027B683B920FE /* AlarmScheduleReconcileEntrypoint.swift */; };
+		1B1488ECC64F591938DEA880 /* WakeUpCheckConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4C65D29F82E70C88900C16A /* WakeUpCheckConfirmationView.swift */; };
 		1C03AE89BE0AC99AD3E829DE /* NotificationPermissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DF22129177248C5394DFFC2 /* NotificationPermissionService.swift */; };
-		23C0CD1574BD2A54EDBFCCE1 /* NapEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA3152F133E737A1C6EF2905 /* NapEditorView.swift */; };
-		36C1824E2D70AF0163976EDA /* SharedAlarmSettingsEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C5DC43674A1A23D8D98A25C /* SharedAlarmSettingsEditor.swift */; };
-		42DA53AB032443282ACAC432 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E55D19BAE63F4BCAD183A095 /* MainTabView.swift */; };
-		4349AE16DB928CA08CA1900B /* AlarmEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C5513FF1DE8CF198A077C38 /* AlarmEditorView.swift */; };
-		43A37EA685F224896032D009 /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D65E8CA1DA583D987D1FDE53 /* AppRootView.swift */; };
+		3033CE1DBADAA18ED7564BAA /* NapDurationPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A06DA178A073176D55E9CDD1 /* NapDurationPicker.swift */; };
+		40FC7F4295F6FF44F3F72965 /* AlarmRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C31159CD06DFA85A7F28AB7E /* AlarmRowView.swift */; };
 		4796FE34E7D27B854FB78CB6 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 8E679FED54733251272BD0A9 /* Localizable.strings */; };
+		550B59450BA119BE04B396DA /* NapBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07291350CDE6FB5A563F6EB0 /* NapBannerView.swift */; };
 		5824049B9D337E771858C73B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CFE2D4CDA835E9DD606528A0 /* Assets.xcassets */; };
-		58BDACC5F57BBA0A5953274E /* OpenAlarmTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91529C2531FED87446559016 /* OpenAlarmTheme.swift */; };
+		664DE4F297F665B0D6656421 /* AlarmStore+SchedulingHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = B09996DA82152D5AABFAC198 /* AlarmStore+SchedulingHelpers.swift */; };
+		6708757688D6396CFA62E5A5 /* AlarmStore+AlarmCRUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22BE9BFEB8EE47112EBE06AE /* AlarmStore+AlarmCRUD.swift */; };
+		6A50E1ADBEA686D1DA26C3F0 /* OpenAlarmApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA110F30C0C8E9D50303CDA8 /* OpenAlarmApp.swift */; };
+		6DAF29F47FD1E6004674040F /* AlarmHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1026E6B6735DA2D0141B5895 /* AlarmHomeView.swift */; };
 		75F6F1776DF5731E152893A0 /* AlarmStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B70862277833BF001ABA7BBE /* AlarmStore.swift */; };
-		7A6C9625D2A75EB1C003316B /* OpenAlarmApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 764BB1926C868CDA8BB0801A /* OpenAlarmApp.swift */; };
+		77EF586640E2BA39DCC5BEC2 /* AlarmEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 338D2925467C9DAB2942FEFC /* AlarmEditorView.swift */; };
 		8399559AD42B82F57361E9E3 /* WakeUpCheckModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 568AC6EB43A9044628BFB421 /* WakeUpCheckModels.swift */; };
+		889CE05E7D5553E71FD08F27 /* AlarmStore+RemoteSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBE68C07DECE0F89E0886687 /* AlarmStore+RemoteSync.swift */; };
+		98D7DE03C986859C06252DE7 /* SettingsHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 804446594677F10342CA095A /* SettingsHomeView.swift */; };
 		99FFE75EAF79B740FE9D2225 /* WakeUpCheckNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7049E02D02264E608DE04480 /* WakeUpCheckNotificationService.swift */; };
+		9D0DD3AB9083C56EAC951450 /* AlarmScheduleCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED32F0FEF88F960C8186F35F /* AlarmScheduleCoordinator.swift */; };
 		A07CAFA80E4CC40C1C53496B /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = E43A03F552339F3CF4DBCF2C /* LaunchScreen.storyboard */; };
-		A1B2C3D4E5F6A7B8C9D0E1F2 /* AlarmConfigurationFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6F7A8B9C0D1E2 /* AlarmConfigurationFactory.swift */; };
 		A6D55657E1563EC89C608EFD /* OpenAlarmNotificationDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0213A81B71B2B9C6B189C61F /* OpenAlarmNotificationDelegate.swift */; };
-		B1A2C3D4E5F6A7B8C9D0E1A1 /* AlarmStoreViewHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1B2D3E4F5A6B7C8D9E0F1A2 /* AlarmStoreViewHelpers.swift */; };
-		B2A3C4D5E6F7A8B9C0D1E2A3 /* AlarmHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2B3D4E5F6A7B8C9D0E1F2A4 /* AlarmHomeView.swift */; };
-		B3A4C5D6E7F8A9B0C1D2E3A5 /* SettingsHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B4D5E6F7A8B9C0D1E2F3A6 /* SettingsHomeView.swift */; };
-		B4A5C6D7E8F9A0B1C2D3E4A7 /* NapDurationPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4B5D6E7F8A9B0C1D2E3F4A8 /* NapDurationPicker.swift */; };
+		BD8A90252F2F3669200E2C4F /* OpenAlarmTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 339F4E487D879956D310862D /* OpenAlarmTheme.swift */; };
 		BDD2C5EBBA247FBB4FD16F4D /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 2E7F4014449CC01093832222 /* InfoPlist.strings */; };
+		BE4423E0EE43DF8321B70D02 /* WakeUpCheckPipelineController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA89AF9EF426683B72FD571C /* WakeUpCheckPipelineController.swift */; };
 		BF8889E27B6255835899C3B5 /* AlarmModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7C07703BA4BEC265B421B03 /* AlarmModels.swift */; };
-		C2A1B3D4E5F6A7B8C9D0E1F3 /* WakeUpCheckPipelineController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3B2C4E5F6A7B8C9D0E1F2A4 /* WakeUpCheckPipelineController.swift */; };
+		C669FDD2D25E4256D2430161 /* SharedAlarmSettingsEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 672FBF5B1749EB576E198EF2 /* SharedAlarmSettingsEditor.swift */; };
+		C6E89EE4F2C9E834C6F4E5F4 /* NapEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 896CD183713535DB742DC78B /* NapEditorView.swift */; };
+		CC0D737C6C5221FD884251E6 /* AlarmConfigurationFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02A5D9A16AC500976FF37F67 /* AlarmConfigurationFactory.swift */; };
+		CEEB02817569AB0C4EDD35C2 /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 033BCA435537486554426903 /* AppRootView.swift */; };
 		D0827BEDA4B4C360461E9F23 /* AlarmPersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0F3414FB10A9E51937B6877 /* AlarmPersistence.swift */; };
+		D09087168FBE789F67A07707 /* AlarmStore+NapManagement.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA743E1252E483F77ADC8C4B /* AlarmStore+NapManagement.swift */; };
+		DAF5A47BFCC2345F0622347C /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BEA79BA987079BEC109687B /* OnboardingFlowView.swift */; };
 		DDD615542DED46BA648B2FE7 /* AlarmScheduleReconcilerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C0AC8200730558CC6EC3B15 /* AlarmScheduleReconcilerTests.swift */; };
 		E072A215F811DC860E8ED2F1 /* OnboardingEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6981BF284D917EBC650816B /* OnboardingEngine.swift */; };
-		E1B2C3D4E5F6A7B8C9D0E1F3 /* AlarmRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A2B3C4D5E6F7A8B9C0D1E3 /* AlarmRowView.swift */; };
-		E2B3C4D5E6F7A8B9C0D1E2F4 /* AlarmStore+AlarmCRUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2A3B4C5D6E7F8A9B0C1D2E4 /* AlarmStore+AlarmCRUD.swift */; };
-		E3B4C5D6E7F8A9B0C1D2E3F5 /* AlarmStore+NapManagement.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A4B5C6D7E8F9A0B1C2D3E5 /* AlarmStore+NapManagement.swift */; };
-		E4B5C6D7E8F9A0B1C2D3E4F6 /* AlarmStore+RemoteSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A5B6C7D8E9F0A1B2C3D4E6 /* AlarmStore+RemoteSync.swift */; };
-		E4C3D5F6A7B8C9D0E1F2A3B5 /* AlarmScheduleCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5D4E6F7B8C9D0E1F2A3B4C6 /* AlarmScheduleCoordinator.swift */; };
-		E5B6C7D8E9F0A1B2C3D4E5F7 /* AlarmStore+SchedulingHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A6B7C8D9E0F1A2B3C4D5E7 /* AlarmStore+SchedulingHelpers.swift */; };
-		E6B7C8D9E0F1A2B3C4D5E6F8 /* NapBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6A7B8C9D0E1F2A3B4C5D6E8 /* NapBannerView.swift */; };
+		EC7D8AE4E31ADC7D31172E40 /* AlarmStoreViewHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = E55B4933242DBB34E14D1046 /* AlarmStoreViewHelpers.swift */; };
 		F1CC7D2E7D1CC6F5D537C625 /* AlarmScheduleReconciler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06DDC0185B5B0D8A1400C98B /* AlarmScheduleReconciler.swift */; };
 		FB2461D5447424A95E288109 /* WakeUpCheckStopIntentArmService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0AF3F0DE1850AE6E1938DA9 /* WakeUpCheckStopIntentArmService.swift */; };
-		F2A3B4C5D6E7F8A9B0C1D2E5 /* WakeUpCheckConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7B8C9D0E1F2A3B4C5D6E7F9 /* WakeUpCheckConfirmationView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -62,54 +62,64 @@
 
 /* Begin PBXFileReference section */
 		0213A81B71B2B9C6B189C61F /* OpenAlarmNotificationDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAlarmNotificationDelegate.swift; sourceTree = "<group>"; };
+		02A5D9A16AC500976FF37F67 /* AlarmConfigurationFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmConfigurationFactory.swift; sourceTree = "<group>"; };
+		033BCA435537486554426903 /* AppRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRootView.swift; sourceTree = "<group>"; };
 		06DDC0185B5B0D8A1400C98B /* AlarmScheduleReconciler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmScheduleReconciler.swift; sourceTree = "<group>"; };
+		07291350CDE6FB5A563F6EB0 /* NapBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NapBannerView.swift; sourceTree = "<group>"; };
 		0D166817BB079DD4546C285D /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		1026E6B6735DA2D0141B5895 /* AlarmHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmHomeView.swift; sourceTree = "<group>"; };
 		1528047A29F027B683B920FE /* AlarmScheduleReconcileEntrypoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmScheduleReconcileEntrypoint.swift; sourceTree = "<group>"; };
 		1AAB5EE73D1350495BF00CA8 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/InfoPlist.strings; sourceTree = "<group>"; };
-		22E4F6FF18C9BE1617CD7543 /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowView.swift; sourceTree = "<group>"; };
-		3C5513FF1DE8CF198A077C38 /* AlarmEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmEditorView.swift; sourceTree = "<group>"; };
+		22BE9BFEB8EE47112EBE06AE /* AlarmStore+AlarmCRUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AlarmStore+AlarmCRUD.swift"; sourceTree = "<group>"; };
+		338D2925467C9DAB2942FEFC /* AlarmEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmEditorView.swift; sourceTree = "<group>"; };
+		339F4E487D879956D310862D /* OpenAlarmTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAlarmTheme.swift; sourceTree = "<group>"; };
 		4C0AC8200730558CC6EC3B15 /* AlarmScheduleReconcilerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmScheduleReconcilerTests.swift; sourceTree = "<group>"; };
 		568AC6EB43A9044628BFB421 /* WakeUpCheckModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeUpCheckModels.swift; sourceTree = "<group>"; };
 		59535AE7D6830B97391FD0E5 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Localizable.strings; sourceTree = "<group>"; };
-		5C5DC43674A1A23D8D98A25C /* SharedAlarmSettingsEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedAlarmSettingsEditor.swift; sourceTree = "<group>"; };
 		5DF22129177248C5394DFFC2 /* NotificationPermissionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPermissionService.swift; sourceTree = "<group>"; };
 		6093C9086BF89A5DE696608D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		672FBF5B1749EB576E198EF2 /* SharedAlarmSettingsEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedAlarmSettingsEditor.swift; sourceTree = "<group>"; };
+		6BEA79BA987079BEC109687B /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowView.swift; sourceTree = "<group>"; };
 		7049E02D02264E608DE04480 /* WakeUpCheckNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeUpCheckNotificationService.swift; sourceTree = "<group>"; };
-		764BB1926C868CDA8BB0801A /* OpenAlarmApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAlarmApp.swift; sourceTree = "<group>"; };
+		804446594677F10342CA095A /* SettingsHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsHomeView.swift; sourceTree = "<group>"; };
 		83400772796DC9406DADEF9F /* AlarmPermissionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmPermissionService.swift; sourceTree = "<group>"; };
 		85010326D24CEF7C1A38D50D /* AlarmIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmIntents.swift; sourceTree = "<group>"; };
-		91529C2531FED87446559016 /* OpenAlarmTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAlarmTheme.swift; sourceTree = "<group>"; };
+		896CD183713535DB742DC78B /* NapEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NapEditorView.swift; sourceTree = "<group>"; };
+		A06DA178A073176D55E9CDD1 /* NapDurationPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NapDurationPicker.swift; sourceTree = "<group>"; };
 		A0F3414FB10A9E51937B6877 /* AlarmPersistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmPersistence.swift; sourceTree = "<group>"; };
-		A5D4E6F7B8C9D0E1F2A3B4C6 /* AlarmScheduleCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmScheduleCoordinator.swift; sourceTree = "<group>"; };
 		A6981BF284D917EBC650816B /* OnboardingEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingEngine.swift; sourceTree = "<group>"; };
 		A7C07703BA4BEC265B421B03 /* AlarmModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmModels.swift; sourceTree = "<group>"; };
+		AA743E1252E483F77ADC8C4B /* AlarmStore+NapManagement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AlarmStore+NapManagement.swift"; sourceTree = "<group>"; };
 		B0511AEB1608CC1DFD19C495 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
-		B5B9304B4982E495CBDABF6C /* OpenAlarmTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenAlarmTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B09996DA82152D5AABFAC198 /* AlarmStore+SchedulingHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AlarmStore+SchedulingHelpers.swift"; sourceTree = "<group>"; };
+		B5B9304B4982E495CBDABF6C /* OpenAlarmTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OpenAlarmTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B69D30D8FB6982C26A6AE32D /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		B70862277833BF001ABA7BBE /* AlarmStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmStore.swift; sourceTree = "<group>"; };
-		C1B2D3E4F5A6B7C8D9E0F1A2 /* AlarmStoreViewHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmStoreViewHelpers.swift; sourceTree = "<group>"; };
-		C2B3D4E5F6A7B8C9D0E1F2A4 /* AlarmHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmHomeView.swift; sourceTree = "<group>"; };
-		C3B4D5E6F7A8B9C0D1E2F3A6 /* SettingsHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsHomeView.swift; sourceTree = "<group>"; };
-		C4B5D6E7F8A9B0C1D2E3F4A8 /* NapDurationPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NapDurationPicker.swift; sourceTree = "<group>"; };
+		C31159CD06DFA85A7F28AB7E /* AlarmRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmRowView.swift; sourceTree = "<group>"; };
+		CBE68C07DECE0F89E0886687 /* AlarmStore+RemoteSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AlarmStore+RemoteSync.swift"; sourceTree = "<group>"; };
 		CFE2D4CDA835E9DD606528A0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		D1A2B3C4D5E6F7A8B9C0D1E3 /* AlarmRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmRowView.swift; sourceTree = "<group>"; };
-		D2A3B4C5D6E7F8A9B0C1D2E4 /* AlarmStore+AlarmCRUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AlarmStore+AlarmCRUD.swift"; sourceTree = "<group>"; };
-		D3A4B5C6D7E8F9A0B1C2D3E5 /* AlarmStore+NapManagement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AlarmStore+NapManagement.swift"; sourceTree = "<group>"; };
-		D3B2C4E5F6A7B8C9D0E1F2A4 /* WakeUpCheckPipelineController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeUpCheckPipelineController.swift; sourceTree = "<group>"; };
-		D4A5B6C7D8E9F0A1B2C3D4E6 /* AlarmStore+RemoteSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AlarmStore+RemoteSync.swift"; sourceTree = "<group>"; };
-		D5A6B7C8D9E0F1A2B3C4D5E7 /* AlarmStore+SchedulingHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AlarmStore+SchedulingHelpers.swift"; sourceTree = "<group>"; };
-		D65E8CA1DA583D987D1FDE53 /* AppRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRootView.swift; sourceTree = "<group>"; };
-		D6A7B8C9D0E1F2A3B4C5D6E8 /* NapBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NapBannerView.swift; sourceTree = "<group>"; };
+		D4C65D29F82E70C88900C16A /* WakeUpCheckConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeUpCheckConfirmationView.swift; sourceTree = "<group>"; };
+		DA110F30C0C8E9D50303CDA8 /* OpenAlarmApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAlarmApp.swift; sourceTree = "<group>"; };
 		E0AF3F0DE1850AE6E1938DA9 /* WakeUpCheckStopIntentArmService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeUpCheckStopIntentArmService.swift; sourceTree = "<group>"; };
 		E43A03F552339F3CF4DBCF2C /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
-		E55D19BAE63F4BCAD183A095 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
-		E9ACF85F89CF9D011BF26A5E /* OpenAlarm.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpenAlarm.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		F1A2B3C4D5E6F7A8B9C0D1E2 /* AlarmConfigurationFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmConfigurationFactory.swift; sourceTree = "<group>"; };
+		E55B4933242DBB34E14D1046 /* AlarmStoreViewHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmStoreViewHelpers.swift; sourceTree = "<group>"; };
+		E9ACF85F89CF9D011BF26A5E /* OpenAlarm.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OpenAlarm.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EA89AF9EF426683B72FD571C /* WakeUpCheckPipelineController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeUpCheckPipelineController.swift; sourceTree = "<group>"; };
+		ED32F0FEF88F960C8186F35F /* AlarmScheduleCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmScheduleCoordinator.swift; sourceTree = "<group>"; };
 		F68BF27EA97B5D8C42193398 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
-		FA3152F133E737A1C6EF2905 /* NapEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NapEditorView.swift; sourceTree = "<group>"; };
-		E7B8C9D0E1F2A3B4C5D6E7F9 /* WakeUpCheckConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeUpCheckConfirmationView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
+		0A8CE3FB687201507588590D /* Nap */ = {
+			isa = PBXGroup;
+			children = (
+				07291350CDE6FB5A563F6EB0 /* NapBannerView.swift */,
+				A06DA178A073176D55E9CDD1 /* NapDurationPicker.swift */,
+				896CD183713535DB742DC78B /* NapEditorView.swift */,
+			);
+			path = Nap;
+			sourceTree = "<group>";
+		};
 		135C9DF212569F46B82E0C7A /* OpenAlarmSchedulingCoreTests */ = {
 			isa = PBXGroup;
 			children = (
@@ -127,6 +137,14 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		21C855E76DAE2E6C1AEC02D8 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				6BEA79BA987079BEC109687B /* OnboardingFlowView.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
 		4A12B252E6DF89BC145988F5 = {
 			isa = PBXGroup;
 			children = (
@@ -136,51 +154,97 @@
 			);
 			sourceTree = "<group>";
 		};
+		5E23DB03853BC1CB98973B3C /* App */ = {
+			isa = PBXGroup;
+			children = (
+				033BCA435537486554426903 /* AppRootView.swift */,
+				B69D30D8FB6982C26A6AE32D /* MainTabView.swift */,
+				DA110F30C0C8E9D50303CDA8 /* OpenAlarmApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		6CC0662B453E03B986F0299F /* Alarm */ = {
+			isa = PBXGroup;
+			children = (
+				338D2925467C9DAB2942FEFC /* AlarmEditorView.swift */,
+				1026E6B6735DA2D0141B5895 /* AlarmHomeView.swift */,
+				C31159CD06DFA85A7F28AB7E /* AlarmRowView.swift */,
+			);
+			path = Alarm;
+			sourceTree = "<group>";
+		};
+		85F1AF767BAAACB99F6F07F7 /* WakeUpCheck */ = {
+			isa = PBXGroup;
+			children = (
+				D4C65D29F82E70C88900C16A /* WakeUpCheckConfirmationView.swift */,
+			);
+			path = WakeUpCheck;
+			sourceTree = "<group>";
+		};
+		8A89A9B2E5A269C2694A3422 /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				E55B4933242DBB34E14D1046 /* AlarmStoreViewHelpers.swift */,
+				339F4E487D879956D310862D /* OpenAlarmTheme.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
 		BCC1989FF6463FB02B837C9B /* OpenAlarm */ = {
 			isa = PBXGroup;
 			children = (
-				3C5513FF1DE8CF198A077C38 /* AlarmEditorView.swift */,
-				C2B3D4E5F6A7B8C9D0E1F2A4 /* AlarmHomeView.swift */,
+				02A5D9A16AC500976FF37F67 /* AlarmConfigurationFactory.swift */,
 				85010326D24CEF7C1A38D50D /* AlarmIntents.swift */,
 				A7C07703BA4BEC265B421B03 /* AlarmModels.swift */,
-				F1A2B3C4D5E6F7A8B9C0D1E2 /* AlarmConfigurationFactory.swift */,
 				83400772796DC9406DADEF9F /* AlarmPermissionService.swift */,
-				A5D4E6F7B8C9D0E1F2A3B4C6 /* AlarmScheduleCoordinator.swift */,
 				A0F3414FB10A9E51937B6877 /* AlarmPersistence.swift */,
-				D1A2B3C4D5E6F7A8B9C0D1E3 /* AlarmRowView.swift */,
+				ED32F0FEF88F960C8186F35F /* AlarmScheduleCoordinator.swift */,
 				1528047A29F027B683B920FE /* AlarmScheduleReconcileEntrypoint.swift */,
 				06DDC0185B5B0D8A1400C98B /* AlarmScheduleReconciler.swift */,
 				B70862277833BF001ABA7BBE /* AlarmStore.swift */,
-				D2A3B4C5D6E7F8A9B0C1D2E4 /* AlarmStore+AlarmCRUD.swift */,
-				D3A4B5C6D7E8F9A0B1C2D3E5 /* AlarmStore+NapManagement.swift */,
-				D4A5B6C7D8E9F0A1B2C3D4E6 /* AlarmStore+RemoteSync.swift */,
-				D5A6B7C8D9E0F1A2B3C4D5E7 /* AlarmStore+SchedulingHelpers.swift */,
-				C1B2D3E4F5A6B7C8D9E0F1A2 /* AlarmStoreViewHelpers.swift */,
-				D65E8CA1DA583D987D1FDE53 /* AppRootView.swift */,
+				22BE9BFEB8EE47112EBE06AE /* AlarmStore+AlarmCRUD.swift */,
+				AA743E1252E483F77ADC8C4B /* AlarmStore+NapManagement.swift */,
+				CBE68C07DECE0F89E0886687 /* AlarmStore+RemoteSync.swift */,
+				B09996DA82152D5AABFAC198 /* AlarmStore+SchedulingHelpers.swift */,
 				CFE2D4CDA835E9DD606528A0 /* Assets.xcassets */,
 				6093C9086BF89A5DE696608D /* Info.plist */,
 				B0511AEB1608CC1DFD19C495 /* L10n.swift */,
 				E43A03F552339F3CF4DBCF2C /* LaunchScreen.storyboard */,
-				E55D19BAE63F4BCAD183A095 /* MainTabView.swift */,
-				D6A7B8C9D0E1F2A3B4C5D6E8 /* NapBannerView.swift */,
-				C4B5D6E7F8A9B0C1D2E3F4A8 /* NapDurationPicker.swift */,
-				FA3152F133E737A1C6EF2905 /* NapEditorView.swift */,
 				5DF22129177248C5394DFFC2 /* NotificationPermissionService.swift */,
 				A6981BF284D917EBC650816B /* OnboardingEngine.swift */,
-				22E4F6FF18C9BE1617CD7543 /* OnboardingFlowView.swift */,
-				764BB1926C868CDA8BB0801A /* OpenAlarmApp.swift */,
 				0213A81B71B2B9C6B189C61F /* OpenAlarmNotificationDelegate.swift */,
-				91529C2531FED87446559016 /* OpenAlarmTheme.swift */,
-				C3B4D5E6F7A8B9C0D1E2F3A6 /* SettingsHomeView.swift */,
-				5C5DC43674A1A23D8D98A25C /* SharedAlarmSettingsEditor.swift */,
 				568AC6EB43A9044628BFB421 /* WakeUpCheckModels.swift */,
 				7049E02D02264E608DE04480 /* WakeUpCheckNotificationService.swift */,
+				EA89AF9EF426683B72FD571C /* WakeUpCheckPipelineController.swift */,
 				E0AF3F0DE1850AE6E1938DA9 /* WakeUpCheckStopIntentArmService.swift */,
-				E7B8C9D0E1F2A3B4C5D6E7F9 /* WakeUpCheckConfirmationView.swift */,
-				D3B2C4E5F6A7B8C9D0E1F2A4 /* WakeUpCheckPipelineController.swift */,
+				5E23DB03853BC1CB98973B3C /* App */,
 				FD7B31457CC502B622019E4F /* Resources */,
+				BD853A1B3783B54238C796B0 /* Screens */,
+				8A89A9B2E5A269C2694A3422 /* Theme */,
 			);
 			path = OpenAlarm;
+			sourceTree = "<group>";
+		};
+		BD853A1B3783B54238C796B0 /* Screens */ = {
+			isa = PBXGroup;
+			children = (
+				6CC0662B453E03B986F0299F /* Alarm */,
+				0A8CE3FB687201507588590D /* Nap */,
+				21C855E76DAE2E6C1AEC02D8 /* Onboarding */,
+				D0AF9828ACEDF8EBACCD6C99 /* Settings */,
+				85F1AF767BAAACB99F6F07F7 /* WakeUpCheck */,
+			);
+			path = Screens;
+			sourceTree = "<group>";
+		};
+		D0AF9828ACEDF8EBACCD6C99 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				804446594677F10342CA095A /* SettingsHomeView.swift */,
+				672FBF5B1749EB576E198EF2 /* SharedAlarmSettingsEditor.swift */,
+			);
+			path = Settings;
 			sourceTree = "<group>";
 		};
 		FD7B31457CC502B622019E4F /* Resources */ = {
@@ -238,7 +302,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 2630;
+				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					E551FDD196683E640B0F9503 = {
 						DevelopmentTeam = 7P7CKKPH5L;
@@ -247,7 +311,6 @@
 				};
 			};
 			buildConfigurationList = 151A4987828856810E33F08D /* Build configuration list for PBXProject "OpenAlarm" */;
-			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -257,6 +320,8 @@
 			);
 			mainGroup = 4A12B252E6DF89BC145988F5;
 			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 205990B36FE807545D4ADA70 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -293,42 +358,42 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4349AE16DB928CA08CA1900B /* AlarmEditorView.swift in Sources */,
+				CC0D737C6C5221FD884251E6 /* AlarmConfigurationFactory.swift in Sources */,
+				77EF586640E2BA39DCC5BEC2 /* AlarmEditorView.swift in Sources */,
+				6DAF29F47FD1E6004674040F /* AlarmHomeView.swift in Sources */,
 				05162562A0170BE9098361EE /* AlarmIntents.swift in Sources */,
 				BF8889E27B6255835899C3B5 /* AlarmModels.swift in Sources */,
-				A1B2C3D4E5F6A7B8C9D0E1F2 /* AlarmConfigurationFactory.swift in Sources */,
 				0B5A2C2BC6692B00E79A988E /* AlarmPermissionService.swift in Sources */,
 				D0827BEDA4B4C360461E9F23 /* AlarmPersistence.swift in Sources */,
+				40FC7F4295F6FF44F3F72965 /* AlarmRowView.swift in Sources */,
+				9D0DD3AB9083C56EAC951450 /* AlarmScheduleCoordinator.swift in Sources */,
 				10DC781930D22D3C916F3AB3 /* AlarmScheduleReconcileEntrypoint.swift in Sources */,
 				F1CC7D2E7D1CC6F5D537C625 /* AlarmScheduleReconciler.swift in Sources */,
+				6708757688D6396CFA62E5A5 /* AlarmStore+AlarmCRUD.swift in Sources */,
+				D09087168FBE789F67A07707 /* AlarmStore+NapManagement.swift in Sources */,
+				889CE05E7D5553E71FD08F27 /* AlarmStore+RemoteSync.swift in Sources */,
+				664DE4F297F665B0D6656421 /* AlarmStore+SchedulingHelpers.swift in Sources */,
 				75F6F1776DF5731E152893A0 /* AlarmStore.swift in Sources */,
-				43A37EA685F224896032D009 /* AppRootView.swift in Sources */,
+				EC7D8AE4E31ADC7D31172E40 /* AlarmStoreViewHelpers.swift in Sources */,
+				CEEB02817569AB0C4EDD35C2 /* AppRootView.swift in Sources */,
 				1068E5E14AAA376BDD6E846B /* L10n.swift in Sources */,
-				42DA53AB032443282ACAC432 /* MainTabView.swift in Sources */,
-				23C0CD1574BD2A54EDBFCCE1 /* NapEditorView.swift in Sources */,
+				0B94972715ED422EAA18A64B /* MainTabView.swift in Sources */,
+				550B59450BA119BE04B396DA /* NapBannerView.swift in Sources */,
+				3033CE1DBADAA18ED7564BAA /* NapDurationPicker.swift in Sources */,
+				C6E89EE4F2C9E834C6F4E5F4 /* NapEditorView.swift in Sources */,
 				1C03AE89BE0AC99AD3E829DE /* NotificationPermissionService.swift in Sources */,
 				E072A215F811DC860E8ED2F1 /* OnboardingEngine.swift in Sources */,
-				0137578A7C3DB65015FC02BE /* OnboardingFlowView.swift in Sources */,
-				7A6C9625D2A75EB1C003316B /* OpenAlarmApp.swift in Sources */,
+				DAF5A47BFCC2345F0622347C /* OnboardingFlowView.swift in Sources */,
+				6A50E1ADBEA686D1DA26C3F0 /* OpenAlarmApp.swift in Sources */,
 				A6D55657E1563EC89C608EFD /* OpenAlarmNotificationDelegate.swift in Sources */,
-				58BDACC5F57BBA0A5953274E /* OpenAlarmTheme.swift in Sources */,
-				36C1824E2D70AF0163976EDA /* SharedAlarmSettingsEditor.swift in Sources */,
+				BD8A90252F2F3669200E2C4F /* OpenAlarmTheme.swift in Sources */,
+				98D7DE03C986859C06252DE7 /* SettingsHomeView.swift in Sources */,
+				C669FDD2D25E4256D2430161 /* SharedAlarmSettingsEditor.swift in Sources */,
+				1B1488ECC64F591938DEA880 /* WakeUpCheckConfirmationView.swift in Sources */,
 				8399559AD42B82F57361E9E3 /* WakeUpCheckModels.swift in Sources */,
 				99FFE75EAF79B740FE9D2225 /* WakeUpCheckNotificationService.swift in Sources */,
+				BE4423E0EE43DF8321B70D02 /* WakeUpCheckPipelineController.swift in Sources */,
 				FB2461D5447424A95E288109 /* WakeUpCheckStopIntentArmService.swift in Sources */,
-				C2A1B3D4E5F6A7B8C9D0E1F3 /* WakeUpCheckPipelineController.swift in Sources */,
-				E4C3D5F6A7B8C9D0E1F2A3B5 /* AlarmScheduleCoordinator.swift in Sources */,
-				B1A2C3D4E5F6A7B8C9D0E1A1 /* AlarmStoreViewHelpers.swift in Sources */,
-				B2A3C4D5E6F7A8B9C0D1E2A3 /* AlarmHomeView.swift in Sources */,
-				B3A4C5D6E7F8A9B0C1D2E3A5 /* SettingsHomeView.swift in Sources */,
-				B4A5C6D7E8F9A0B1C2D3E4A7 /* NapDurationPicker.swift in Sources */,
-				E1B2C3D4E5F6A7B8C9D0E1F3 /* AlarmRowView.swift in Sources */,
-				E2B3C4D5E6F7A8B9C0D1E2F4 /* AlarmStore+AlarmCRUD.swift in Sources */,
-				E3B4C5D6E7F8A9B0C1D2E3F5 /* AlarmStore+NapManagement.swift in Sources */,
-				E4B5C6D7E8F9A0B1C2D3E4F6 /* AlarmStore+RemoteSync.swift in Sources */,
-				E5B6C7D8E9F0A1B2C3D4E5F7 /* AlarmStore+SchedulingHelpers.swift in Sources */,
-				E6B7C8D9E0F1A2B3C4D5E6F8 /* NapBannerView.swift in Sources */,
-				F2A3B4C5D6E7F8A9B0C1D2E5 /* WakeUpCheckConfirmationView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -370,7 +435,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 57;
+				CURRENT_PROJECT_VERSION = 41;
 				DEVELOPMENT_TEAM = 7P7CKKPH5L;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = OpenAlarm/Info.plist;
@@ -393,7 +458,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -428,7 +492,6 @@
 				DEVELOPMENT_LANGUAGE = en;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -448,7 +511,6 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -481,7 +543,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 57;
+				CURRENT_PROJECT_VERSION = 41;
 				DEVELOPMENT_TEAM = 7P7CKKPH5L;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = OpenAlarm/Info.plist;
@@ -504,7 +566,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -539,7 +600,6 @@
 				DEVELOPMENT_LANGUAGE = en;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -552,7 +612,6 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
