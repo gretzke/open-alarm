@@ -2,257 +2,547 @@ import AlarmKit
 import AppIntents
 import Combine
 import Foundation
+import os
+import SwiftUI
 
-extension Notification.Name {
-    static let wakeUpCheckConfirmationRequested = Notification.Name("wakeUpCheckConfirmationRequested")
-}
-
-struct WakeUpCheckConfirmationPresentation: Identifiable {
-    let id: UUID
-}
+// MARK: - AlarmStore
 
 @MainActor
 final class AlarmStore: ObservableObject {
+    private static let logger = Logger(subsystem: "com.openalarm", category: "AlarmStore")
+
+    // MARK: - Published Properties
+
     @Published internal var alarms: [UserAlarm] = []
     @Published var defaultSharedSettings: SharedAlarmSettings
     @Published var defaultNapDurationMinutes: Int
     @Published var testingModeEnabled: Bool
+    @Published var permissionStatus: AlarmPermissionStatus
+    @Published var notificationPermissionStatus: NotificationPermissionStatus = .notDetermined
+    @Published var remoteStates: [UUID: Alarm.State] = [:]
+
+    // NOOP: Phase 4
     @Published var wakeUpCheckConfirmationPresentation: WakeUpCheckConfirmationPresentation?
 
-    /// The single active nap alarm, derived from the unified alarms array.
+    // MARK: - Computed Properties
+
     var activeNap: UserAlarm? {
         alarms.first { $0.isNap }
     }
 
-    /// Alarms visible in the main list (excludes nap and tryOut).
     var regularAlarms: [UserAlarm] {
         alarms.filter { $0.alarmType == .regular }
     }
 
-    @Published internal var permissionStatus: AlarmPermissionStatus
-    @Published internal var notificationPermissionStatus: NotificationPermissionStatus = .notDetermined
-    @Published internal var remoteStates: [UUID: Alarm.State] = [:]
+    // MARK: - Dependencies
 
-    let alarmManager: AlarmManager
+    private let alarmManager: AlarmManager
     private let permissionService: AlarmPermissionService
     private let notificationPermissionService: NotificationPermissionService
-    let persistence: AlarmPersistence
-
+    private let persistence: AlarmPersistence
     private var alarmUpdatesTask: Task<Void, Never>?
-    var lastKnownAlarmState: [UUID: Alarm.State] = [:]
-    private(set) var wakeUpCheckController: WakeUpCheckPipelineController!
-    private(set) var scheduleCoordinator: AlarmScheduleCoordinator!
 
-    /// When temporary schedule override is active, we keep this many explicit
-    /// one-shot alarms queued as fallback bridges.
-    let manualOverrideQueueDepth = AlarmSchedulePlanner.defaultManualQueueDepth
+    // MARK: - Init
 
     init(
         alarmManager: AlarmManager = .shared,
         permissionService: AlarmPermissionService? = nil,
         notificationPermissionService: NotificationPermissionService? = nil,
-        wakeUpCheckNotificationService: WakeUpCheckNotificationService? = nil,
         userDefaults: UserDefaults = .standard
     ) {
         self.alarmManager = alarmManager
         self.permissionService = permissionService ?? AlarmPermissionService(manager: alarmManager)
         self.notificationPermissionService = notificationPermissionService ?? NotificationPermissionService()
-        let wakeNotifService = wakeUpCheckNotificationService ?? WakeUpCheckNotificationService()
         self.persistence = AlarmPersistence(defaults: userDefaults)
         self.defaultSharedSettings = persistence.loadDefaultSharedSettings()
         self.defaultNapDurationMinutes = persistence.loadDefaultNapDurationMinutes()
         self.testingModeEnabled = persistence.loadTestingModeEnabled()
         self.permissionStatus = self.permissionService.currentStatus()
 
-        self.wakeUpCheckController = WakeUpCheckPipelineController(
-            persistence: persistence,
-            notificationService: wakeNotifService,
-            alarmManager: alarmManager
-        )
-
-        wireWakeUpCheckControllerCallbacks()
-
-        self.scheduleCoordinator = AlarmScheduleCoordinator(
-            alarmManager: alarmManager,
-            persistence: persistence,
-            wakeUpCheckController: wakeUpCheckController,
-            manualOverrideQueueDepth: manualOverrideQueueDepth
-        )
-
-        wireScheduleCoordinatorCallbacks()
-        wireWakeUpCheckCoordinatorDependencies()
-        applyLegacyWakeCheckMigration()
-
-        wakeNotifService.ensureCategoryRegistered()
-        AlarmScheduleReconcileEntrypoint.register(handler: scheduleCoordinator)
+        WakeUpCheckNotificationService().ensureCategoryRegistered()
 
         load()
         observeAlarmUpdates()
-        refreshFromSystem()
-
-        NotificationCenter.default.addObserver(
-            forName: .wakeUpCheckConfirmationRequested,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.consumePendingWakeUpCheckConfirmationUI()
-            }
-        }
-
-        Task { @MainActor [weak self] in
-            await self?.refreshNotificationPermissionStatus()
-            await AlarmScheduleReconcileEntrypoint.reconcile(trigger: .appLaunch)
-        }
     }
 
     deinit {
         alarmUpdatesTask?.cancel()
     }
 
-    // MARK: - App lifecycle
+    // MARK: - Load
+
+    private func load() {
+        alarms = sortAlarms(persistence.loadUserAlarms())
+    }
+
+    // MARK: - App Lifecycle
 
     func handleAppOpened() {
-        refreshFromSystem()
+        permissionStatus = permissionService.currentStatus()
+        load()
+        refreshRemoteState()
+    }
 
-        Task { @MainActor [weak self] in
-            await self?.refreshNotificationPermissionStatus()
-            await AlarmScheduleReconcileEntrypoint.reconcile(trigger: .appLaunch)
-            self?.consumePendingWakeUpCheckConfirmationUI()
+    private func refreshRemoteState() {
+        do {
+            let remote = try alarmManager.alarms
+            applyRemoteAlarms(remote)
+        } catch {
+            remoteStates = [:]
         }
     }
 
-    // MARK: - Permissions
+    // MARK: - Create Alarm (unified code path)
 
-    func requestPermissionIfNeeded() async -> AlarmPermissionStatus {
-        switch permissionService.currentStatus() {
-        case .notDetermined:
-            permissionStatus = await permissionService.requestAuthorization()
-        case .denied:
-            permissionStatus = .denied
-        case .authorized:
-            permissionStatus = .authorized
-        }
-        return permissionStatus
-    }
-
-    @discardableResult
-    func refreshNotificationPermissionStatus() async -> NotificationPermissionStatus {
-        notificationPermissionStatus = await notificationPermissionService.currentStatus()
-        return notificationPermissionStatus
-    }
-
-    func requestNotificationPermissionIfNeeded() async -> NotificationPermissionStatus {
-        let status = await refreshNotificationPermissionStatus()
-
-        switch status {
-        case .notDetermined:
-            notificationPermissionStatus = await notificationPermissionService.requestAuthorization()
-        case .authorized, .denied:
-            break
+    func createAlarm(from draft: AlarmDraft) async throws {
+        if permissionStatus != .authorized {
+            let status = await requestPermissionIfNeeded()
+            guard status == .authorized else {
+                throw AlarmStoreError.permissionDenied
+            }
         }
 
-        return notificationPermissionStatus
+        let alarm = draft.toUserAlarm(
+            defaultSharedSettings: defaultSharedSettings
+        )
+
+        alarms.append(alarm)
+        alarms = sortAlarms(alarms)
+        saveAlarms()
+
+        await scheduleAlarm(alarm)
     }
 
-    func shouldPresentWakeCheckPermissionDeniedPromptOnLaunch() async -> Bool {
-        let status = await refreshNotificationPermissionStatus()
-        guard status == .denied else {
-            return false
+    // MARK: - Update Alarm
+
+    func updateAlarm(_ alarm: UserAlarm, with draft: AlarmDraft, clearNextOverride: Bool = false) async throws {
+        // NOOP: Phase 2
+    }
+
+    // MARK: - Update Next Alarm Occurrence
+
+    func updateNextAlarmOccurrence(_ alarm: UserAlarm, with draft: AlarmDraft) async throws {
+        // NOOP: Phase 5
+    }
+
+    // MARK: - Delete Alarm
+
+    func deleteAlarm(_ alarm: UserAlarm) {
+        try? alarmManager.stop(id: alarm.id)
+        try? alarmManager.cancel(id: alarm.id)
+
+        alarms.removeAll { $0.id == alarm.id }
+        remoteStates.removeValue(forKey: alarm.id)
+        saveAlarms()
+    }
+
+    // MARK: - Set Alarm Enabled
+
+    func setAlarmEnabled(_ alarm: UserAlarm, enabled: Bool, skipNext: Bool? = nil) async throws {
+        // NOOP: Phase 2
+    }
+
+    // MARK: - Create Nap (unified code path)
+
+    func createNap(from draft: NapDraft) async throws {
+        if permissionStatus != .authorized {
+            let status = await requestPermissionIfNeeded()
+            guard status == .authorized else {
+                throw AlarmStoreError.permissionDenied
+            }
         }
 
-        return hasWakeUpCheckEnabledConfigurationWithNotificationRequirement
+        // Remove existing nap if any
+        if let existingNap = activeNap {
+            deleteAlarm(existingNap)
+        }
+
+        let targetDate = Date.now.addingTimeInterval(TimeInterval(draft.totalMinutes * 60))
+        let alarm = UserAlarm.makeNap(
+            from: draft,
+            defaultSharedSettings: defaultSharedSettings,
+            targetDate: targetDate
+        )
+
+        alarms.append(alarm)
+        alarms = sortAlarms(alarms)
+        saveAlarms()
+
+        await scheduleAlarm(alarm)
     }
 
-    // MARK: - Default settings
+    // MARK: - Pause Nap
+
+    func pauseNap() {
+        guard let nap = activeNap, !nap.isPaused else { return }
+
+        let remaining = nap.remainingSeconds()
+
+        guard let index = alarms.firstIndex(where: { $0.id == nap.id }) else { return }
+        alarms[index].pausedRemainingSeconds = remaining
+        alarms[index].updatedAt = .now
+        saveAlarms()
+
+        try? alarmManager.stop(id: nap.id)
+        try? alarmManager.cancel(id: nap.id)
+    }
+
+    // MARK: - Resume Nap
+
+    func resumeNap() async {
+        guard let nap = activeNap, nap.isPaused,
+              let remaining = nap.pausedRemainingSeconds else { return }
+
+        let newTarget = Date.now.addingTimeInterval(remaining)
+
+        guard let index = alarms.firstIndex(where: { $0.id == nap.id }) else { return }
+        alarms[index].fixedTriggerDate = newTarget
+        alarms[index].pausedRemainingSeconds = nil
+        alarms[index].updatedAt = .now
+        saveAlarms()
+
+        await scheduleAlarm(alarms[index])
+    }
+
+    // MARK: - Delete Nap
+
+    func deleteNap() {
+        guard let nap = activeNap else { return }
+        deleteAlarm(nap)
+    }
+
+    // MARK: - Schedule Try-Out (unified code path)
+
+    func scheduleTryOut(sharedSettings: SharedAlarmSettings, after seconds: TimeInterval) async throws {
+        if permissionStatus != .authorized {
+            let status = await requestPermissionIfNeeded()
+            guard status == .authorized else {
+                throw AlarmStoreError.permissionDenied
+            }
+        }
+
+        // Remove existing tryOuts
+        let existing = alarms.filter { $0.isTryOut }
+        for alarm in existing {
+            deleteAlarm(alarm)
+        }
+
+        let triggerDate = Date.now.addingTimeInterval(seconds)
+        let id = UUID()
+        var alarm = UserAlarm(
+            id: id,
+            name: "",
+            hour: 0,
+            minute: 0,
+            repeatDays: [],
+            deleteAfterUse: true,
+            alarmType: .tryOut,
+            fixedTriggerDate: triggerDate,
+            useDefaultSharedSettings: false,
+            customSharedSettings: sharedSettings,
+            nextTriggerOverrideDate: nil,
+            isEnabled: true,
+            skipNextUntilDate: nil,
+            snoozeCount: 0,
+            lifecycleState: .scheduled,
+            createdAt: .now,
+            updatedAt: .now
+        )
+        AlarmTypePolicy.normalizeOnWrite(&alarm)
+
+        alarms.append(alarm)
+        alarms = sortAlarms(alarms)
+        saveAlarms()
+
+        await scheduleAlarm(alarm)
+    }
+
+    // MARK: - Settings
 
     func updateDefaultSharedSettings(_ settings: SharedAlarmSettings) {
-        guard defaultSharedSettings != settings else {
-            return
-        }
-
         defaultSharedSettings = settings
         persistence.saveDefaultSharedSettings(settings)
-
-        var changed = false
-        for index in alarms.indices where alarms[index].useDefaultSharedSettings {
-            alarms[index].customSharedSettings = settings
-            alarms[index].updatedAt = .now
-            changed = true
-        }
-
-        if changed {
-            alarms = sortAlarms(alarms)
-            save()
-
-            Task { @MainActor [weak self] in
-                await self?.rescheduleAlarmsUsingDefaultSharedSettings()
-            }
-        }
-    }
-
-    func disableWakeUpCheckFeatureGlobally() {
-        var defaults = defaultSharedSettings
-        if defaults.wakeUpCheckEnabled {
-            defaults.wakeUpCheckEnabled = false
-            defaultSharedSettings = defaults
-            persistence.saveDefaultSharedSettings(defaults)
-        }
-
-        var changed = false
-        for index in alarms.indices {
-            guard !alarms[index].useDefaultSharedSettings else {
-                continue
-            }
-
-            if alarms[index].customSharedSettings.wakeUpCheckEnabled {
-                alarms[index].customSharedSettings.wakeUpCheckEnabled = false
-                alarms[index].updatedAt = .now
-                changed = true
-            }
-        }
-
-        if changed {
-            alarms = sortAlarms(alarms)
-            save()
-        }
-
-        wakeUpCheckController.clearAllWakeUpCheckSessions(restoreSchedules: true)
     }
 
     func updateTestingModeEnabled(_ enabled: Bool) {
-        guard testingModeEnabled != enabled else {
-            return
-        }
-
         testingModeEnabled = enabled
         persistence.saveTestingModeEnabled(enabled)
     }
 
     func updateDefaultNapDurationMinutes(_ minutes: Int) {
-        let next = max(1, minutes)
-        guard defaultNapDurationMinutes != next else {
+        defaultNapDurationMinutes = max(1, minutes)
+        persistence.saveDefaultNapDurationMinutes(defaultNapDurationMinutes)
+    }
+
+    func openSettings() {
+        guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else {
             return
         }
-
-        defaultNapDurationMinutes = next
-        persistence.saveDefaultNapDurationMinutes(next)
+        UIApplication.shared.open(settingsURL)
     }
 
-    // MARK: - Persistence helpers
+    // MARK: - Permissions
 
-    func persistCommittedAlarm(_ alarm: UserAlarm) {
-        if let existingIndex = alarms.firstIndex(where: { $0.id == alarm.id }) {
-            alarms[existingIndex] = alarm
-        } else {
-            alarms.append(alarm)
+    @discardableResult
+    func requestPermissionIfNeeded() async -> AlarmPermissionStatus {
+        let status = await permissionService.requestAuthorization()
+        permissionStatus = status
+        return status
+    }
+
+    @discardableResult
+    func refreshNotificationPermissionStatus() async -> NotificationPermissionStatus {
+        let status = await notificationPermissionService.currentStatus()
+        notificationPermissionStatus = status
+        return status
+    }
+
+    func requestNotificationPermissionIfNeeded() async -> NotificationPermissionStatus {
+        let status = await notificationPermissionService.requestAuthorization()
+        notificationPermissionStatus = status
+        return status
+    }
+
+    // MARK: - Wake-Up Check (Phase 6 no-ops)
+
+    func disableWakeUpCheckFeatureGlobally() {
+        // NOOP: Phase 4
+    }
+
+    func confirmWakeUpCheck(for alarmID: UUID) async {
+        // NOOP: Phase 4
+    }
+
+    func applyWakeUpCheckGracePeriodIfNeeded(for alarmID: UUID) async -> Date? {
+        // NOOP: Phase 4
+        return nil
+    }
+
+    func shouldPresentWakeCheckPermissionDeniedPromptOnLaunch() async -> Bool {
+        // NOOP: Phase 4
+        return false
+    }
+
+    // MARK: - Error Display
+
+    func userFacingErrorMessage(for error: Error) -> LocalizedStringKey {
+        guard let storeError = error as? AlarmStoreError else {
+            return L10n.alarmEditorErrorGeneric
         }
 
-        alarms = sortAlarms(alarms)
-        save()
+        switch storeError {
+        case .permissionDenied:
+            return L10n.alarmEditorErrorPermissionDenied
+        case .scheduleFailed:
+            return L10n.alarmEditorErrorGeneric
+        }
     }
 
-    func sortAlarms(_ alarms: [UserAlarm]) -> [UserAlarm] {
+    // MARK: - View Helpers
+
+    func lifecycleLabel(for state: AlarmLifecycleState) -> LocalizedStringKey {
+        switch state {
+        case .scheduled:
+            return L10n.alarmStateScheduled
+        case .alerting:
+            return L10n.alarmStateAlerting
+        case .awaitingWakeCheck:
+            return L10n.alarmStateAwaitingWakeCheck
+        case .completed:
+            return L10n.alarmStateCompleted
+        }
+    }
+
+    func permissionStatusLabel() -> LocalizedStringKey {
+        switch permissionStatus {
+        case .authorized:
+            return L10n.settingsPermissionAuthorized
+        case .notDetermined:
+            return L10n.settingsPermissionNotDetermined
+        case .denied:
+            return L10n.settingsPermissionDenied
+        }
+    }
+
+    // MARK: - Internal Scheduling (unified code path)
+
+    private func scheduleAlarm(_ alarm: UserAlarm) async {
+        let runtimeSchedule = AlarmScheduleResolver.runtimeSchedule(for: alarm)
+        let config = makeConfiguration(for: alarm, schedule: runtimeSchedule)
+
+        do {
+            _ = try await alarmManager.schedule(id: alarm.id, configuration: config)
+        } catch {
+            Self.logger.warning("Schedule failed for \(alarm.id), retrying: \(error.localizedDescription)")
+            try? alarmManager.stop(id: alarm.id)
+            try? alarmManager.cancel(id: alarm.id)
+            do {
+                _ = try await alarmManager.schedule(id: alarm.id, configuration: config)
+            } catch {
+                Self.logger.error("Retry schedule failed for \(alarm.id): \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func makeConfiguration(
+        for alarm: UserAlarm,
+        schedule: Alarm.Schedule
+    ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
+        let title = resolvedTitle(for: alarm)
+        let sharedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
+        // NOOP: Phase 4 — snooze button hidden until SnoozeIntent is implemented
+        let showSnooze = false // sharedSettings.canSnoozeAgain(currentCount: alarm.snoozeCount)
+
+        let alertPresentation = AlarmPresentation.Alert(
+            title: Self.localizedResource(from: title),
+            stopButton: .stopButton,
+            secondaryButton: showSnooze ? .snoozeButton : nil,
+            secondaryButtonBehavior: showSnooze ? .custom : nil
+        )
+
+        let presentation = AlarmPresentation(alert: alertPresentation)
+
+        let attributes = AlarmAttributes(
+            presentation: presentation,
+            metadata: OpenAlarmMetadata(source: alarm.id.uuidString, isShadowTrial: alarm.isTryOut),
+            tintColor: OAColor.actionCyan
+        )
+
+        let snoozeInterval: TimeInterval = sharedSettings.snoozeDurationMinutes == 0
+            ? 5
+            : TimeInterval(sharedSettings.snoozeDurationMinutes * 60)
+
+        let countdownDuration: Alarm.CountdownDuration? = showSnooze
+            ? .init(preAlert: nil, postAlert: snoozeInterval)
+            : nil
+
+        return .init(
+            countdownDuration: countdownDuration,
+            schedule: schedule,
+            attributes: attributes,
+            stopIntent: StopIntent(alarmID: alarm.id.uuidString),
+            secondaryIntent: nil,
+            sound: .default
+        )
+    }
+
+    private func resolvedTitle(for alarm: UserAlarm) -> String {
+        if alarm.isNap {
+            return String(localized: "nap_default_alarm_label")
+        }
+        let trimmed = alarm.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return NSLocalizedString("alarm_editor_default_label", comment: "")
+        }
+        return trimmed
+    }
+
+    private static func localizedResource(from text: String) -> LocalizedStringResource {
+        LocalizedStringResource(String.LocalizationValue(text))
+    }
+
+    // MARK: - Observe AlarmKit Updates
+
+    private func observeAlarmUpdates() {
+        alarmUpdatesTask = Task { [weak self] in
+            guard let self else { return }
+            for await incoming in alarmManager.alarmUpdates {
+                guard !Task.isCancelled else { return }
+                self.applyRemoteAlarms(incoming)
+            }
+        }
+    }
+
+    private var lastKnownAlarmState: [UUID: Alarm.State] = [:]
+
+    private func applyRemoteAlarms(_ incoming: [Alarm]) {
+        let remoteByID = Dictionary(uniqueKeysWithValues: incoming.map { ($0.id, $0) })
+
+        var updated = alarms
+        var changed = false
+        var idsToRemove: Set<UUID> = []
+
+        for index in updated.indices {
+            let alarm = updated[index]
+            let previousState = lastKnownAlarmState[alarm.id]
+            let currentState = remoteByID[alarm.id]?.state
+
+            // Track state
+            if let currentState {
+                lastKnownAlarmState[alarm.id] = currentState
+            } else {
+                lastKnownAlarmState.removeValue(forKey: alarm.id)
+            }
+
+            // Detect alarm fired: alerting → non-alerting transition
+            let firedTransition = previousState == .alerting && currentState != .alerting
+            // Detect cold-start completion: alarm gone and was one-shot with past trigger
+            let coldStartCompletion = currentState == nil && !alarm.isRepeating
+                && alarm.fixedTriggerDate != nil && alarm.fixedTriggerDate! <= .now
+
+            if firedTransition || coldStartCompletion {
+                // Nap or tryOut: always remove
+                if alarm.isNap || alarm.isTryOut {
+                    idsToRemove.insert(alarm.id)
+                    continue
+                }
+
+                // Regular alarm: delete-after-use
+                if alarm.deleteAfterUse {
+                    idsToRemove.insert(alarm.id)
+                    continue
+                }
+
+                // Regular alarm kept: disable it
+                if !alarm.isRepeating {
+                    updated[index].isEnabled = false
+                    updated[index].lifecycleState = .completed
+                    updated[index].updatedAt = .now
+                    changed = true
+                }
+            }
+
+            // Update lifecycle state from remote
+            if let currentState {
+                let newLifecycle: AlarmLifecycleState = currentState == .alerting ? .alerting : .scheduled
+                if updated[index].lifecycleState != newLifecycle {
+                    updated[index].lifecycleState = newLifecycle
+                    changed = true
+                }
+            }
+        }
+
+        // Remove completed alarms
+        if !idsToRemove.isEmpty {
+            for id in idsToRemove {
+                try? alarmManager.stop(id: id)
+                try? alarmManager.cancel(id: id)
+                lastKnownAlarmState.removeValue(forKey: id)
+            }
+            updated.removeAll { idsToRemove.contains($0.id) }
+            changed = true
+        }
+
+        // Update remote states for UI
+        var newRemoteStates: [UUID: Alarm.State] = [:]
+        for (id, alarm) in remoteByID {
+            newRemoteStates[id] = alarm.state
+        }
+        remoteStates = newRemoteStates
+
+        if changed {
+            alarms = sortAlarms(updated)
+            saveAlarms()
+        }
+    }
+
+    // MARK: - Persistence Helpers
+
+    private func saveAlarms() {
+        persistence.saveUserAlarms(alarms)
+    }
+
+    private func sortAlarms(_ alarms: [UserAlarm]) -> [UserAlarm] {
         alarms.sorted { lhs, rhs in
             if lhs.hour == rhs.hour {
                 if lhs.minute == rhs.minute {
@@ -262,264 +552,5 @@ final class AlarmStore: ObservableObject {
             }
             return lhs.hour < rhs.hour
         }
-    }
-
-    func mergeSnoozeCountsFromPersistence(into alarms: inout [UserAlarm]) -> Bool {
-        let persisted = Dictionary(uniqueKeysWithValues: persistence.loadUserAlarms().map { ($0.id, $0.snoozeCount) })
-
-        var changed = false
-        for index in alarms.indices {
-            guard let persistedCount = persisted[alarms[index].id] else {
-                continue
-            }
-            if alarms[index].snoozeCount != persistedCount {
-                alarms[index].snoozeCount = persistedCount
-                changed = true
-            }
-        }
-        return changed
-    }
-
-    func load() {
-        alarms = sortAlarms(persistence.loadUserAlarms())
-    }
-
-    func save() {
-        persistence.saveUserAlarms(alarms)
-    }
-
-    // MARK: - Remote observation
-
-    private func observeAlarmUpdates() {
-        alarmUpdatesTask = Task { [weak self] in
-            guard let self else {
-                return
-            }
-
-            for await incoming in alarmManager.alarmUpdates {
-                if Task.isCancelled {
-                    return
-                }
-
-                applyRemoteAlarms(incoming)
-                await AlarmScheduleReconcileEntrypoint.reconcileAllSchedules()
-            }
-        }
-    }
-
-    private func refreshFromSystem() {
-        permissionStatus = permissionService.currentStatus()
-        do {
-            let remote = try alarmManager.alarms
-            applyRemoteAlarms(remote)
-        } catch {
-            remoteStates = [:]
-        }
-
-        Task { @MainActor in
-            await AlarmScheduleReconcileEntrypoint.reconcileAllSchedules()
-        }
-    }
-
-    // MARK: - Private init wiring
-
-    private var hasWakeUpCheckEnabledConfigurationWithNotificationRequirement: Bool {
-        if defaultSharedSettings.wakeUpCheckEnabled {
-            return true
-        }
-
-        return alarms.contains { alarm in
-            !alarm.useDefaultSharedSettings && alarm.customSharedSettings.wakeUpCheckEnabled
-        }
-    }
-
-    private func wireWakeUpCheckControllerCallbacks() {
-        wakeUpCheckController.findAlarm = { [weak self] id in
-            self?.alarms.first { $0.id == id }
-        }
-        wakeUpCheckController.findAlarmIndex = { [weak self] id in
-            guard let self, let idx = self.alarms.firstIndex(where: { $0.id == id }) else { return nil }
-            return (idx, self.alarms[idx])
-        }
-        wakeUpCheckController.allAlarmIDs = { [weak self] in
-            self?.alarms.map(\.id) ?? []
-        }
-        wakeUpCheckController.defaultSharedSettings = { [weak self] in
-            self?.defaultSharedSettings ?? .featureDefaults
-        }
-        wakeUpCheckController.notificationPermissionStatus = { [weak self] in
-            self?.notificationPermissionStatus ?? .notDetermined
-        }
-        wakeUpCheckController.updateAlarm = { [weak self] id, mutate in
-            guard let self, let idx = self.alarms.firstIndex(where: { $0.id == id }) else { return }
-            mutate(&self.alarms[idx])
-        }
-        wakeUpCheckController.removeAlarm = { [weak self] id in
-            self?.alarms.removeAll { $0.id == id }
-        }
-        wakeUpCheckController.sortAndSave = { [weak self] in
-            guard let self else { return }
-            self.alarms = self.sortAlarms(self.alarms)
-            self.save()
-        }
-        wakeUpCheckController.updateLastKnownState = { [weak self] id, state in
-            if let state {
-                self?.lastKnownAlarmState[id] = state
-            } else {
-                self?.lastKnownAlarmState.removeValue(forKey: id)
-            }
-        }
-        wakeUpCheckController.updateRemoteState = { [weak self] id, state in
-            if let state {
-                self?.remoteStates[id] = state
-            } else {
-                self?.remoteStates.removeValue(forKey: id)
-            }
-        }
-        wakeUpCheckController.triggerReconcileForAlarm = { alarmID in
-            Task { @MainActor in
-                await AlarmScheduleReconcileEntrypoint.reconcileSchedule(alarmID: alarmID, forceRearm: true)
-            }
-        }
-    }
-
-    private func wireScheduleCoordinatorCallbacks() {
-        scheduleCoordinator.findAlarm = { [weak self] id in
-            self?.alarms.first { $0.id == id }
-        }
-        scheduleCoordinator.allAlarmIDs = { [weak self] in
-            self?.alarms.map(\.id) ?? []
-        }
-        scheduleCoordinator.allAlarms = { [weak self] in
-            self?.alarms ?? []
-        }
-        scheduleCoordinator.defaultSharedSettings = { [weak self] in
-            self?.defaultSharedSettings ?? .featureDefaults
-        }
-        scheduleCoordinator.persistCommittedAlarm = { [weak self] alarm in
-            self?.persistCommittedAlarm(alarm)
-        }
-        scheduleCoordinator.updateLastKnownState = { [weak self] id, state in
-            if let state {
-                self?.lastKnownAlarmState[id] = state
-            } else {
-                self?.lastKnownAlarmState.removeValue(forKey: id)
-            }
-        }
-        scheduleCoordinator.updateRemoteState = { [weak self] id, state in
-            if let state {
-                self?.remoteStates[id] = state
-            } else {
-                self?.remoteStates.removeValue(forKey: id)
-            }
-        }
-        scheduleCoordinator.removeStaleAlarms = { [weak self] staleIDs in
-            guard let self else { return }
-            self.alarms.removeAll { staleIDs.contains($0.id) }
-            self.save()
-        }
-    }
-
-    private func wireWakeUpCheckCoordinatorDependencies() {
-        wakeUpCheckController.owningAlarmID = { [weak self] id in
-            self?.scheduleCoordinator.owningAlarmID(for: id)
-        }
-        wakeUpCheckController.makeConfiguration = { [weak self] alarm, schedule, forceDisableSnooze in
-            guard let self else {
-                return AlarmConfigurationFactory.makeConfiguration(
-                    for: alarm,
-                    schedule: schedule,
-                    defaultSharedSettings: .featureDefaults,
-                    forceDisableSnooze: forceDisableSnooze
-                )
-            }
-            return self.scheduleCoordinator.makeConfiguration(
-                for: alarm,
-                schedule: schedule,
-                forceDisableSnooze: forceDisableSnooze
-            )
-        }
-        wakeUpCheckController.scheduleAlarmWithUpdateFallback = { [weak self] id, config, isUpdate in
-            guard let self else { throw CancellationError() }
-            return try await self.scheduleCoordinator.scheduleAlarmWithUpdateFallback(
-                id: id,
-                configuration: config,
-                isUpdate: isUpdate
-            )
-        }
-    }
-
-    private func applyLegacyWakeCheckMigration() {
-        if let legacyWakeDefaults = persistence.loadLegacyDefaultWakeUpCheckDefaults() {
-            self.defaultSharedSettings.wakeUpCheckEnabled = legacyWakeDefaults.enabledByDefault
-            self.defaultSharedSettings.wakeUpCheckDelayMinutes = legacyWakeDefaults.clampedDelayMinutes
-            persistence.saveDefaultSharedSettings(self.defaultSharedSettings)
-            persistence.clearLegacyDefaultWakeUpCheckDefaults()
-        }
-    }
-
-    // MARK: - Wake-up check confirmation UI
-
-    func consumePendingWakeUpCheckConfirmationUI() {
-        var pendingIDs = persistence.loadPendingWakeUpCheckShowConfirmUIIDs()
-        guard let alarmID = pendingIDs.first else { return }
-
-        guard wakeUpCheckController.sessionsByAlarmID[alarmID] != nil else {
-            pendingIDs.remove(alarmID)
-            persistence.savePendingWakeUpCheckShowConfirmUIIDs(pendingIDs)
-            return
-        }
-
-        pendingIDs.remove(alarmID)
-        persistence.savePendingWakeUpCheckShowConfirmUIIDs(pendingIDs)
-        wakeUpCheckConfirmationPresentation = WakeUpCheckConfirmationPresentation(id: alarmID)
-    }
-
-    func confirmWakeUpCheck(for alarmID: UUID) async {
-        wakeUpCheckConfirmationPresentation = nil
-        await wakeUpCheckController.completeWakeUpCheck(for: alarmID)
-    }
-
-    func applyWakeUpCheckGracePeriodIfNeeded(for alarmID: UUID) async -> Date? {
-        guard var session = wakeUpCheckController.sessionsByAlarmID[alarmID] else { return nil }
-
-        let now = Date.now
-        let remaining = session.deadlineAt.timeIntervalSince(now)
-
-        guard remaining < 60 else { return session.deadlineAt }
-
-        let newDeadline = now.addingTimeInterval(60)
-        session.deadlineAt = newDeadline
-        session.updatedAt = now
-        wakeUpCheckController.setSession(session, for: alarmID)
-        wakeUpCheckController.persistSessions()
-
-        let config = scheduleCoordinator.makeConfiguration(
-            for: alarms.first { $0.id == alarmID } ?? alarms[0],
-            schedule: .fixed(newDeadline),
-            forceDisableSnooze: WakeUpCheckCoordinator.wakeCheckAlarmsDisableSnooze
-        )
-        _ = try? await scheduleCoordinator.scheduleAlarmWithUpdateFallback(
-            id: alarmID,
-            configuration: config,
-            isUpdate: true
-        )
-
-        return newDeadline
-    }
-}
-
-enum AlarmStoreError: Error {
-    case permissionDenied
-    case scheduleFailed
-}
-
-extension AlarmButton {
-    static var snoozeButton: Self {
-        AlarmButton(text: "Snooze", textColor: .black, systemImageName: "zzz")
-    }
-
-    static var stopButton: Self {
-        AlarmButton(text: "Done", textColor: .white, systemImageName: "stop.circle")
     }
 }

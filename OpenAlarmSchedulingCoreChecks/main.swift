@@ -1,5 +1,5 @@
 import Foundation
-import OpenAlarmSchedulingCore
+@testable import OpenAlarmSchedulingCore
 
 struct CheckFailure: Error {
     let message: String
@@ -25,780 +25,79 @@ func expectTrue(
 }
 
 @main
-struct AlarmScheduleReconcilerDeterministicChecks {
+struct AlarmSchedulingCoreChecks {
     static func main() {
         do {
             try runChecks()
-            print("✅ Deterministic scheduling checks passed (28/28)")
+            print("All scheduling core checks passed (4/4)")
         } catch {
             if let failure = error as? CheckFailure {
-                fputs("❌ \(failure.message)\n", stderr)
+                fputs("FAIL: \(failure.message)\n", stderr)
             } else {
-                fputs("❌ Unexpected error: \(error)\n", stderr)
+                fputs("FAIL: Unexpected error: \(error)\n", stderr)
             }
             exit(1)
         }
     }
 
     static func runChecks() throws {
-        let now = Date(timeIntervalSince1970: 1_000_000)
-
-        // 1) skip-next -> next valid occurrence -> recurring restore
+        // 1) AlarmStateMachine: enable from idle schedules alarm
         do {
-            let skipUntil = now.addingTimeInterval(-1)
-            let desired = AlarmScheduleDesiredPlan(
-                isRepeating: true,
-                mode: .temporarySkip(until: skipUntil)
+            let alarm = AlarmDefinition(trigger: .time(hour: 7, minute: 0))
+            let settings = AlarmSettings.defaults
+            let result = AlarmStateMachine.transition(
+                current: .idle,
+                event: .enabled,
+                alarm: alarm,
+                settings: settings
             )
-            let actual = AlarmScheduleActualState(previous: .missing, current: .missing)
-
-            let operations = AlarmScheduleReconciler.reconcile(
-                desired: desired,
-                actual: actual,
-                now: now
-            )
-
-            try expectEqual(
-                operations,
-                [.clearTemporarySkipAndEnableRecurring, .scheduleRecurringRestore],
-                "skip-next scenario should restore recurring schedule"
-            )
+            try expectEqual(result.phase, .scheduled(alarmKitIDs: [alarm.id]), "enable from idle should schedule")
+            try expectEqual(result.effects, [
+                .scheduleAlarmKit(alarmID: alarm.id, trigger: alarm.trigger, recurrence: alarm.recurrence)
+            ], "enable should emit schedule effect")
         }
 
-        // 2) modify-next-once -> recurring restore
+        // 2) AlarmStateMachine: delete from scheduled cancels and deletes
         do {
-            let oneShotTrigger = now.addingTimeInterval(-30)
-            let desired = AlarmScheduleDesiredPlan(
-                isRepeating: true,
-                mode: .temporaryOneShot(triggerDate: oneShotTrigger),
-                nextTriggerOverrideDate: oneShotTrigger
+            let alarm = AlarmDefinition(trigger: .time(hour: 7, minute: 0))
+            let settings = AlarmSettings.defaults
+            let result = AlarmStateMachine.transition(
+                current: .scheduled(alarmKitIDs: [alarm.id]),
+                event: .deleted,
+                alarm: alarm,
+                settings: settings
             )
-            let actual = AlarmScheduleActualState(previous: .alerting, current: .missing)
-
-            let operations = AlarmScheduleReconciler.reconcile(
-                desired: desired,
-                actual: actual,
-                now: now
-            )
-
-            try expectEqual(
-                operations,
-                [.clearTemporaryOneShot, .scheduleRecurringRestore],
-                "modify-next-once scenario should restore recurring schedule"
-            )
+            try expectEqual(result.phase, .idle, "delete should transition to idle")
+            try expectTrue(result.effects.contains(.cancelAlarmKit(ids: [alarm.id])), "delete should cancel")
+            try expectTrue(result.effects.contains(.deleteAlarm(alarm.id)), "delete should remove alarm")
         }
 
-        // 3) duplicate fire callback idempotency
+        // 3) AlarmStateMachine: stop one-shot delete-after-use completes and deletes
         do {
-            let oneShotTrigger = now.addingTimeInterval(-60)
-            let firstDesired = AlarmScheduleDesiredPlan(
-                isRepeating: true,
-                mode: .temporaryOneShot(triggerDate: oneShotTrigger),
-                nextTriggerOverrideDate: oneShotTrigger
+            let alarm = AlarmDefinition(trigger: .time(hour: 7, minute: 0), deleteAfterUse: true)
+            let settings = AlarmSettings.defaults
+            let result = AlarmStateMachine.transition(
+                current: .alerting(alarmKitID: alarm.id),
+                event: .stopped(alarmKitID: alarm.id),
+                alarm: alarm,
+                settings: settings
             )
-            let firstActual = AlarmScheduleActualState(previous: .alerting, current: .missing)
-
-            let firstOps = AlarmScheduleReconciler.reconcile(
-                desired: firstDesired,
-                actual: firstActual,
-                now: now
-            )
-
-            try expectEqual(
-                firstOps,
-                [.clearTemporaryOneShot, .scheduleRecurringRestore],
-                "first fire callback should consume one-shot and restore recurring"
-            )
-
-            let duplicateDesired = AlarmScheduleDesiredPlan(
-                isRepeating: true,
-                mode: .recurring,
-                nextTriggerOverrideDate: nil
-            )
-            let duplicateActual = AlarmScheduleActualState(previous: .missing, current: .missing)
-
-            let duplicateOps = AlarmScheduleReconciler.reconcile(
-                desired: duplicateDesired,
-                actual: duplicateActual,
-                now: now
-            )
-
-            try expectTrue(
-                duplicateOps.isEmpty,
-                "duplicate callback should produce no additional operations"
-            )
+            try expectEqual(result.phase, .completed, "stop one-shot should complete")
+            try expectTrue(result.effects.contains(.deleteAlarm(alarm.id)), "stop one-shot should delete")
         }
 
-        // 4) cold-start recovery from temporary/one-shot mode
+        // 4) AlarmStateMachine: disable from idle is no-op
         do {
-            let oneShotTrigger = now.addingTimeInterval(-120)
-            let desired = AlarmScheduleDesiredPlan(
-                isRepeating: true,
-                mode: .temporaryOneShot(triggerDate: oneShotTrigger),
-                nextTriggerOverrideDate: oneShotTrigger
+            let alarm = AlarmDefinition(trigger: .time(hour: 7, minute: 0))
+            let settings = AlarmSettings.defaults
+            let result = AlarmStateMachine.transition(
+                current: .idle,
+                event: .disabled,
+                alarm: alarm,
+                settings: settings
             )
-            let actual = AlarmScheduleActualState(previous: .missing, current: .missing)
-
-            let operations = AlarmScheduleReconciler.reconcile(
-                desired: desired,
-                actual: actual,
-                now: now
-            )
-
-            try expectEqual(
-                operations,
-                [.clearTemporaryOneShot, .scheduleRecurringRestore],
-                "cold-start recovery should restore recurring schedule from persisted one-shot mode"
-            )
-        }
-
-        // 5) stop-intent hook routes to single-alarm reconcile
-        do {
-            let alarmID = UUID(uuidString: "DCE8CB2E-01D8-4548-B03A-2A12F3A16DB1")!
-            try expectEqual(
-                AlarmScheduleReconcileRouting.target(for: .stopIntent(alarmID)),
-                .alarm(alarmID),
-                "stop intent should route to alarm-scoped reconcile"
-            )
-        }
-
-        // 6) snooze-intent hook routes to single-alarm reconcile
-        do {
-            let alarmID = UUID(uuidString: "FB0C589E-8D72-45B3-B16F-25FC774E5FF9")!
-            try expectEqual(
-                AlarmScheduleReconcileRouting.target(for: .snoozeIntent(alarmID)),
-                .alarm(alarmID),
-                "snooze intent should route to alarm-scoped reconcile"
-            )
-        }
-
-        // 7) app-launch hook routes to all-alarms reconcile
-        do {
-            try expectEqual(
-                AlarmScheduleReconcileRouting.target(for: .appLaunch),
-                .allAlarms,
-                "app-launch reconciliation should route to all alarms"
-            )
-        }
-
-        // 8) reconcile hook routing is idempotent
-        do {
-            let alarmID = UUID(uuidString: "2D78DAD2-3D64-4B9E-A2A9-DCA6A743DF9F")!
-            let stopFirst = AlarmScheduleReconcileRouting.target(for: .stopIntent(alarmID))
-            let stopSecond = AlarmScheduleReconcileRouting.target(for: .stopIntent(alarmID))
-            let snoozeFirst = AlarmScheduleReconcileRouting.target(for: .snoozeIntent(alarmID))
-            let snoozeSecond = AlarmScheduleReconcileRouting.target(for: .snoozeIntent(alarmID))
-            let launchFirst = AlarmScheduleReconcileRouting.target(for: .appLaunch)
-            let launchSecond = AlarmScheduleReconcileRouting.target(for: .appLaunch)
-
-            try expectEqual(stopFirst, stopSecond, "stop hook should be deterministic")
-            try expectEqual(snoozeFirst, snoozeSecond, "snooze hook should be deterministic")
-            try expectEqual(stopFirst, snoozeFirst, "stop and snooze should share the same single-alarm reconcile route")
-            try expectEqual(launchFirst, launchSecond, "app-launch hook should be deterministic")
-        }
-
-        // 9) disable-next activation builds N=5 manual queue anchored to second canonical occurrence
-        do {
-            var calendar = Calendar(identifier: .gregorian)
-            calendar.timeZone = TimeZone(secondsFromGMT: 0)!
-
-            let now = DateComponents(
-                calendar: calendar,
-                timeZone: calendar.timeZone,
-                year: 2026,
-                month: 2,
-                day: 28,
-                hour: 6,
-                minute: 0,
-                second: 0
-            ).date!
-
-            let schedule = AlarmCanonicalScheduleSpec(
-                weekdayNumbers: [1, 2, 3, 4, 5, 6, 7],
-                hour: 7,
-                minute: 0,
-                isEnabled: true
-            )
-
-            let activation = AlarmSchedulePlanner.activateTemporaryOverride(
-                canonicalSchedule: schedule,
-                intent: .disableNext,
-                now: now,
-                manualQueueDepth: 5,
-                calendar: calendar
-            )
-
-            try expectTrue(activation != nil, "disable-next activation should succeed")
-            try expectEqual(activation?.overrideState.kind, .disableNext, "override mode should be disable-next")
-            try expectEqual(activation?.manualTriggerDates.count, 5, "disable-next should enqueue 5 manual bridge alarms")
-
-            let expectedAnchor = DateComponents(
-                calendar: calendar,
-                timeZone: calendar.timeZone,
-                year: 2026,
-                month: 3,
-                day: 1,
-                hour: 7,
-                minute: 0,
-                second: 0
-            ).date!
-            try expectEqual(
-                activation?.overrideState.restoreAnchorDate,
-                expectedAnchor,
-                "disable-next restore anchor should be second canonical occurrence"
-            )
-        }
-
-        // 10) Mon/Fri modify-next-earlier applies once, consumes override, and skips same-day canonical
-        do {
-            var calendar = Calendar(identifier: .gregorian)
-            calendar.timeZone = TimeZone(secondsFromGMT: 0)!
-
-            let now = DateComponents(
-                calendar: calendar,
-                timeZone: calendar.timeZone,
-                year: 2026,
-                month: 3,
-                day: 1,
-                hour: 12,
-                minute: 0,
-                second: 0
-            ).date! // Sunday
-            let mondayOverride = DateComponents(
-                calendar: calendar,
-                timeZone: calendar.timeZone,
-                year: 2026,
-                month: 3,
-                day: 2,
-                hour: 8,
-                minute: 0,
-                second: 0
-            ).date!
-            let mondayCanonical = DateComponents(
-                calendar: calendar,
-                timeZone: calendar.timeZone,
-                year: 2026,
-                month: 3,
-                day: 2,
-                hour: 9,
-                minute: 0,
-                second: 0
-            ).date!
-            let fridayCanonical = DateComponents(
-                calendar: calendar,
-                timeZone: calendar.timeZone,
-                year: 2026,
-                month: 3,
-                day: 6,
-                hour: 9,
-                minute: 0,
-                second: 0
-            ).date!
-
-            let schedule = AlarmCanonicalScheduleSpec(
-                weekdayNumbers: [2, 6],
-                hour: 9,
-                minute: 0,
-                isEnabled: true
-            )
-
-            let activation = AlarmSchedulePlanner.activateTemporaryOverride(
-                canonicalSchedule: schedule,
-                intent: .modifyNext(triggerDate: mondayOverride),
-                now: now,
-                manualQueueDepth: 5,
-                calendar: calendar
-            )
-
-            try expectTrue(activation != nil, "modify-next Mon/Fri activation should succeed")
-            try expectEqual(activation?.manualTriggerDates.first, mondayOverride, "first trigger should be override day/time")
-            try expectEqual(activation?.manualTriggerDates.dropFirst().first, fridayCanonical, "second trigger should skip Monday 09:00 and bridge to Friday")
-            try expectTrue(
-                !(activation?.manualTriggerDates.contains(mondayCanonical) ?? true),
-                "queue must not include same-day canonical slot after earlier override"
-            )
-
-            try expectTrue(
-                AlarmSchedulePlanner.shouldConsumeOverrideDate(
-                    afterManualAlarmFiredAt: mondayOverride,
-                    overrideState: activation!.overrideState
-                ),
-                "override date should be consumed on first eligible manual ring"
-            )
-            try expectTrue(
-                !AlarmSchedulePlanner.shouldRestoreRecurringSchedule(
-                    afterManualAlarmFiredAt: mondayOverride,
-                    overrideState: activation!.overrideState
-                ),
-                "first eligible override ring should not restore recurring before anchor"
-            )
-
-            var consumedState = activation!.overrideState
-            consumedState.overrideDate = nil
-
-            let mondayAfterOverride = DateComponents(
-                calendar: calendar,
-                timeZone: calendar.timeZone,
-                year: 2026,
-                month: 3,
-                day: 2,
-                hour: 8,
-                minute: 30,
-                second: 0
-            ).date!
-
-            let rebuilt = AlarmSchedulePlanner.desiredManualTriggerDates(
-                canonicalSchedule: schedule,
-                overrideState: consumedState,
-                now: mondayAfterOverride,
-                manualQueueDepth: 5,
-                calendar: calendar
-            )
-
-            try expectEqual(rebuilt.first, fridayCanonical, "reconcile after consume should not reintroduce Monday 09:00")
-            try expectTrue(
-                !rebuilt.contains(mondayCanonical),
-                "reconcile should not revive stale same-day canonical trigger"
-            )
-        }
-
-        // 11) modify-next-later restores at overridden ring
-        do {
-            var calendar = Calendar(identifier: .gregorian)
-            calendar.timeZone = TimeZone(secondsFromGMT: 0)!
-
-            let now = DateComponents(
-                calendar: calendar,
-                timeZone: calendar.timeZone,
-                year: 2026,
-                month: 2,
-                day: 28,
-                hour: 6,
-                minute: 0,
-                second: 0
-            ).date!
-            let overrideDate = DateComponents(
-                calendar: calendar,
-                timeZone: calendar.timeZone,
-                year: 2026,
-                month: 2,
-                day: 28,
-                hour: 9,
-                minute: 0,
-                second: 0
-            ).date!
-
-            let schedule = AlarmCanonicalScheduleSpec(
-                weekdayNumbers: [1, 2, 3, 4, 5, 6, 7],
-                hour: 8,
-                minute: 0,
-                isEnabled: true
-            )
-
-            let activation = AlarmSchedulePlanner.activateTemporaryOverride(
-                canonicalSchedule: schedule,
-                intent: .modifyNext(triggerDate: overrideDate),
-                now: now,
-                manualQueueDepth: 5,
-                calendar: calendar
-            )
-
-            try expectTrue(activation != nil, "modify-next-later activation should succeed")
-            try expectTrue(
-                AlarmSchedulePlanner.shouldRestoreRecurringSchedule(
-                    afterManualAlarmFiredAt: overrideDate,
-                    overrideState: activation!.overrideState
-                ),
-                "later override ring should restore recurring"
-            )
-        }
-
-        // 12) schedule signature changes clear temporary override state
-        do {
-            let previous = AlarmCanonicalScheduleSignature(
-                spec: AlarmCanonicalScheduleSpec(
-                    weekdayNumbers: [2, 4, 6],
-                    hour: 8,
-                    minute: 15,
-                    isEnabled: true
-                )
-            )
-
-            let same = AlarmCanonicalScheduleSignature(
-                spec: AlarmCanonicalScheduleSpec(
-                    weekdayNumbers: [2, 4, 6],
-                    hour: 8,
-                    minute: 15,
-                    isEnabled: true
-                )
-            )
-            let changed = AlarmCanonicalScheduleSignature(
-                spec: AlarmCanonicalScheduleSpec(
-                    weekdayNumbers: [2, 4],
-                    hour: 8,
-                    minute: 45,
-                    isEnabled: true
-                )
-            )
-
-            try expectTrue(
-                !AlarmSchedulePlanner.shouldClearTemporaryOverride(previous: previous, next: same),
-                "identical schedule signatures should not clear override"
-            )
-            try expectTrue(
-                AlarmSchedulePlanner.shouldClearTemporaryOverride(previous: previous, next: changed),
-                "schedule edits should clear temporary override"
-            )
-        }
-
-        // 13) wake-check delay options include required user-facing choices
-        do {
-            try expectEqual(
-                WakeUpCheckTimingPolicy.checkDelayOptionsMinutes,
-                [1, 3, 5, 10, 15, 20, 30, 45, 60],
-                "wake-check delay options should match UX requirements"
-            )
-        }
-
-        // 14) wake-check delay debug sentinel uses 5-second delay
-        do {
-            try expectEqual(
-                WakeUpCheckTimingPolicy.checkDelayInterval(
-                    for: WakeUpCheckTimingPolicy.debugFiveSecondSentinelMinutes
-                ),
-                5,
-                "wake-check debug delay should be 5 seconds"
-            )
-        }
-
-        // 15) wake-check normal delay values stay minute-based
-        do {
-            try expectEqual(
-                WakeUpCheckTimingPolicy.checkDelayInterval(for: 5),
-                300,
-                "wake-check 5-minute delay should map to 300 seconds"
-            )
-        }
-
-        // 16) wake-check delay clamping preserves debug sentinel and clamps invalid values
-        do {
-            try expectEqual(
-                WakeUpCheckTimingPolicy.clampCheckDelayMinutes(
-                    WakeUpCheckTimingPolicy.debugFiveSecondSentinelMinutes
-                ),
-                0,
-                "debug sentinel should remain 0"
-            )
-            try expectEqual(
-                WakeUpCheckTimingPolicy.clampCheckDelayMinutes(-2),
-                1,
-                "invalid delay values should clamp to 1 minute"
-            )
-            try expectEqual(
-                WakeUpCheckTimingPolicy.clampCheckDelayMinutes(120),
-                60,
-                "delay values above range should clamp to 60 minutes"
-            )
-        }
-
-        // 17) wake-check timeout options include required user-facing choices
-        do {
-            try expectEqual(
-                WakeUpCheckTimingPolicy.responseTimeoutOptionsMinutes,
-                [1, 2, 3, 5, 10, 20],
-                "wake-check response timeout options should match UX requirements"
-            )
-        }
-
-        // 18) wake-check timeout debug sentinel uses 5-second timeout
-        do {
-            try expectEqual(
-                WakeUpCheckTimingPolicy.responseTimeoutInterval(
-                    for: WakeUpCheckTimingPolicy.debugFiveSecondSentinelMinutes
-                ),
-                5,
-                "wake-check debug timeout should be 5 seconds"
-            )
-        }
-
-        // 19) wake-check normal timeout values stay minute-based
-        do {
-            try expectEqual(
-                WakeUpCheckTimingPolicy.responseTimeoutInterval(for: 3),
-                180,
-                "wake-check 3-minute timeout should map to 180 seconds"
-            )
-        }
-
-        // 20) wake-check timeout normalization preserves debug sentinel and clamps invalid values
-        do {
-            try expectEqual(
-                WakeUpCheckTimingPolicy.normalizeResponseTimeoutMinutes(
-                    WakeUpCheckTimingPolicy.debugFiveSecondSentinelMinutes
-                ),
-                0,
-                "debug sentinel should remain 0"
-            )
-            try expectEqual(
-                WakeUpCheckTimingPolicy.normalizeResponseTimeoutMinutes(-2),
-                1,
-                "invalid timeout values should clamp to 1 minute"
-            )
-        }
-
-        // 21) wake-check stop-intent coordinator policy starts first and repeat cycles
-        do {
-            try expectTrue(
-                WakeUpCheckCoordinator.shouldEnqueuePipelineOnStopIntent(
-                    wakeUpCheckEnabledForAlarm: true,
-                    hasActiveSession: false
-                ),
-                "wake-check enabled alarms should enqueue pipeline on first stop"
-            )
-            try expectTrue(
-                WakeUpCheckCoordinator.shouldEnqueuePipelineOnStopIntent(
-                    wakeUpCheckEnabledForAlarm: false,
-                    hasActiveSession: true
-                ),
-                "active wake-check sessions should continue pipeline even after settings changes"
-            )
-            try expectTrue(
-                !WakeUpCheckCoordinator.shouldEnqueuePipelineOnStopIntent(
-                    wakeUpCheckEnabledForAlarm: false,
-                    hasActiveSession: false
-                ),
-                "non-wake-check alarms with no active session should not enqueue pipeline"
-            )
-            try expectTrue(
-                WakeUpCheckCoordinator.wakeCheckAlarmsDisableSnooze,
-                "wake-check alarms must always disable snooze"
-            )
-        }
-
-        // 22) immediate stop-intent arming success clears durable pending-start marker
-        do {
-            let alarmID = UUID(uuidString: "A0EE4E5F-7331-46D0-B531-7AB1AFC57E07")!
-            let siblingAlarmID = UUID(uuidString: "00EBC0E6-B6F0-4783-B73B-2224BE465D55")!
-            let pendingStartIDs: Set<UUID> = [alarmID, siblingAlarmID]
-
-            let cleared = WakeUpCheckCoordinator.pendingStartIDsAfterImmediateStopIntentArming(
-                pendingStartIDs: pendingStartIDs,
-                alarmID: alarmID,
-                didArmImmediately: true
-            )
-            try expectEqual(
-                cleared,
-                Set([siblingAlarmID]),
-                "immediate wake-check arming should consume pending-start marker"
-            )
-
-            let unchanged = WakeUpCheckCoordinator.pendingStartIDsAfterImmediateStopIntentArming(
-                pendingStartIDs: pendingStartIDs,
-                alarmID: alarmID,
-                didArmImmediately: false
-            )
-            try expectEqual(
-                unchanged,
-                pendingStartIDs,
-                "failed immediate arming must preserve durable pending-start marker"
-            )
-        }
-
-        // 23) confirm-awake queueing cancels pending-start and enqueues confirmation marker
-        do {
-            let alarmID = UUID(uuidString: "CA32F120-5EAA-4DD7-89E3-EA82D64F4284")!
-            let unrelatedAlarmID = UUID(uuidString: "A503141D-29F5-4567-A95C-1CD7A6805B2A")!
-
-            let next = WakeUpCheckCoordinator.pendingWakeQueuesAfterConfirmAction(
-                alarmID: alarmID,
-                pendingStartIDs: [alarmID, unrelatedAlarmID],
-                pendingConfirmIDs: [unrelatedAlarmID]
-            )
-
-            try expectEqual(
-                next.pendingStartIDs,
-                Set([unrelatedAlarmID]),
-                "confirm action must remove pending-start for same alarm"
-            )
-            try expectEqual(
-                next.pendingConfirmIDs,
-                Set([alarmID, unrelatedAlarmID]),
-                "confirm action must enqueue confirm marker without dropping existing ones"
-            )
-        }
-
-        // 24) wake-check coordinator carries persisted config snapshot across cycles
-        do {
-            let alarmID = UUID(uuidString: "D7AFC2A6-AB4C-4BB6-B1FC-90D7FD53DB4E")!
-            let previous = WakeUpCheckSessionState(
-                alarmID: alarmID,
-                cycle: 2,
-                checkAt: Date(timeIntervalSince1970: 300),
-                deadlineAt: Date(timeIntervalSince1970: 600),
-                notificationID: "wakecheck.previous",
-                status: .deadlineFired,
-                configSnapshot: WakeUpCheckConfigSnapshot(checkDelayMinutes: 10, responseTimeoutMinutes: 2),
-                createdAt: Date(timeIntervalSince1970: 100),
-                updatedAt: Date(timeIntervalSince1970: 700)
-            )
-
-            let next = WakeUpCheckCoordinator.nextCycleSession(
-                alarmID: alarmID,
-                previousSession: previous,
-                fallbackSnapshot: WakeUpCheckConfigSnapshot(checkDelayMinutes: 1, responseTimeoutMinutes: 1),
-                now: Date(timeIntervalSince1970: 1_000),
-                makeNotificationID: { id, cycle in "wakecheck.\(id.uuidString).\(cycle)" }
-            )
-
-            try expectEqual(next.cycle, 3, "wake-check cycles should increment deterministically")
-            try expectEqual(
-                next.configSnapshot,
-                WakeUpCheckConfigSnapshot(checkDelayMinutes: 10, responseTimeoutMinutes: 2),
-                "next wake-check cycle should keep previously persisted config snapshot"
-            )
-            try expectEqual(next.status, .scheduling, "next cycle should start in scheduling state")
-        }
-
-        // 25) wake-check arming failure policy finalizes non-repeating alarms without active sessions
-        do {
-            try expectEqual(
-                WakeUpCheckCoordinator.armingFailureResolution(
-                    isRepeating: false,
-                    hasActiveSessionAfterAttempt: false
-                ),
-                .completeNonRepeating,
-                "one-shot wake-check arming failures should fall back to completion"
-            )
-            try expectEqual(
-                WakeUpCheckCoordinator.armingFailureResolution(
-                    isRepeating: true,
-                    hasActiveSessionAfterAttempt: false
-                ),
-                .restoreScheduled,
-                "repeating wake-check arming failures should restore scheduled state"
-            )
-            try expectEqual(
-                WakeUpCheckCoordinator.armingFailureResolution(
-                    isRepeating: false,
-                    hasActiveSessionAfterAttempt: true
-                ),
-                .keepAwaitingActiveSession,
-                "active wake-check sessions should preserve awaiting state on stale failures"
-            )
-        }
-
-        // 26) wake-check partial arming failure cancels notifications only when they were scheduled
-        do {
-            try expectTrue(
-                WakeUpCheckCoordinator.shouldCancelNotificationAfterArmingFailure(
-                    notificationWasScheduled: true
-                ),
-                "notification must be canceled when runtime arming fails after notification scheduling"
-            )
-            try expectTrue(
-                !WakeUpCheckCoordinator.shouldCancelNotificationAfterArmingFailure(
-                    notificationWasScheduled: false
-                ),
-                "no cancellation needed when notification scheduling never succeeded"
-            )
-        }
-
-        // 27) disable-next vs modify-next are mutually exclusive modes
-        do {
-            var calendar = Calendar(identifier: .gregorian)
-            calendar.timeZone = TimeZone(secondsFromGMT: 0)!
-            let now = DateComponents(
-                calendar: calendar,
-                timeZone: calendar.timeZone,
-                year: 2026,
-                month: 2,
-                day: 28,
-                hour: 6,
-                minute: 0,
-                second: 0
-            ).date!
-            let schedule = AlarmCanonicalScheduleSpec(
-                weekdayNumbers: [1, 2, 3, 4, 5, 6, 7],
-                hour: 8,
-                minute: 0,
-                isEnabled: true
-            )
-
-            let disable = AlarmSchedulePlanner.activateTemporaryOverride(
-                canonicalSchedule: schedule,
-                intent: .disableNext,
-                now: now,
-                manualQueueDepth: 5,
-                calendar: calendar
-            )
-            let modify = AlarmSchedulePlanner.activateTemporaryOverride(
-                canonicalSchedule: schedule,
-                intent: .modifyNext(triggerDate: now.addingTimeInterval(3600)),
-                now: now,
-                manualQueueDepth: 5,
-                calendar: calendar
-            )
-
-            try expectEqual(disable?.overrideState.kind, .disableNext, "disable-next intent should set disable-next mode")
-            try expectEqual(modify?.overrideState.kind, .modifyNext, "modify intent should set modify-next mode")
-        }
-
-        // 28) fallback queue rebuild after missed anchor still emits future bridges
-        do {
-            var calendar = Calendar(identifier: .gregorian)
-            calendar.timeZone = TimeZone(secondsFromGMT: 0)!
-
-            let now = DateComponents(
-                calendar: calendar,
-                timeZone: calendar.timeZone,
-                year: 2026,
-                month: 2,
-                day: 28,
-                hour: 6,
-                minute: 0,
-                second: 0
-            ).date!
-            let afterMissedAnchor = DateComponents(
-                calendar: calendar,
-                timeZone: calendar.timeZone,
-                year: 2026,
-                month: 3,
-                day: 1,
-                hour: 8,
-                minute: 0,
-                second: 0
-            ).date!
-
-            let schedule = AlarmCanonicalScheduleSpec(
-                weekdayNumbers: [1, 2, 3, 4, 5, 6, 7],
-                hour: 7,
-                minute: 0,
-                isEnabled: true
-            )
-
-            let activation = AlarmSchedulePlanner.activateTemporaryOverride(
-                canonicalSchedule: schedule,
-                intent: .disableNext,
-                now: now,
-                manualQueueDepth: 5,
-                calendar: calendar
-            )
-
-            try expectTrue(activation != nil, "disable-next activation should succeed")
-
-            let rebuilt = AlarmSchedulePlanner.desiredManualTriggerDates(
-                canonicalSchedule: schedule,
-                overrideState: activation!.overrideState,
-                now: afterMissedAnchor,
-                manualQueueDepth: 5,
-                calendar: calendar
-            )
-
-            try expectEqual(rebuilt.count, 5, "fallback queue should keep depth=5")
-            try expectTrue(
-                rebuilt.allSatisfy { $0 > afterMissedAnchor },
-                "fallback queue after missed anchor should contain only future bridges"
-            )
+            try expectEqual(result.phase, .idle, "disable from idle stays idle")
+            try expectTrue(result.effects.isEmpty, "disable from idle has no effects")
         }
     }
 }

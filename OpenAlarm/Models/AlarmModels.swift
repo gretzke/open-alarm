@@ -1,6 +1,8 @@
 import AlarmKit
 import Foundation
 
+// MARK: - OpenAlarmMetadata
+
 struct OpenAlarmMetadata: AlarmMetadata {
     var source: String
     var isShadowTrial: Bool
@@ -13,15 +15,29 @@ struct OpenAlarmMetadata: AlarmMetadata {
     }
 }
 
+// MARK: - AlarmButton Extensions
+
+extension AlarmButton {
+    static var stopButton: Self {
+        AlarmButton(text: "Done", textColor: .white, systemImageName: "stop.circle")
+    }
+
+    static var snoozeButton: Self {
+        AlarmButton(text: "Snooze", textColor: .black, systemImageName: "zzz")
+    }
+}
+
+// MARK: - Alarm Type
+
 enum AlarmType: String, Codable, CaseIterable, Sendable {
     case regular
     case nap
     case tryOut
 }
 
+// MARK: - Alarm Type Policy
+
 enum AlarmTypePolicy {
-    /// Normalizes alarm fields on write based on alarm type.
-    /// Forces `deleteAfterUse = true` for nap and tryOut types.
     static func normalizeOnWrite(_ alarm: inout UserAlarm) {
         switch alarm.alarmType {
         case .nap, .tryOut:
@@ -32,6 +48,8 @@ enum AlarmTypePolicy {
     }
 }
 
+// MARK: - Alarm Lifecycle State
+
 enum AlarmLifecycleState: String, Codable, CaseIterable, Sendable {
     case scheduled
     case alerting
@@ -39,69 +57,53 @@ enum AlarmLifecycleState: String, Codable, CaseIterable, Sendable {
     case completed
 }
 
-enum AlarmWeekday: Int, CaseIterable, Codable, Hashable, Sendable, Identifiable {
-    case sunday = 1
-    case monday = 2
-    case tuesday = 3
-    case wednesday = 4
-    case thursday = 5
-    case friday = 6
-    case saturday = 7
-
-    var id: Int { rawValue }
-
-    var localeWeekday: Locale.Weekday {
-        switch self {
-        case .sunday: .sunday
-        case .monday: .monday
-        case .tuesday: .tuesday
-        case .wednesday: .wednesday
-        case .thursday: .thursday
-        case .friday: .friday
-        case .saturday: .saturday
-        }
-    }
-
-    static func orderedForCurrentLocale(calendar: Calendar = .autoupdatingCurrent) -> [AlarmWeekday] {
-        let first = calendar.firstWeekday
-        guard let firstIndex = AlarmWeekday.allCases.firstIndex(where: { $0.rawValue == first }) else {
-            return AlarmWeekday.allCases
-        }
-
-        let head = AlarmWeekday.allCases[firstIndex...]
-        let tail = AlarmWeekday.allCases[..<firstIndex]
-        return Array(head + tail)
-    }
-
-    func veryShortSymbol(calendar: Calendar = .autoupdatingCurrent, locale: Locale = .autoupdatingCurrent) -> String {
-        let formatter = DateFormatter()
-        formatter.calendar = calendar
-        formatter.locale = locale
-
-        let symbols = formatter.veryShortStandaloneWeekdaySymbols ?? formatter.veryShortWeekdaySymbols ?? []
-        guard symbols.count >= 7 else {
-            return fallbackSymbol
-        }
-        return symbols[rawValue - 1]
-    }
-
-    private var fallbackSymbol: String {
-        switch self {
-        case .sunday: return "S"
-        case .monday: return "M"
-        case .tuesday: return "T"
-        case .wednesday: return "W"
-        case .thursday: return "T"
-        case .friday: return "F"
-        case .saturday: return "S"
-        }
-    }
-}
-
+// MARK: - Alarm Feature Requirement
 
 enum AlarmFeatureRequirement: Hashable, Sendable {
     case notifications
 }
+
+// MARK: - Wake-Up Check Timing Policy
+
+public enum WakeUpCheckTimingPolicy {
+    public static let debugFiveSecondSentinelMinutes = 0
+    public static let defaultCheckDelayMinutes = 5
+    public static let defaultResponseTimeoutMinutes = 3
+    public static let checkDelayOptionsMinutes: [Int] = [1, 3, 5, 10, 15, 20, 30, 45, 60]
+    public static let responseTimeoutOptionsMinutes: [Int] = [1, 2, 3, 5, 10, 20]
+
+    public static func clampCheckDelayMinutes(_ minutes: Int) -> Int {
+        if minutes == debugFiveSecondSentinelMinutes {
+            return debugFiveSecondSentinelMinutes
+        }
+        return min(60, max(1, minutes))
+    }
+
+    public static func normalizeResponseTimeoutMinutes(_ minutes: Int) -> Int {
+        if minutes == debugFiveSecondSentinelMinutes {
+            return debugFiveSecondSentinelMinutes
+        }
+        return max(1, minutes)
+    }
+
+    public static func checkDelayInterval(for minutes: Int) -> TimeInterval {
+        let normalizedMinutes = clampCheckDelayMinutes(minutes)
+        if normalizedMinutes == debugFiveSecondSentinelMinutes {
+            return 5
+        }
+        return TimeInterval(normalizedMinutes * 60)
+    }
+
+    public static func responseTimeoutInterval(for minutes: Int) -> TimeInterval {
+        let normalizedMinutes = normalizeResponseTimeoutMinutes(minutes)
+        if normalizedMinutes == debugFiveSecondSentinelMinutes {
+            return 5
+        }
+        return TimeInterval(normalizedMinutes * 60)
+    }
+}
+
+// MARK: - SharedAlarmSettings
 
 struct SharedAlarmSettings: Codable, Equatable, Sendable {
     var snoozeEnabled: Bool
@@ -186,6 +188,8 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
     }
 }
 
+// MARK: - UserAlarm
+
 struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
     var id: UUID
     var name: String
@@ -201,27 +205,13 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
     var useDefaultSharedSettings: Bool
     var customSharedSettings: SharedAlarmSettings
 
-    /// Stable identifier used by temporary manual one-shots to reference alarm
-    /// configuration independently from runtime AlarmKit alarm IDs.
-    var scheduleConfigReferenceID: UUID
-
-    /// Legacy UI/display field (kept for compatibility): next modified one-shot
-    /// date chosen by "Apply next only".
     var nextTriggerOverrideDate: Date?
 
     var isEnabled: Bool
 
-    /// Legacy UI/display field (kept for compatibility): skipped canonical date
-    /// for disable-next banners.
     var skipNextUntilDate: Date?
 
     var snoozeCount: Int
-
-    /// Unified temporary override state used by scheduling planner/reconciler.
-    var temporaryScheduleOverride: AlarmTemporaryScheduleOverride?
-
-    /// Explicit manual AlarmKit one-shot queue used while override is active.
-    var manualScheduleQueue: [AlarmManualScheduleEntry]
 
     var lifecycleState: AlarmLifecycleState
     var createdAt: Date
@@ -240,13 +230,10 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         pausedRemainingSeconds: TimeInterval? = nil,
         useDefaultSharedSettings: Bool,
         customSharedSettings: SharedAlarmSettings,
-        scheduleConfigReferenceID: UUID,
         nextTriggerOverrideDate: Date?,
         isEnabled: Bool,
         skipNextUntilDate: Date?,
         snoozeCount: Int,
-        temporaryScheduleOverride: AlarmTemporaryScheduleOverride?,
-        manualScheduleQueue: [AlarmManualScheduleEntry],
         lifecycleState: AlarmLifecycleState,
         createdAt: Date,
         updatedAt: Date
@@ -263,13 +250,10 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         self.pausedRemainingSeconds = pausedRemainingSeconds
         self.useDefaultSharedSettings = useDefaultSharedSettings
         self.customSharedSettings = customSharedSettings
-        self.scheduleConfigReferenceID = scheduleConfigReferenceID
         self.nextTriggerOverrideDate = nextTriggerOverrideDate
         self.isEnabled = isEnabled
         self.skipNextUntilDate = skipNextUntilDate
         self.snoozeCount = snoozeCount
-        self.temporaryScheduleOverride = temporaryScheduleOverride
-        self.manualScheduleQueue = manualScheduleQueue.sorted { $0.triggerDate < $1.triggerDate }
         self.lifecycleState = lifecycleState
         self.createdAt = createdAt
         self.updatedAt = updatedAt
@@ -291,7 +275,6 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
     var isTryOut: Bool { alarmType == .tryOut }
     var isPaused: Bool { pausedRemainingSeconds != nil }
 
-    /// Remaining seconds for a nap alarm (paused or counting down to fixedTriggerDate).
     func remainingSeconds(referenceDate: Date = .now) -> TimeInterval {
         if let pausedRemainingSeconds {
             return max(0, pausedRemainingSeconds)
@@ -300,7 +283,6 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         return max(0, target.timeIntervalSince(referenceDate))
     }
 
-    /// Creates a nap-typed UserAlarm from a NapDraft.
     static func makeNap(
         from draft: NapDraft,
         defaultSharedSettings: SharedAlarmSettings,
@@ -322,28 +304,16 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
             pausedRemainingSeconds: nil,
             useDefaultSharedSettings: draft.useDefaultSharedSettings,
             customSharedSettings: customSettings,
-            scheduleConfigReferenceID: id,
             nextTriggerOverrideDate: nil,
             isEnabled: true,
             skipNextUntilDate: nil,
             snoozeCount: 0,
-            temporaryScheduleOverride: nil,
-            manualScheduleQueue: [],
             lifecycleState: .scheduled,
             createdAt: now,
             updatedAt: now
         )
         AlarmTypePolicy.normalizeOnWrite(&alarm)
         return alarm
-    }
-
-    var canonicalScheduleSpec: AlarmCanonicalScheduleSpec {
-        AlarmCanonicalScheduleSpec(
-            weekdayNumbers: sortedRepeatDays.map(\.rawValue),
-            hour: hour,
-            minute: minute,
-            isEnabled: true
-        )
     }
 
     var triggerDateForDisplay: Date {
@@ -362,8 +332,6 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         repeatDays.sorted { $0.rawValue < $1.rawValue }
     }
 
-    /// Canonical schedule only. Temporary overrides are handled by manual queue
-    /// scheduling and must not mutate this payload.
     var schedule: Alarm.Schedule {
         let time = Alarm.Schedule.Relative.Time(hour: hour, minute: minute)
         if repeatDays.isEmpty {
@@ -395,17 +363,14 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         case fixedTriggerDate
         case durationMinutes
         case pausedRemainingSeconds
-        case wakeUpCheckEnabled // legacy migration key
-        case wakeUpCheckDelayMinutes // legacy migration key
+        case wakeUpCheckEnabled
+        case wakeUpCheckDelayMinutes
         case useDefaultSharedSettings
         case customSharedSettings
-        case scheduleConfigReferenceID
         case nextTriggerOverrideDate
         case isEnabled
         case skipNextUntilDate
         case snoozeCount
-        case temporaryScheduleOverride
-        case manualScheduleQueue
         case lifecycleState
         case createdAt
         case updatedAt
@@ -429,7 +394,6 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         customSharedSettings = try container.decodeIfPresent(SharedAlarmSettings.self, forKey: .customSharedSettings) ?? .featureDefaults
         useDefaultSharedSettings = try container.decodeIfPresent(Bool.self, forKey: .useDefaultSharedSettings) ?? true
 
-        // Legacy migration: older builds stored wake-check values on UserAlarm instead of SharedAlarmSettings.
         if let legacyWakeEnabled = try container.decodeIfPresent(Bool.self, forKey: .wakeUpCheckEnabled) {
             customSharedSettings.wakeUpCheckEnabled = legacyWakeEnabled
         }
@@ -437,16 +401,11 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
             customSharedSettings.wakeUpCheckDelayMinutes = WakeUpCheckTimingPolicy.clampCheckDelayMinutes(legacyWakeDelay)
         }
 
-        scheduleConfigReferenceID = try container.decodeIfPresent(UUID.self, forKey: .scheduleConfigReferenceID) ?? id
         nextTriggerOverrideDate = try container.decodeIfPresent(Date.self, forKey: .nextTriggerOverrideDate)
         isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
         skipNextUntilDate = try container.decodeIfPresent(Date.self, forKey: .skipNextUntilDate)
 
         snoozeCount = try container.decodeIfPresent(Int.self, forKey: .snoozeCount) ?? 0
-
-        temporaryScheduleOverride = try container.decodeIfPresent(AlarmTemporaryScheduleOverride.self, forKey: .temporaryScheduleOverride)
-        manualScheduleQueue = (try container.decodeIfPresent([AlarmManualScheduleEntry].self, forKey: .manualScheduleQueue) ?? [])
-            .sorted { $0.triggerDate < $1.triggerDate }
 
         lifecycleState = try container.decodeIfPresent(AlarmLifecycleState.self, forKey: .lifecycleState) ?? .scheduled
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? .now
@@ -467,18 +426,33 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
         try container.encodeIfPresent(pausedRemainingSeconds, forKey: .pausedRemainingSeconds)
         try container.encode(useDefaultSharedSettings, forKey: .useDefaultSharedSettings)
         try container.encode(customSharedSettings, forKey: .customSharedSettings)
-        try container.encode(scheduleConfigReferenceID, forKey: .scheduleConfigReferenceID)
         try container.encodeIfPresent(nextTriggerOverrideDate, forKey: .nextTriggerOverrideDate)
         try container.encode(isEnabled, forKey: .isEnabled)
         try container.encodeIfPresent(skipNextUntilDate, forKey: .skipNextUntilDate)
         try container.encode(snoozeCount, forKey: .snoozeCount)
-        try container.encodeIfPresent(temporaryScheduleOverride, forKey: .temporaryScheduleOverride)
-        try container.encode(manualScheduleQueue, forKey: .manualScheduleQueue)
         try container.encode(lifecycleState, forKey: .lifecycleState)
         try container.encode(createdAt, forKey: .createdAt)
         try container.encode(updatedAt, forKey: .updatedAt)
     }
 }
+
+// MARK: - AlarmScheduleResolver
+
+enum AlarmScheduleResolver {
+    static func runtimeSchedule(for alarm: UserAlarm) -> Alarm.Schedule {
+        switch alarm.alarmType {
+        case .nap, .tryOut:
+            if let fixedDate = alarm.fixedTriggerDate {
+                return .fixed(fixedDate)
+            }
+            return alarm.schedule
+        case .regular:
+            return alarm.schedule
+        }
+    }
+}
+
+// MARK: - NapDraft
 
 struct NapDraft: Equatable {
     var durationHours: Int
@@ -510,6 +484,8 @@ struct NapDraft: Equatable {
         useDefaultSharedSettings ? defaults : customSharedSettings
     }
 }
+
+// MARK: - AlarmDraft
 
 struct AlarmDraft: Equatable {
     var name: String
@@ -573,16 +549,9 @@ struct AlarmDraft: Equatable {
     }
 
     func toUserAlarm(
-        id: UUID,
-        existingCreatedAt: Date?,
+        id: UUID = UUID(),
+        existingCreatedAt: Date? = nil,
         defaultSharedSettings: SharedAlarmSettings,
-        existingScheduleConfigReferenceID: UUID? = nil,
-        existingNextTriggerOverrideDate: Date? = nil,
-        existingIsEnabled: Bool = true,
-        existingSkipNextUntilDate: Date? = nil,
-        existingSnoozeCount: Int?,
-        existingTemporaryScheduleOverride: AlarmTemporaryScheduleOverride? = nil,
-        existingManualScheduleQueue: [AlarmManualScheduleEntry] = [],
         alarmType: AlarmType = .regular
     ) -> UserAlarm {
         let timeComponents = Calendar.autoupdatingCurrent.dateComponents([.hour, .minute], from: time)
@@ -600,19 +569,18 @@ struct AlarmDraft: Equatable {
             alarmType: alarmType,
             useDefaultSharedSettings: useDefaultSharedSettings,
             customSharedSettings: persistedCustomSharedSettings,
-            scheduleConfigReferenceID: existingScheduleConfigReferenceID ?? id,
-            nextTriggerOverrideDate: existingNextTriggerOverrideDate,
-            isEnabled: existingIsEnabled,
-            skipNextUntilDate: existingSkipNextUntilDate,
-            snoozeCount: existingSnoozeCount ?? 0,
-            temporaryScheduleOverride: existingTemporaryScheduleOverride,
-            manualScheduleQueue: existingManualScheduleQueue,
+            nextTriggerOverrideDate: nil,
+            isEnabled: true,
+            skipNextUntilDate: nil,
+            snoozeCount: 0,
             lifecycleState: .scheduled,
             createdAt: existingCreatedAt ?? .now,
             updatedAt: .now
         )
     }
 }
+
+// MARK: - AlarmWeekday repeat summary
 
 extension Collection where Element == AlarmWeekday {
     func repeatSummary() -> String {
@@ -623,57 +591,186 @@ extension Collection where Element == AlarmWeekday {
     }
 }
 
-// MARK: - Temporary schedule override helpers
+// MARK: - WakeUpCheckConfirmationPresentation
 
-extension UserAlarm {
-    /// Clears temporary schedule override state (skip-next, modify-next) and
-    /// optionally restores the enabled flag. Shared by both `AlarmStore` and
-    /// `AlarmScheduleCoordinator` so the mutation lives on the value type.
-    mutating func clearTemporaryScheduleOverride(
-        restoreEnabledState: Bool?,
-        clearManualQueue: Bool,
-        updatedAt: Date
-    ) {
-        if let restoreEnabledState {
-            isEnabled = restoreEnabledState
-        }
+struct WakeUpCheckConfirmationPresentation: Identifiable {
+    let id: UUID
+}
 
-        nextTriggerOverrideDate = nil
-        skipNextUntilDate = nil
-        temporaryScheduleOverride = nil
+// MARK: - NotificationPermissionStatus
 
-        if clearManualQueue {
-            manualScheduleQueue.removeAll()
-        }
+enum NotificationPermissionStatus: Equatable {
+    case notDetermined
+    case denied
+    case authorized
+}
 
-        self.updatedAt = updatedAt
+// MARK: - WakeUpCheckNotificationConstants
+
+enum WakeUpCheckNotificationConstants {
+    static let categoryID = "OPENALARM_WAKE_CHECK"
+    static let alarmIDUserInfoKey = "alarmID"
+    static let cycleUserInfoKey = "cycle"
+
+    static func notificationID(alarmID: UUID, cycle: Int) -> String {
+        "wakecheck.\(alarmID.uuidString).\(cycle)"
     }
 }
 
-// MARK: - Typed runtime schedule resolver
+// MARK: - WakeUpCheckAction
 
-/// Resolves the correct `Alarm.Schedule` for runtime scheduling based on alarm type.
-///
-/// Regular alarms use the canonical relative schedule (hour/minute/weekdays).
-/// Nap and tryOut alarms use their `fixedTriggerDate` as a one-shot fixed schedule.
-/// This prevents one-shot types from being re-armed with a wrong relative schedule
-/// during runtime convergence or wake-check completion.
-enum AlarmScheduleResolver {
-    /// Returns the appropriate runtime schedule for an alarm.
-    ///
-    /// - For nap/tryOut: returns `.fixed(fixedTriggerDate)` when available.
-    /// - For regular (or nap/tryOut without fixedTriggerDate): returns `alarm.schedule`.
-    static func runtimeSchedule(for alarm: UserAlarm) -> Alarm.Schedule {
-        switch alarm.alarmType {
-        case .nap, .tryOut:
-            if let fixedDate = alarm.fixedTriggerDate {
-                return .fixed(fixedDate)
-            }
-            // Fallback: should not happen for well-formed nap/tryOut, but
-            // degrade gracefully to canonical schedule.
-            return alarm.schedule
-        case .regular:
-            return alarm.schedule
+enum WakeUpCheckAction: String {
+    case confirmAwake = "WAKE_CHECK_CONFIRM_AWAKE"
+}
+
+// MARK: - AlarmStoreError
+
+enum AlarmStoreError: Error {
+    case permissionDenied
+    case scheduleFailed
+}
+
+// MARK: - Notification.Name
+
+extension Notification.Name {
+    static let wakeUpCheckConfirmationRequested = Notification.Name("wakeUpCheckConfirmationRequested")
+}
+
+// MARK: - WakeUpCheckNotificationService
+
+import UserNotifications
+
+@MainActor
+final class WakeUpCheckNotificationService {
+    private let center: UNUserNotificationCenter
+
+    init(center: UNUserNotificationCenter = .current()) {
+        self.center = center
+    }
+
+    func ensureCategoryRegistered() {
+        let confirmAction = UNNotificationAction(
+            identifier: WakeUpCheckAction.confirmAwake.rawValue,
+            title: String(localized: "wake_check_notification_action_awake"),
+            options: [.foreground]
+        )
+
+        let category = UNNotificationCategory(
+            identifier: WakeUpCheckNotificationConstants.categoryID,
+            actions: [confirmAction],
+            intentIdentifiers: [],
+            options: []
+        )
+
+        center.setNotificationCategories([category])
+    }
+}
+
+// MARK: - AlarmPersistence (legacy, kept for notification delegate and StopIntent)
+
+final class AlarmPersistence: Sendable {
+    static let shared = AlarmPersistence()
+
+    private nonisolated(unsafe) let defaults: UserDefaults
+
+    private let userAlarmsKey = "OPENALARM_USER_ALARMS_V1"
+    private let defaultSharedSettingsKey = "OPENALARM_DEFAULT_SHARED_SETTINGS_V1"
+    private let testingModeEnabledKey = "OPENALARM_TESTING_MODE_ENABLED_V1"
+    private let defaultNapDurationMinutesKey = "OPENALARM_DEFAULT_NAP_DURATION_MINUTES_V1"
+    private let pendingWakeUpCheckShowConfirmUIIDsKey = "OPENALARM_PENDING_WAKE_CHECK_SHOW_CONFIRM_UI_IDS_V1"
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
+
+    // MARK: - User Alarms
+
+    func loadUserAlarms() -> [UserAlarm] {
+        guard let data = defaults.data(forKey: userAlarmsKey) else {
+            return []
         }
+
+        do {
+            return try JSONDecoder().decode([UserAlarm].self, from: data)
+        } catch {
+            return []
+        }
+    }
+
+    func saveUserAlarms(_ alarms: [UserAlarm]) {
+        do {
+            let data = try JSONEncoder().encode(alarms)
+            defaults.set(data, forKey: userAlarmsKey)
+        } catch {
+            defaults.removeObject(forKey: userAlarmsKey)
+        }
+    }
+
+    // MARK: - Default Shared Settings
+
+    func loadDefaultSharedSettings() -> SharedAlarmSettings {
+        guard let data = defaults.data(forKey: defaultSharedSettingsKey) else {
+            return .featureDefaults
+        }
+
+        do {
+            return try JSONDecoder().decode(SharedAlarmSettings.self, from: data)
+        } catch {
+            return .featureDefaults
+        }
+    }
+
+    func saveDefaultSharedSettings(_ settings: SharedAlarmSettings) {
+        do {
+            let data = try JSONEncoder().encode(settings)
+            defaults.set(data, forKey: defaultSharedSettingsKey)
+        } catch {
+            defaults.removeObject(forKey: defaultSharedSettingsKey)
+        }
+    }
+
+    // MARK: - Testing Mode
+
+    func loadTestingModeEnabled() -> Bool {
+        defaults.bool(forKey: testingModeEnabledKey)
+    }
+
+    func saveTestingModeEnabled(_ enabled: Bool) {
+        defaults.set(enabled, forKey: testingModeEnabledKey)
+    }
+
+    // MARK: - Default Nap Duration
+
+    func loadDefaultNapDurationMinutes() -> Int {
+        let raw = defaults.integer(forKey: defaultNapDurationMinutesKey)
+        return raw > 0 ? raw : 35
+    }
+
+    func saveDefaultNapDurationMinutes(_ minutes: Int) {
+        defaults.set(max(1, minutes), forKey: defaultNapDurationMinutesKey)
+    }
+
+    // MARK: - Pending Wake-Up Check Show Confirm UI IDs
+
+    func loadPendingWakeUpCheckShowConfirmUIIDs() -> Set<UUID> {
+        loadUUIDSet(forKey: pendingWakeUpCheckShowConfirmUIIDsKey)
+    }
+
+    func savePendingWakeUpCheckShowConfirmUIIDs(_ ids: Set<UUID>) {
+        saveUUIDSet(ids, forKey: pendingWakeUpCheckShowConfirmUIIDsKey)
+    }
+
+    // MARK: - Private helpers
+
+    private func loadUUIDSet(forKey key: String) -> Set<UUID> {
+        guard let raw = defaults.array(forKey: key) as? [String] else {
+            return []
+        }
+        return Set(raw.compactMap(UUID.init(uuidString:)))
+    }
+
+    private func saveUUIDSet(_ ids: Set<UUID>, forKey key: String) {
+        let raw = ids.map(\.uuidString)
+        defaults.set(raw, forKey: key)
     }
 }

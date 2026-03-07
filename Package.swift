@@ -19,7 +19,9 @@ let package = Package(
             name: "OpenAlarmSchedulingCore",
             path: "OpenAlarm",
             sources: [
-                "AlarmScheduleReconciler.swift"
+                "Models/AlarmDefinition.swift",
+                "Models/AlarmSettings.swift",
+                "Scheduling/AlarmStateMachine.swift"
             ]
         ),
         .executableTarget(

@@ -53,23 +53,21 @@ struct NapEditorView: View {
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        startNap()
-                    } label: {
-                        if isSaving {
-                            ProgressView()
-                                .tint(OAColor.actionCyan)
-                        } else {
+                    if isSaving {
+                        ProgressView()
+                            .tint(OAColor.actionCyan)
+                    } else {
+                        Button {
+                            startNap()
+                        } label: {
                             Image(systemName: "checkmark")
                                 .font(.headline.weight(.bold))
                         }
+                        .tint(OAColor.actionCyan)
+                        .buttonStyle(.glassProminent)
+                        .contentShape(Rectangle())
+                        .accessibilityLabel(L10n.napEditorStartButton)
                     }
-                    .tint(OAColor.actionCyan)
-                    .buttonStyle(.glassProminent)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-                    .disabled(isSaving)
-                    .accessibilityLabel(L10n.napEditorStartButton)
                 }
             }
         }
