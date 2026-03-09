@@ -6,6 +6,8 @@ enum AlarmSchedulingPhase: Equatable, Sendable {
     case idle
     case scheduled(alarmKitIDs: Set<UUID>)
     case alerting(alarmKitID: UUID)
+    case snoozed(alarmKitID: UUID)
+    case awaitingWakeCheck
     case completed
 }
 
@@ -17,6 +19,10 @@ enum AlarmEvent: Equatable, Sendable {
     case deleted
     case alarmKitStateChanged(alarmKitID: UUID, newState: AlarmKitRuntimeState)
     case stopped(alarmKitID: UUID)
+    case snoozed(alarmKitID: UUID)
+    case wakeCheckStarted
+    case wakeCheckConfirmed
+    case updated
 }
 
 enum AlarmKitRuntimeState: Equatable, Sendable {
@@ -48,7 +54,7 @@ enum AlarmStateMachine {
         current: AlarmSchedulingPhase,
         event: AlarmEvent,
         alarm: AlarmDefinition,
-        settings: AlarmSettings
+        resolvedSettings: SharedAlarmSettings = .featureDefaults
     ) -> TransitionResult {
         switch (current, event) {
 
@@ -81,14 +87,51 @@ enum AlarmStateMachine {
                 effects: [.scheduleAlarmKit(alarmID: alarm.id, trigger: alarm.trigger, recurrence: alarm.recurrence)]
             )
 
+        // MARK: - Updated (alarm was edited)
+
+        case (_, .updated):
+            if !alarm.isEnabled {
+                let idsToCancel = alarmKitIDs(in: current)
+                var effects: [SchedulingSideEffect] = []
+                if !idsToCancel.isEmpty {
+                    effects.append(.cancelAlarmKit(ids: idsToCancel))
+                }
+                return TransitionResult(phase: .idle, effects: effects)
+            }
+            let idsToCancel = alarmKitIDs(in: current)
+            var effects: [SchedulingSideEffect] = []
+            if !idsToCancel.isEmpty {
+                effects.append(.cancelAlarmKit(ids: idsToCancel))
+            }
+            effects.append(.scheduleAlarmKit(alarmID: alarm.id, trigger: alarm.trigger, recurrence: alarm.recurrence))
+            return TransitionResult(phase: .scheduled(alarmKitIDs: [alarm.id]), effects: effects)
+
         // MARK: - AlarmKit state changes
 
         case (.scheduled(let ids), .alarmKitStateChanged(let akID, .alerting)) where ids.contains(akID):
             return TransitionResult(phase: .alerting(alarmKitID: akID), effects: [])
 
+        case (.snoozed(let akID), .alarmKitStateChanged(let changedID, .alerting)) where akID == changedID:
+            return TransitionResult(phase: .alerting(alarmKitID: akID), effects: [])
+
+        // MARK: - Snooze
+
+        case (.alerting(let akID), .snoozed(let snoozedID)) where akID == snoozedID:
+            return TransitionResult(
+                phase: .snoozed(alarmKitID: akID),
+                effects: [.scheduleAlarmKit(alarmID: alarm.id, trigger: alarm.trigger, recurrence: alarm.recurrence)]
+            )
+
         // MARK: - Stop
 
         case (.alerting(let akID), .stopped(let stoppedID)) where akID == stoppedID:
+            if resolvedSettings.wakeUpCheckEnabled {
+                return TransitionResult(
+                    phase: .awaitingWakeCheck,
+                    effects: [.cancelAlarmKit(ids: [akID])]
+                )
+            }
+
             if alarm.isRepeating {
                 return TransitionResult(
                     phase: .scheduled(alarmKitIDs: [alarm.id]),
@@ -108,6 +151,30 @@ enum AlarmStateMachine {
                 effects: [.cancelAlarmKit(ids: [akID])]
             )
 
+        // MARK: - Awaiting wake check: backup alarm fired (stop → stays in wake-check)
+
+        case (.awaitingWakeCheck, .stopped):
+            return TransitionResult(phase: .awaitingWakeCheck, effects: [])
+
+        // MARK: - Wake-check confirmed
+
+        case (.awaitingWakeCheck, .wakeCheckConfirmed):
+            if alarm.isRepeating {
+                return TransitionResult(
+                    phase: .scheduled(alarmKitIDs: [alarm.id]),
+                    effects: [.scheduleAlarmKit(alarmID: alarm.id, trigger: alarm.trigger, recurrence: alarm.recurrence)]
+                )
+            }
+
+            if alarm.deleteAfterUse || alarm.isNap || alarm.isTryOut {
+                return TransitionResult(
+                    phase: .completed,
+                    effects: [.deleteAlarm(alarm.id)]
+                )
+            }
+
+            return TransitionResult(phase: .completed, effects: [])
+
         // MARK: - Default: no transition
 
         default:
@@ -119,9 +186,10 @@ enum AlarmStateMachine {
 
     private static func alarmKitIDs(in phase: AlarmSchedulingPhase) -> Set<UUID> {
         switch phase {
-        case .idle, .completed: return []
+        case .idle, .completed, .awaitingWakeCheck: return []
         case .scheduled(let ids): return ids
         case .alerting(let id): return [id]
+        case .snoozed(let id): return [id]
         }
     }
 }

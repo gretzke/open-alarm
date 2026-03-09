@@ -4,6 +4,9 @@ struct SettingsHomeView: View {
     @EnvironmentObject private var alarmStore: AlarmStore
 
     private func napDurationSummary(minutes: Int) -> String {
+        if minutes == 0 {
+            return "5 sec"
+        }
         let hours = minutes / 60
         let mins = minutes % 60
 
@@ -185,7 +188,7 @@ private struct NapDefaultDurationView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                NapDurationPicker(hours: $hours, minutes: $minutes)
+                NapDurationPicker(hours: $hours, minutes: $minutes, allowZeroMinutes: alarmStore.testingModeEnabled)
             }
             .padding(20)
             .oaGlassCard()
@@ -208,7 +211,7 @@ private struct NapDefaultDurationView: View {
     }
 
     private func setDuration(minutes total: Int) {
-        let clamped = max(1, total)
+        let clamped = max(0, total)
         hours = clamped / 60
         minutes = clamped % 60
     }
@@ -218,7 +221,7 @@ private struct NapDefaultDurationView: View {
             return
         }
 
-        let total = max(1, hours * 60 + minutes)
+        let total = max(0, hours * 60 + minutes)
         alarmStore.updateDefaultNapDurationMinutes(total)
     }
 }

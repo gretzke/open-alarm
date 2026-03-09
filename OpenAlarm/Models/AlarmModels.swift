@@ -28,19 +28,11 @@ extension AlarmButton {
     }
 }
 
-// MARK: - Alarm Type
-
-enum AlarmType: String, Codable, CaseIterable, Sendable {
-    case regular
-    case nap
-    case tryOut
-}
-
 // MARK: - Alarm Type Policy
 
 enum AlarmTypePolicy {
     static func normalizeOnWrite(_ alarm: inout UserAlarm) {
-        switch alarm.alarmType {
+        switch alarm.type {
         case .nap, .tryOut:
             alarm.deleteAfterUse = true
         case .regular:
@@ -189,150 +181,9 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
     }
 }
 
-// MARK: - UserAlarm
+// MARK: - AlarmDefinition + AlarmKit Schedule
 
-struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
-    var id: UUID
-    var name: String
-    var hour: Int
-    var minute: Int
-    var repeatDays: [AlarmWeekday]
-    var deleteAfterUse: Bool
-    var alarmType: AlarmType
-    var fixedTriggerDate: Date?
-    var durationMinutes: Int?
-    var pausedRemainingSeconds: TimeInterval?
-
-    var useDefaultSharedSettings: Bool
-    var customSharedSettings: SharedAlarmSettings
-
-    var nextTriggerOverrideDate: Date?
-
-    var isEnabled: Bool
-
-    var skipNextUntilDate: Date?
-
-    var snoozeCount: Int
-
-    var lifecycleState: AlarmLifecycleState
-    var createdAt: Date
-    var updatedAt: Date
-
-    init(
-        id: UUID,
-        name: String,
-        hour: Int,
-        minute: Int,
-        repeatDays: [AlarmWeekday],
-        deleteAfterUse: Bool,
-        alarmType: AlarmType = .regular,
-        fixedTriggerDate: Date? = nil,
-        durationMinutes: Int? = nil,
-        pausedRemainingSeconds: TimeInterval? = nil,
-        useDefaultSharedSettings: Bool,
-        customSharedSettings: SharedAlarmSettings,
-        nextTriggerOverrideDate: Date?,
-        isEnabled: Bool,
-        skipNextUntilDate: Date?,
-        snoozeCount: Int,
-        lifecycleState: AlarmLifecycleState,
-        createdAt: Date,
-        updatedAt: Date
-    ) {
-        self.id = id
-        self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        self.hour = hour
-        self.minute = minute
-        self.repeatDays = repeatDays.sorted { $0.rawValue < $1.rawValue }
-        self.deleteAfterUse = deleteAfterUse
-        self.alarmType = alarmType
-        self.fixedTriggerDate = fixedTriggerDate
-        self.durationMinutes = durationMinutes
-        self.pausedRemainingSeconds = pausedRemainingSeconds
-        self.useDefaultSharedSettings = useDefaultSharedSettings
-        self.customSharedSettings = customSharedSettings
-        self.nextTriggerOverrideDate = nextTriggerOverrideDate
-        self.isEnabled = isEnabled
-        self.skipNextUntilDate = skipNextUntilDate
-        self.snoozeCount = snoozeCount
-        self.lifecycleState = lifecycleState
-        self.createdAt = createdAt
-        self.updatedAt = updatedAt
-    }
-
-    var isRepeating: Bool {
-        !repeatDays.isEmpty
-    }
-
-    var isSkippingNext: Bool {
-        !isEnabled && skipNextUntilDate != nil
-    }
-
-    var isFullyDisabled: Bool {
-        !isEnabled && skipNextUntilDate == nil
-    }
-
-    var isNap: Bool { alarmType == .nap }
-    var isTryOut: Bool { alarmType == .tryOut }
-    var isPaused: Bool { pausedRemainingSeconds != nil }
-
-    func remainingSeconds(referenceDate: Date = .now) -> TimeInterval {
-        if let pausedRemainingSeconds {
-            return max(0, pausedRemainingSeconds)
-        }
-        guard let target = fixedTriggerDate else { return 0 }
-        return max(0, target.timeIntervalSince(referenceDate))
-    }
-
-    static func makeNap(
-        from draft: NapDraft,
-        defaultSharedSettings: SharedAlarmSettings,
-        targetDate: Date,
-        now: Date = .now
-    ) -> UserAlarm {
-        let customSettings = draft.useDefaultSharedSettings ? defaultSharedSettings : draft.customSharedSettings
-        let id = UUID()
-        var alarm = UserAlarm(
-            id: id,
-            name: "",
-            hour: 0,
-            minute: 0,
-            repeatDays: [],
-            deleteAfterUse: true,
-            alarmType: .nap,
-            fixedTriggerDate: targetDate,
-            durationMinutes: draft.totalMinutes,
-            pausedRemainingSeconds: nil,
-            useDefaultSharedSettings: draft.useDefaultSharedSettings,
-            customSharedSettings: customSettings,
-            nextTriggerOverrideDate: nil,
-            isEnabled: true,
-            skipNextUntilDate: nil,
-            snoozeCount: 0,
-            lifecycleState: .scheduled,
-            createdAt: now,
-            updatedAt: now
-        )
-        AlarmTypePolicy.normalizeOnWrite(&alarm)
-        return alarm
-    }
-
-    var triggerDateForDisplay: Date {
-        if let nextTriggerOverrideDate {
-            return nextTriggerOverrideDate
-        }
-
-        var components = Calendar.autoupdatingCurrent.dateComponents([.year, .month, .day], from: .now)
-        components.hour = hour
-        components.minute = minute
-        components.second = 0
-        return Calendar.autoupdatingCurrent.date(from: components) ?? .now
-    }
-
-    var sortedRepeatDays: [AlarmWeekday] {
-        repeatDays.sorted { $0.rawValue < $1.rawValue }
-    }
-
+extension AlarmDefinition {
     var schedule: Alarm.Schedule {
         let time = Alarm.Schedule.Relative.Time(hour: hour, minute: minute)
         if repeatDays.isEmpty {
@@ -344,104 +195,13 @@ struct UserAlarm: Identifiable, Codable, Equatable, Sendable {
             repeats: .weekly(sortedRepeatDays.map(\.localeWeekday))
         ))
     }
-
-    func resolvedSharedSettings(defaults: SharedAlarmSettings) -> SharedAlarmSettings {
-        useDefaultSharedSettings ? defaults : customSharedSettings
-    }
-
-    func canSnoozeAgain(defaults: SharedAlarmSettings) -> Bool {
-        resolvedSharedSettings(defaults: defaults).canSnoozeAgain(currentCount: snoozeCount)
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case name
-        case hour
-        case minute
-        case repeatDays
-        case deleteAfterUse
-        case alarmType
-        case fixedTriggerDate
-        case durationMinutes
-        case pausedRemainingSeconds
-        case wakeUpCheckEnabled
-        case wakeUpCheckDelayMinutes
-        case useDefaultSharedSettings
-        case customSharedSettings
-        case nextTriggerOverrideDate
-        case isEnabled
-        case skipNextUntilDate
-        case snoozeCount
-        case lifecycleState
-        case createdAt
-        case updatedAt
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-
-        id = try container.decode(UUID.self, forKey: .id)
-        name = (try container.decodeIfPresent(String.self, forKey: .name) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        hour = try container.decode(Int.self, forKey: .hour)
-        minute = try container.decode(Int.self, forKey: .minute)
-        repeatDays = (try container.decodeIfPresent([AlarmWeekday].self, forKey: .repeatDays) ?? [])
-            .sorted { $0.rawValue < $1.rawValue }
-        deleteAfterUse = try container.decodeIfPresent(Bool.self, forKey: .deleteAfterUse) ?? true
-        alarmType = try container.decodeIfPresent(AlarmType.self, forKey: .alarmType) ?? .regular
-        fixedTriggerDate = try container.decodeIfPresent(Date.self, forKey: .fixedTriggerDate)
-        durationMinutes = try container.decodeIfPresent(Int.self, forKey: .durationMinutes)
-        pausedRemainingSeconds = try container.decodeIfPresent(Double.self, forKey: .pausedRemainingSeconds)
-
-        customSharedSettings = try container.decodeIfPresent(SharedAlarmSettings.self, forKey: .customSharedSettings) ?? .featureDefaults
-        useDefaultSharedSettings = try container.decodeIfPresent(Bool.self, forKey: .useDefaultSharedSettings) ?? true
-
-        if let legacyWakeEnabled = try container.decodeIfPresent(Bool.self, forKey: .wakeUpCheckEnabled) {
-            customSharedSettings.wakeUpCheckEnabled = legacyWakeEnabled
-        }
-        if let legacyWakeDelay = try container.decodeIfPresent(Int.self, forKey: .wakeUpCheckDelayMinutes) {
-            customSharedSettings.wakeUpCheckDelayMinutes = WakeUpCheckTimingPolicy.clampCheckDelayMinutes(legacyWakeDelay)
-        }
-
-        nextTriggerOverrideDate = try container.decodeIfPresent(Date.self, forKey: .nextTriggerOverrideDate)
-        isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
-        skipNextUntilDate = try container.decodeIfPresent(Date.self, forKey: .skipNextUntilDate)
-
-        snoozeCount = try container.decodeIfPresent(Int.self, forKey: .snoozeCount) ?? 0
-
-        lifecycleState = try container.decodeIfPresent(AlarmLifecycleState.self, forKey: .lifecycleState) ?? .scheduled
-        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? .now
-        updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? .now
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(id, forKey: .id)
-        try container.encode(name, forKey: .name)
-        try container.encode(hour, forKey: .hour)
-        try container.encode(minute, forKey: .minute)
-        try container.encode(repeatDays, forKey: .repeatDays)
-        try container.encode(deleteAfterUse, forKey: .deleteAfterUse)
-        try container.encode(alarmType, forKey: .alarmType)
-        try container.encodeIfPresent(fixedTriggerDate, forKey: .fixedTriggerDate)
-        try container.encodeIfPresent(durationMinutes, forKey: .durationMinutes)
-        try container.encodeIfPresent(pausedRemainingSeconds, forKey: .pausedRemainingSeconds)
-        try container.encode(useDefaultSharedSettings, forKey: .useDefaultSharedSettings)
-        try container.encode(customSharedSettings, forKey: .customSharedSettings)
-        try container.encodeIfPresent(nextTriggerOverrideDate, forKey: .nextTriggerOverrideDate)
-        try container.encode(isEnabled, forKey: .isEnabled)
-        try container.encodeIfPresent(skipNextUntilDate, forKey: .skipNextUntilDate)
-        try container.encode(snoozeCount, forKey: .snoozeCount)
-        try container.encode(lifecycleState, forKey: .lifecycleState)
-        try container.encode(createdAt, forKey: .createdAt)
-        try container.encode(updatedAt, forKey: .updatedAt)
-    }
 }
 
 // MARK: - AlarmScheduleResolver
 
 enum AlarmScheduleResolver {
     static func runtimeSchedule(for alarm: UserAlarm) -> Alarm.Schedule {
-        switch alarm.alarmType {
+        switch alarm.type {
         case .nap, .tryOut:
             if let fixedDate = alarm.fixedTriggerDate {
                 return .fixed(fixedDate)
@@ -458,27 +218,58 @@ enum AlarmScheduleResolver {
 struct NapDraft: Equatable {
     var durationHours: Int
     var durationMinutes: Int
-    var useDefaultSharedSettings: Bool
-    var customSharedSettings: SharedAlarmSettings
+    var settingsMode: SettingsMode
+
+    /// Cached default settings for pre-filling when user toggles to custom.
+    private var cachedDefaults: SharedAlarmSettings
+
+    var useDefaultSharedSettings: Bool {
+        get {
+            if case .useDefault = settingsMode { return true }
+            return false
+        }
+        set {
+            if newValue {
+                settingsMode = .useDefault
+            } else {
+                settingsMode = .custom(cachedDefaults)
+            }
+        }
+    }
+
+    var customSharedSettings: SharedAlarmSettings {
+        get {
+            if case .custom(let settings) = settingsMode { return settings }
+            return cachedDefaults
+        }
+        set {
+            settingsMode = .custom(newValue)
+        }
+    }
 
     init(
         totalMinutes: Int,
         useDefaultSharedSettings: Bool = true,
         customSharedSettings: SharedAlarmSettings
     ) {
-        let clampedMinutes = max(1, totalMinutes)
+        let clampedMinutes = max(0, totalMinutes)
         durationHours = clampedMinutes / 60
         durationMinutes = clampedMinutes % 60
-        self.useDefaultSharedSettings = useDefaultSharedSettings
-        self.customSharedSettings = customSharedSettings
+        self.cachedDefaults = customSharedSettings
+        if useDefaultSharedSettings {
+            self.settingsMode = .useDefault
+        } else {
+            self.settingsMode = .custom(customSharedSettings)
+        }
     }
 
     var totalMinutes: Int {
-        max(1, durationHours * 60 + durationMinutes)
+        // 0 is valid (5-second testing mode nap)
+        max(0, durationHours * 60 + durationMinutes)
     }
 
     mutating func applyDefaultSharedSettings(_ defaults: SharedAlarmSettings) {
-        customSharedSettings = defaults
+        cachedDefaults = defaults
     }
 
     func resolvedSharedSettings(defaults: SharedAlarmSettings) -> SharedAlarmSettings {
@@ -493,9 +284,34 @@ struct AlarmDraft: Equatable {
     var time: Date
     var repeatDays: Set<AlarmWeekday>
     var deleteAfterUse: Bool
+    var settingsMode: SettingsMode
 
-    var useDefaultSharedSettings: Bool
-    var customSharedSettings: SharedAlarmSettings
+    /// Cached default settings for pre-filling when user toggles to custom.
+    private var cachedDefaults: SharedAlarmSettings
+
+    var useDefaultSharedSettings: Bool {
+        get {
+            if case .useDefault = settingsMode { return true }
+            return false
+        }
+        set {
+            if newValue {
+                settingsMode = .useDefault
+            } else {
+                settingsMode = .custom(cachedDefaults)
+            }
+        }
+    }
+
+    var customSharedSettings: SharedAlarmSettings {
+        get {
+            if case .custom(let settings) = settingsMode { return settings }
+            return cachedDefaults
+        }
+        set {
+            settingsMode = .custom(newValue)
+        }
+    }
 
     init(
         name: String = "",
@@ -509,8 +325,12 @@ struct AlarmDraft: Equatable {
         self.time = time
         self.repeatDays = repeatDays
         self.deleteAfterUse = deleteAfterUse
-        self.useDefaultSharedSettings = useDefaultSharedSettings
-        self.customSharedSettings = customSharedSettings
+        self.cachedDefaults = customSharedSettings
+        if useDefaultSharedSettings {
+            self.settingsMode = .useDefault
+        } else {
+            self.settingsMode = .custom(customSharedSettings)
+        }
     }
 
     init(alarm: UserAlarm) {
@@ -518,8 +338,12 @@ struct AlarmDraft: Equatable {
         self.time = alarm.triggerDateForDisplay
         self.repeatDays = Set(alarm.repeatDays)
         self.deleteAfterUse = alarm.deleteAfterUse
-        self.useDefaultSharedSettings = alarm.useDefaultSharedSettings
-        self.customSharedSettings = alarm.customSharedSettings
+        self.settingsMode = alarm.settingsMode
+        if case .custom(let settings) = alarm.settingsMode {
+            self.cachedDefaults = settings
+        } else {
+            self.cachedDefaults = .featureDefaults
+        }
     }
 
     mutating func toggleRepeatDay(_ day: AlarmWeekday) {
@@ -542,7 +366,7 @@ struct AlarmDraft: Equatable {
     }
 
     mutating func applyDefaultSharedSettings(_ defaults: SharedAlarmSettings) {
-        customSharedSettings = defaults
+        cachedDefaults = defaults
     }
 
     func resolvedSharedSettings(defaults: SharedAlarmSettings) -> SharedAlarmSettings {
@@ -558,18 +382,20 @@ struct AlarmDraft: Equatable {
         let timeComponents = Calendar.autoupdatingCurrent.dateComponents([.hour, .minute], from: time)
         let hour = timeComponents.hour ?? 7
         let minute = timeComponents.minute ?? 0
-        let persistedCustomSharedSettings = useDefaultSharedSettings ? defaultSharedSettings : customSharedSettings
+
+        let resolvedSettingsMode: SettingsMode = settingsMode
+
+        let daysArray = Array(repeatDays)
+        let alarmRecurrence: AlarmRecurrence = daysArray.isEmpty ? .none : .weekly(daysArray)
 
         return UserAlarm(
             id: id,
             name: name,
-            hour: hour,
-            minute: minute,
-            repeatDays: Array(repeatDays),
+            trigger: .time(hour: hour, minute: minute),
+            recurrence: alarmRecurrence,
+            type: alarmType,
             deleteAfterUse: deleteAfterUse,
-            alarmType: alarmType,
-            useDefaultSharedSettings: useDefaultSharedSettings,
-            customSharedSettings: persistedCustomSharedSettings,
+            settingsMode: resolvedSettingsMode,
             nextTriggerOverrideDate: nil,
             isEnabled: true,
             skipNextUntilDate: nil,
@@ -624,6 +450,16 @@ enum WakeUpCheckAction: String {
     case confirmAwake = "WAKE_CHECK_CONFIRM_AWAKE"
 }
 
+// MARK: - WakeCheckSession
+
+struct WakeCheckSession: Codable, Equatable, Sendable {
+    var alarmID: UUID
+    var cycle: Int
+    var checkAt: Date
+    var deadlineAt: Date
+    var notificationID: String
+}
+
 // MARK: - AlarmStoreError
 
 enum AlarmStoreError: Error {
@@ -647,6 +483,38 @@ final class WakeUpCheckNotificationService {
 
     init(center: UNUserNotificationCenter = .current()) {
         self.center = center
+    }
+
+    func scheduleWakeCheckNotification(
+        alarmID: UUID,
+        cycle: Int,
+        triggerDate: Date
+    ) async {
+        let notificationID = WakeUpCheckNotificationConstants.notificationID(alarmID: alarmID, cycle: cycle)
+        let content = UNMutableNotificationContent()
+        content.title = String(localized: "wake_check_notification_title")
+        content.body = String(localized: "wake_check_notification_body")
+        content.sound = .default
+        content.categoryIdentifier = WakeUpCheckNotificationConstants.categoryID
+        content.userInfo = [
+            WakeUpCheckNotificationConstants.alarmIDUserInfoKey: alarmID.uuidString,
+            WakeUpCheckNotificationConstants.cycleUserInfoKey: cycle,
+        ]
+
+        let delay = max(1, triggerDate.timeIntervalSinceNow)
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false)
+        let request = UNNotificationRequest(identifier: notificationID, content: content, trigger: trigger)
+
+        do {
+            try await center.add(request)
+        } catch {
+            // Best-effort; if notification scheduling fails the backup alarm will still fire
+        }
+    }
+
+    func cancelNotification(id: String) {
+        center.removePendingNotificationRequests(withIdentifiers: [id])
+        center.removeDeliveredNotifications(withIdentifiers: [id])
     }
 
     func ensureCategoryRegistered() {
@@ -682,7 +550,7 @@ final class AlarmPersistence: Sendable {
     private let napDefaultSharedSettingsKey = "OPENALARM_NAP_DEFAULT_SHARED_SETTINGS_V1"
     private let defaultNapDurationMinutesKey = "OPENALARM_DEFAULT_NAP_DURATION_MINUTES_V1"
     private let pendingWakeUpCheckShowConfirmUIIDsKey = "OPENALARM_PENDING_WAKE_CHECK_SHOW_CONFIRM_UI_IDS_V1"
-
+    private let wakeCheckSessionsKey = "OPENALARM_WAKE_CHECK_SESSIONS_V1"
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
     }
@@ -771,12 +639,15 @@ final class AlarmPersistence: Sendable {
     // MARK: - Default Nap Duration
 
     func loadDefaultNapDurationMinutes() -> Int {
-        let raw = defaults.integer(forKey: defaultNapDurationMinutesKey)
-        return raw > 0 ? raw : 35
+        // 0 is a valid sentinel for 5-second testing mode naps
+        if defaults.object(forKey: defaultNapDurationMinutesKey) == nil {
+            return 35
+        }
+        return defaults.integer(forKey: defaultNapDurationMinutesKey)
     }
 
     func saveDefaultNapDurationMinutes(_ minutes: Int) {
-        defaults.set(max(1, minutes), forKey: defaultNapDurationMinutesKey)
+        defaults.set(max(0, minutes), forKey: defaultNapDurationMinutesKey)
     }
 
     // MARK: - Pending Wake-Up Check Show Confirm UI IDs
@@ -787,6 +658,29 @@ final class AlarmPersistence: Sendable {
 
     func savePendingWakeUpCheckShowConfirmUIIDs(_ ids: Set<UUID>) {
         saveUUIDSet(ids, forKey: pendingWakeUpCheckShowConfirmUIIDsKey)
+    }
+
+    // MARK: - Wake Check Sessions
+
+    func loadWakeCheckSessions() -> [UUID: WakeCheckSession] {
+        guard let data = defaults.data(forKey: wakeCheckSessionsKey) else { return [:] }
+        do {
+            let sessions = try JSONDecoder().decode([WakeCheckSession].self, from: data)
+            return Dictionary(uniqueKeysWithValues: sessions.map { ($0.alarmID, $0) })
+        } catch {
+            Self.logger.error("Failed to decode wake check sessions: \(error.localizedDescription)")
+            return [:]
+        }
+    }
+
+    func saveWakeCheckSessions(_ sessions: [UUID: WakeCheckSession]) {
+        do {
+            let array = Array(sessions.values)
+            let data = try JSONEncoder().encode(array)
+            defaults.set(data, forKey: wakeCheckSessionsKey)
+        } catch {
+            Self.logger.error("Failed to encode wake check sessions: \(error.localizedDescription)")
+        }
     }
 
     // MARK: - Private helpers

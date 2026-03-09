@@ -87,7 +87,7 @@ struct NapEditorView: View {
                 .font(.headline)
                 .foregroundStyle(OAColor.textSecondary)
 
-            NapDurationPicker(hours: $draft.durationHours, minutes: $draft.durationMinutes)
+            NapDurationPicker(hours: $draft.durationHours, minutes: $draft.durationMinutes, allowZeroMinutes: alarmStore.testingModeEnabled)
         }
     }
 

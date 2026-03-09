@@ -9,8 +9,9 @@
 
 "nap_banner_title" = "Take a nap";
 "nap_banner_subtitle" = "Set a quick reset with zzz energy";
-"nap_active_title" = "Nap countdown";
+"nap_active_title" = "Napping";
 "nap_active_paused" = "Paused";
+"nap_active_snoozing_title" = "Snoozing";
 "nap_default_alarm_label" = "Nap";
 
 "alarm_row_repeat_one_time" = "One time";

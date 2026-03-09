@@ -61,12 +61,14 @@ struct AlarmHomeView: View {
 
     private var napSection: some View {
         Section {
-            if let nap = alarmStore.activeNap {
+            if let nap = alarmStore.activeNap, nap.remainingSeconds(referenceDate: now) > 0 || nap.isPaused {
                 ActiveNapRowView(
                     nap: nap,
                     now: now,
                     onPause: {
-                        alarmStore.pauseNap()
+                        Task {
+                            await alarmStore.pauseNap()
+                        }
                     },
                     onContinue: {
                         Task {

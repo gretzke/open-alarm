@@ -65,7 +65,7 @@ struct ActiveNapRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text(L10n.napActiveTitle)
+                Text(nap.snoozeCount > 0 ? L10n.napActiveSnoozingTitle : L10n.napActiveTitle)
                     .font(.headline.weight(.semibold))
                     .foregroundStyle(OAColor.textPrimary)
 

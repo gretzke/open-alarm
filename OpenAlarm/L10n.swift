@@ -13,6 +13,7 @@ enum L10n {
     static let napBannerTitle: LocalizedStringKey = "nap_banner_title"
     static let napBannerSubtitle: LocalizedStringKey = "nap_banner_subtitle"
     static let napActiveTitle: LocalizedStringKey = "nap_active_title"
+    static let napActiveSnoozingTitle: LocalizedStringKey = "nap_active_snoozing_title"
     static let napActivePaused: LocalizedStringKey = "nap_active_paused"
     static let napDefaultAlarmLabel: LocalizedStringKey = "nap_default_alarm_label"
 

@@ -3,10 +3,11 @@ import SwiftUI
 struct NapDurationPicker: View {
     @Binding var hours: Int
     @Binding var minutes: Int
+    var allowZeroMinutes: Bool = false
 
     private var minuteOptions: [Int] {
         if hours == 0 {
-            return Array(1 ... 59)
+            return allowZeroMinutes ? Array(0 ... 59) : Array(1 ... 59)
         }
 
         return Array(0 ... 59)
@@ -37,8 +38,11 @@ struct NapDurationPicker: View {
 
                 Picker("", selection: $minutes) {
                     ForEach(minuteOptions, id: \.self) { value in
-                        Text(String(format: "%02d", value))
-                            .tag(value)
+                        if value == 0, allowZeroMinutes, hours == 0 {
+                            Text("5 sec").tag(value)
+                        } else {
+                            Text(String(format: "%02d", value)).tag(value)
+                        }
                     }
                 }
                 .pickerStyle(.wheel)
@@ -48,12 +52,12 @@ struct NapDurationPicker: View {
         }
         .frame(maxWidth: .infinity)
         .onAppear {
-            if hours == 0, minutes == 0 {
+            if hours == 0, minutes == 0, !allowZeroMinutes {
                 minutes = 1
             }
         }
         .onChange(of: hours) { _, newHours in
-            if newHours == 0, minutes == 0 {
+            if newHours == 0, minutes == 0, !allowZeroMinutes {
                 minutes = 1
             }
         }

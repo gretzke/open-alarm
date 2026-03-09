@@ -33,10 +33,11 @@
 		CEEB02817569AB0C4EDD35C2 /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 033BCA435537486554426903 /* AppRootView.swift */; };
 		DAF5A47BFCC2345F0622347C /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BEA79BA987079BEC109687B /* OnboardingFlowView.swift */; };
 		AA000001AAAA000000000001 /* AlarmDefinition.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002AAAA000000000001 /* AlarmDefinition.swift */; };
-		AA000001AAAA000000000003 /* AlarmSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002AAAA000000000003 /* AlarmSettings.swift */; };
 		AA000001AAAA000000000006 /* AlarmStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002AAAA000000000006 /* AlarmStateMachine.swift */; };
-		AA000001AAAA000000000007 /* AlarmPersistenceV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002AAAA000000000007 /* AlarmPersistenceV2.swift */; };
+		AA000001AAAA00000000000A /* AlarmConfigurationBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002AAAA00000000000A /* AlarmConfigurationBuilder.swift */; };
+		AA000001AAAA00000000000B /* AlarmSchedulingCoreTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002AAAA00000000000B /* AlarmSchedulingCoreTypes.swift */; };
 		AA000001AAAA000000000008 /* StopIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002AAAA000000000008 /* StopIntent.swift */; };
+		AA000001AAAA000000000009 /* SnoozeIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002AAAA000000000009 /* SnoozeIntent.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -81,10 +82,11 @@
 		E9ACF85F89CF9D011BF26A5E /* OpenAlarm.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OpenAlarm.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F68BF27EA97B5D8C42193398 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		AA000002AAAA000000000001 /* AlarmDefinition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmDefinition.swift; sourceTree = "<group>"; };
-		AA000002AAAA000000000003 /* AlarmSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmSettings.swift; sourceTree = "<group>"; };
 		AA000002AAAA000000000006 /* AlarmStateMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmStateMachine.swift; sourceTree = "<group>"; };
-		AA000002AAAA000000000007 /* AlarmPersistenceV2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmPersistenceV2.swift; sourceTree = "<group>"; };
+		AA000002AAAA00000000000A /* AlarmConfigurationBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmConfigurationBuilder.swift; sourceTree = "<group>"; };
+		AA000002AAAA00000000000B /* AlarmSchedulingCoreTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmSchedulingCoreTypes.swift; sourceTree = "<group>"; };
 		AA000002AAAA000000000008 /* StopIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StopIntent.swift; sourceTree = "<group>"; };
+		AA000002AAAA000000000009 /* SnoozeIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnoozeIntent.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -183,7 +185,6 @@
 			children = (
 				AA000002AAAA000000000001 /* AlarmDefinition.swift */,
 				A7C07703BA4BEC265B421B03 /* AlarmModels.swift */,
-				AA000002AAAA000000000003 /* AlarmSettings.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -191,22 +192,17 @@
 		AA000003AAAA000000000005 /* Scheduling */ = {
 			isa = PBXGroup;
 			children = (
+				AA000002AAAA00000000000A /* AlarmConfigurationBuilder.swift */,
+				AA000002AAAA00000000000B /* AlarmSchedulingCoreTypes.swift */,
 				AA000002AAAA000000000006 /* AlarmStateMachine.swift */,
 			);
 			path = Scheduling;
 			sourceTree = "<group>";
 		};
-		AA000003AAAA000000000006 /* Persistence */ = {
-			isa = PBXGroup;
-			children = (
-				AA000002AAAA000000000007 /* AlarmPersistenceV2.swift */,
-			);
-			path = Persistence;
-			sourceTree = "<group>";
-		};
 		AA000003AAAA000000000007 /* Intents */ = {
 			isa = PBXGroup;
 			children = (
+				AA000002AAAA000000000009 /* SnoozeIntent.swift */,
 				AA000002AAAA000000000008 /* StopIntent.swift */,
 			);
 			path = Intents;
@@ -223,7 +219,6 @@
 				5E23DB03853BC1CB98973B3C /* App */,
 				AA000003AAAA000000000007 /* Intents */,
 				AA000003AAAA000000000004 /* Models */,
-				AA000003AAAA000000000006 /* Persistence */,
 				FD7B31457CC502B622019E4F /* Resources */,
 				AA000003AAAA000000000005 /* Scheduling */,
 				BD853A1B3783B54238C796B0 /* Screens */,
@@ -369,9 +364,9 @@
 				6DAF29F47FD1E6004674040F /* AlarmHomeView.swift in Sources */,
 				BF8889E27B6255835899C3B5 /* AlarmModels.swift in Sources */,
 				523D9DD75026165D7A82E9E4 /* AlarmPermissionService.swift in Sources */,
-				AA000001AAAA000000000007 /* AlarmPersistenceV2.swift in Sources */,
 				40FC7F4295F6FF44F3F72965 /* AlarmRowView.swift in Sources */,
-				AA000001AAAA000000000003 /* AlarmSettings.swift in Sources */,
+				AA000001AAAA00000000000A /* AlarmConfigurationBuilder.swift in Sources */,
+				AA000001AAAA00000000000B /* AlarmSchedulingCoreTypes.swift in Sources */,
 				AA000001AAAA000000000006 /* AlarmStateMachine.swift in Sources */,
 				75F6F1776DF5731E152893A0 /* AlarmStore.swift in Sources */,
 				CEEB02817569AB0C4EDD35C2 /* AppRootView.swift in Sources */,
@@ -388,6 +383,7 @@
 				BD8A90252F2F3669200E2C4F /* OpenAlarmTheme.swift in Sources */,
 				98D7DE03C986859C06252DE7 /* SettingsHomeView.swift in Sources */,
 				C669FDD2D25E4256D2430161 /* SharedAlarmSettingsEditor.swift in Sources */,
+				AA000001AAAA000000000009 /* SnoozeIntent.swift in Sources */,
 				AA000001AAAA000000000008 /* StopIntent.swift in Sources */,
 				1B1488ECC64F591938DEA880 /* WakeUpCheckConfirmationView.swift in Sources */,
 			);
