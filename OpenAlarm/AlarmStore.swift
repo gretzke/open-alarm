@@ -116,7 +116,33 @@ final class AlarmStore: ObservableObject {
     // MARK: - Update Alarm
 
     func updateAlarm(_ alarm: UserAlarm, with draft: AlarmDraft, clearNextOverride: Bool = false) async throws {
-        // NOOP: Phase 2
+        if permissionStatus != .authorized {
+            let status = await requestPermissionIfNeeded()
+            guard status == .authorized else {
+                throw AlarmStoreError.permissionDenied
+            }
+        }
+
+        guard let index = alarms.firstIndex(where: { $0.id == alarm.id }) else { return }
+
+        let updated = draft.toUserAlarm(
+            id: alarm.id,
+            existingCreatedAt: alarm.createdAt,
+            defaultSharedSettings: defaultSharedSettings
+        )
+
+        // Cancel old schedule
+        try? alarmManager.stop(id: alarm.id)
+        try? alarmManager.cancel(id: alarm.id)
+
+        alarms[index] = updated
+        alarms = sortAlarms(alarms)
+        saveAlarms()
+
+        // Reschedule if enabled
+        if updated.isEnabled {
+            await scheduleAlarm(updated)
+        }
     }
 
     // MARK: - Update Next Alarm Occurrence
@@ -139,7 +165,33 @@ final class AlarmStore: ObservableObject {
     // MARK: - Set Alarm Enabled
 
     func setAlarmEnabled(_ alarm: UserAlarm, enabled: Bool, skipNext: Bool? = nil) async throws {
-        // NOOP: Phase 2
+        if enabled {
+            let status = await requestPermissionIfNeeded()
+            guard status == .authorized else {
+                throw AlarmStoreError.permissionDenied
+            }
+        }
+
+        guard let index = alarms.firstIndex(where: { $0.id == alarm.id }) else { return }
+
+        // skipNext is Phase 5 — for now treat as full disable
+        alarms[index].isEnabled = enabled
+        alarms[index].snoozeCount = 0
+        alarms[index].updatedAt = .now
+
+        if enabled {
+            alarms[index].lifecycleState = .scheduled
+        }
+
+        alarms = sortAlarms(alarms)
+        saveAlarms()
+
+        if enabled {
+            await scheduleAlarm(alarms.first(where: { $0.id == alarm.id })!)
+        } else {
+            try? alarmManager.stop(id: alarm.id)
+            try? alarmManager.cancel(id: alarm.id)
+        }
     }
 
     // MARK: - Create Nap (unified code path)
@@ -493,8 +545,14 @@ final class AlarmStore: ObservableObject {
                     continue
                 }
 
-                // Regular alarm kept: disable it
-                if !alarm.isRepeating {
+                if alarm.isRepeating {
+                    // Repeating alarm: reset snooze count, stays enabled
+                    updated[index].snoozeCount = 0
+                    updated[index].lifecycleState = .scheduled
+                    updated[index].updatedAt = .now
+                    changed = true
+                } else {
+                    // Non-repeating alarm kept: disable it
                     updated[index].isEnabled = false
                     updated[index].lifecycleState = .completed
                     updated[index].updatedAt = .now
