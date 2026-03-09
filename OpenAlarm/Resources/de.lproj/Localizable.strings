@@ -73,6 +73,8 @@
 "nap_editor_hours_label" = "Stunden";
 "nap_editor_minutes_label" = "Minuten";
 "nap_editor_start_button" = "Starten";
+"nap_editor_use_nap_defaults_toggle" = "Standard-Nap-Einstellungen verwenden";
+"nap_editor_use_nap_defaults_hint" = "Nap-Einstellungen werden in den Einstellungen verwaltet.";
 
 "alarm_editor_error_permission_denied" = "Alarm-Berechtigung wird benötigt. Aktiviere „Alarme & Timer“ in den Einstellungen.";
 "alarm_editor_error_generic" = "Etwas ist schiefgelaufen. Bitte versuche es erneut.";
@@ -84,8 +86,14 @@
 "settings_default_config_page_body" = "Änderungen werden sofort gespeichert und auf Alarme mit Standard-Einstellungen angewendet.";
 "settings_nap_defaults_title" = "Schläfchen-Timer";
 "settings_nap_defaults_body" = "Lege die Standarddauer für „Schläfchen machen“ fest.";
-"settings_nap_defaults_manage_button" = "Standard-Schläfchen konfigurieren";
+"settings_nap_defaults_manage_button" = "Standard-Napdauer";
 "settings_nap_defaults_page_body" = "Änderungen werden sofort gespeichert.";
+"settings_nap_defaults_duration_title" = "Standard-Napdauer";
+"settings_nap_defaults_duration_button" = "Standard-Napdauer";
+"settings_nap_defaults_config_title" = "Nap-Alarmeinstellungen";
+"settings_nap_defaults_config_button" = "Nap-Standardeinstellungen";
+"settings_nap_defaults_use_global_toggle" = "Globale Standards verwenden";
+"settings_nap_defaults_use_global_hint" = "Wenn aktiviert, verwenden Nap-Alarme dieselben Standards wie reguläre Alarme.";
 "settings_testing_mode_title" = "Testmodus";
 "settings_testing_mode_body" = "Aktiviert entwicklungsbezogene Alarmoptionen wie 5-Sekunden-Snooze und 5-Sekunden-Aufwach-Timeout.";
 "settings_testing_mode_toggle" = "Testmodus aktivieren";

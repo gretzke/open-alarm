@@ -73,6 +73,8 @@
 "nap_editor_hours_label" = "Hours";
 "nap_editor_minutes_label" = "Minutes";
 "nap_editor_start_button" = "Start";
+"nap_editor_use_nap_defaults_toggle" = "Use default nap settings";
+"nap_editor_use_nap_defaults_hint" = "Nap settings are managed in Settings.";
 
 "alarm_editor_error_permission_denied" = "Alarm permission is required. Enable Alarms & Timers in Settings.";
 "alarm_editor_error_generic" = "Something went wrong. Please try again.";
@@ -84,8 +86,14 @@
 "settings_default_config_page_body" = "Changes are saved immediately and applied to alarms using default settings.";
 "settings_nap_defaults_title" = "Nap timer";
 "settings_nap_defaults_body" = "Set the default nap length used by Take a nap.";
-"settings_nap_defaults_manage_button" = "Configure default nap";
+"settings_nap_defaults_manage_button" = "Default nap duration";
 "settings_nap_defaults_page_body" = "Changes are saved immediately.";
+"settings_nap_defaults_duration_title" = "Default nap duration";
+"settings_nap_defaults_duration_button" = "Default nap duration";
+"settings_nap_defaults_config_title" = "Nap alarm settings";
+"settings_nap_defaults_config_button" = "Configure nap defaults";
+"settings_nap_defaults_use_global_toggle" = "Use global defaults";
+"settings_nap_defaults_use_global_hint" = "When enabled, nap alarms use the same defaults as regular alarms.";
 "settings_testing_mode_title" = "Testing mode";
 "settings_testing_mode_body" = "Enable development-only alarm options like 5-second snooze and wake-check timeout.";
 "settings_testing_mode_toggle" = "Enable testing mode";

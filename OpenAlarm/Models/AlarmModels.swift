@@ -1,5 +1,6 @@
 import AlarmKit
 import Foundation
+import os
 
 // MARK: - OpenAlarmMetadata
 
@@ -669,6 +670,8 @@ final class WakeUpCheckNotificationService {
 // MARK: - AlarmPersistence (legacy, kept for notification delegate and StopIntent)
 
 final class AlarmPersistence: Sendable {
+    private static let logger = Logger(subsystem: "com.openalarm", category: "AlarmPersistence")
+
     static let shared = AlarmPersistence()
 
     private nonisolated(unsafe) let defaults: UserDefaults
@@ -676,6 +679,7 @@ final class AlarmPersistence: Sendable {
     private let userAlarmsKey = "OPENALARM_USER_ALARMS_V1"
     private let defaultSharedSettingsKey = "OPENALARM_DEFAULT_SHARED_SETTINGS_V1"
     private let testingModeEnabledKey = "OPENALARM_TESTING_MODE_ENABLED_V1"
+    private let napDefaultSharedSettingsKey = "OPENALARM_NAP_DEFAULT_SHARED_SETTINGS_V1"
     private let defaultNapDurationMinutesKey = "OPENALARM_DEFAULT_NAP_DURATION_MINUTES_V1"
     private let pendingWakeUpCheckShowConfirmUIIDsKey = "OPENALARM_PENDING_WAKE_CHECK_SHOW_CONFIRM_UI_IDS_V1"
 
@@ -737,6 +741,31 @@ final class AlarmPersistence: Sendable {
 
     func saveTestingModeEnabled(_ enabled: Bool) {
         defaults.set(enabled, forKey: testingModeEnabledKey)
+    }
+
+    // MARK: - Nap Default Shared Settings
+
+    func loadNapDefaultSharedSettings() -> SharedAlarmSettings? {
+        guard let data = defaults.data(forKey: napDefaultSharedSettingsKey) else { return nil }
+        do {
+            return try JSONDecoder().decode(SharedAlarmSettings.self, from: data)
+        } catch {
+            Self.logger.error("Failed to decode nap default settings: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    func saveNapDefaultSharedSettings(_ settings: SharedAlarmSettings?) {
+        if let settings {
+            do {
+                let data = try JSONEncoder().encode(settings)
+                defaults.set(data, forKey: napDefaultSharedSettingsKey)
+            } catch {
+                Self.logger.error("Failed to encode nap default settings: \(error.localizedDescription)")
+            }
+        } else {
+            defaults.removeObject(forKey: napDefaultSharedSettingsKey)
+        }
     }
 
     // MARK: - Default Nap Duration

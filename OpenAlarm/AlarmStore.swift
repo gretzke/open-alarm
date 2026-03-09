@@ -15,6 +15,7 @@ final class AlarmStore: ObservableObject {
 
     @Published internal var alarms: [UserAlarm] = []
     @Published var defaultSharedSettings: SharedAlarmSettings
+    @Published var napDefaultSharedSettings: SharedAlarmSettings?  // nil = use global defaults
     @Published var defaultNapDurationMinutes: Int
     @Published var testingModeEnabled: Bool
     @Published var permissionStatus: AlarmPermissionStatus
@@ -32,6 +33,15 @@ final class AlarmStore: ObservableObject {
 
     var regularAlarms: [UserAlarm] {
         alarms.filter { $0.alarmType == .regular }
+    }
+
+    var useGlobalDefaultsForNap: Bool {
+        napDefaultSharedSettings == nil
+    }
+
+    /// Returns the effective defaults for nap alarms (nap-specific or global)
+    var resolvedNapDefaults: SharedAlarmSettings {
+        napDefaultSharedSettings ?? defaultSharedSettings
     }
 
     // MARK: - Dependencies
@@ -55,6 +65,7 @@ final class AlarmStore: ObservableObject {
         self.notificationPermissionService = notificationPermissionService ?? NotificationPermissionService()
         self.persistence = AlarmPersistence(defaults: userDefaults)
         self.defaultSharedSettings = persistence.loadDefaultSharedSettings()
+        self.napDefaultSharedSettings = persistence.loadNapDefaultSharedSettings()
         self.defaultNapDurationMinutes = persistence.loadDefaultNapDurationMinutes()
         self.testingModeEnabled = persistence.loadTestingModeEnabled()
         self.permissionStatus = self.permissionService.currentStatus()
@@ -212,7 +223,7 @@ final class AlarmStore: ObservableObject {
         let targetDate = Date.now.addingTimeInterval(TimeInterval(draft.totalMinutes * 60))
         let alarm = UserAlarm.makeNap(
             from: draft,
-            defaultSharedSettings: defaultSharedSettings,
+            defaultSharedSettings: resolvedNapDefaults,
             targetDate: targetDate
         )
 
@@ -319,6 +330,11 @@ final class AlarmStore: ObservableObject {
     func updateTestingModeEnabled(_ enabled: Bool) {
         testingModeEnabled = enabled
         persistence.saveTestingModeEnabled(enabled)
+    }
+
+    func updateNapDefaultSharedSettings(_ settings: SharedAlarmSettings?) {
+        napDefaultSharedSettings = settings
+        persistence.saveNapDefaultSharedSettings(settings)
     }
 
     func updateDefaultNapDurationMinutes(_ minutes: Int) {

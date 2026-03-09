@@ -76,7 +76,7 @@ struct NapEditorView: View {
         .presentationBackground(.clear)
         .onAppear {
             if draft.useDefaultSharedSettings {
-                draft.applyDefaultSharedSettings(alarmStore.defaultSharedSettings)
+                draft.applyDefaultSharedSettings(alarmStore.resolvedNapDefaults)
             }
         }
     }
@@ -97,16 +97,16 @@ struct NapEditorView: View {
                 get: { draft.useDefaultSharedSettings },
                 set: { useDefault in
                     draft.useDefaultSharedSettings = useDefault
-                    draft.applyDefaultSharedSettings(alarmStore.defaultSharedSettings)
+                    draft.applyDefaultSharedSettings(alarmStore.resolvedNapDefaults)
                 }
             )) {
-                Text(L10n.alarmEditorUseDefaultSettingsToggle)
+                Text(L10n.napEditorUseNapDefaultsToggle)
                     .font(.headline)
                     .foregroundStyle(OAColor.textPrimary)
             }
             .tint(OAColor.actionCyan)
 
-            Text(L10n.alarmEditorUseDefaultSettingsHint)
+            Text(L10n.napEditorUseNapDefaultsHint)
                 .font(.footnote)
                 .foregroundStyle(OAColor.textSecondary)
         }

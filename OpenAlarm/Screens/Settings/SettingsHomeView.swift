@@ -56,7 +56,7 @@ struct SettingsHomeView: View {
                             NapDefaultDurationView()
                         } label: {
                             HStack(spacing: 10) {
-                                Text(L10n.settingsNapDefaultsManageButton)
+                                Text(L10n.settingsNapDefaultsDurationButton)
                                     .font(.body.weight(.semibold))
                                     .foregroundStyle(OAColor.textPrimary)
 
@@ -75,7 +75,28 @@ struct SettingsHomeView: View {
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(GlassButtonStyle())
-                        .accessibilityIdentifier("settings_nap_defaults_manage")
+                        .accessibilityIdentifier("settings_nap_defaults_duration")
+
+                        NavigationLink {
+                            NapDefaultSharedSettingsView()
+                        } label: {
+                            HStack(spacing: 10) {
+                                Text(L10n.settingsNapDefaultsConfigButton)
+                                    .font(.body.weight(.semibold))
+                                    .foregroundStyle(OAColor.textPrimary)
+
+                                Spacer(minLength: 0)
+
+                                Image(systemName: "chevron.right")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(OAColor.textSecondary)
+                            }
+                            .padding(.horizontal, 16)
+                            .frame(maxWidth: .infinity, minHeight: 48)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(GlassButtonStyle())
+                        .accessibilityIdentifier("settings_nap_defaults_config")
                     }
                     .padding(20)
                     .oaGlassCard()
@@ -199,5 +220,64 @@ private struct NapDefaultDurationView: View {
 
         let total = max(1, hours * 60 + minutes)
         alarmStore.updateDefaultNapDurationMinutes(total)
+    }
+}
+
+private struct NapDefaultSharedSettingsView: View {
+    @EnvironmentObject private var alarmStore: AlarmStore
+
+    @State private var useGlobalDefaults: Bool = true
+    @State private var napSettings: SharedAlarmSettings = .featureDefaults
+    @State private var loaded = false
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Toggle(isOn: $useGlobalDefaults) {
+                    Text(L10n.settingsNapDefaultsUseGlobalToggle)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(OAColor.textPrimary)
+                }
+                .tint(OAColor.actionCyan)
+                .onChange(of: useGlobalDefaults) { _, newValue in
+                    guard loaded else { return }
+                    if newValue {
+                        alarmStore.updateNapDefaultSharedSettings(nil)
+                    } else {
+                        napSettings = alarmStore.napDefaultSharedSettings ?? alarmStore.defaultSharedSettings
+                        alarmStore.updateNapDefaultSharedSettings(napSettings)
+                    }
+                }
+
+                Text(L10n.settingsNapDefaultsUseGlobalHint)
+                    .font(.footnote)
+                    .foregroundStyle(OAColor.textSecondary)
+
+                if !useGlobalDefaults {
+                    SharedAlarmSettingsEditor(
+                        settings: Binding(
+                            get: { napSettings },
+                            set: { newValue in
+                                napSettings = newValue
+                                alarmStore.updateNapDefaultSharedSettings(newValue)
+                            }
+                        ),
+                        allowFiveSecondSnoozeOption: alarmStore.testingModeEnabled
+                    )
+                }
+            }
+            .padding(20)
+            .oaGlassCard()
+            .padding(20)
+        }
+        .background(OAColor.background.ignoresSafeArea())
+        .navigationTitle(L10n.settingsNapDefaultsConfigTitle)
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            guard !loaded else { return }
+            loaded = true
+            useGlobalDefaults = alarmStore.useGlobalDefaultsForNap
+            napSettings = alarmStore.napDefaultSharedSettings ?? alarmStore.defaultSharedSettings
+        }
     }
 }
