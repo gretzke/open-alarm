@@ -53,6 +53,7 @@ enum SettingsMode: Codable, Equatable, Sendable {
 enum AlarmLifecycleState: String, Codable, CaseIterable, Sendable {
     case scheduled
     case alerting
+    case awaitingDisarmChallenge
     case awaitingWakeCheck
     case completed
 }
@@ -99,6 +100,18 @@ enum AlarmWeekday: Int, CaseIterable, Codable, Hashable, Sendable, Identifiable 
     var id: Int { rawValue }
 }
 
+// MARK: - Disarm Tasks
+
+enum MathDifficulty: String, Codable, CaseIterable, Sendable {
+    case simple
+    case hard
+}
+
+enum AlarmTask: Codable, Equatable, Sendable {
+    case dummy
+    case math(difficulty: MathDifficulty, count: Int)
+}
+
 // MARK: - Minimal SharedAlarmSettings (stub for Codable conformance)
 
 struct SharedAlarmSettings: Codable, Equatable, Sendable {
@@ -108,6 +121,7 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
     var wakeUpCheckEnabled: Bool
     var wakeUpCheckDelayMinutes: Int
     var wakeUpCheckResponseTimeoutMinutes: Int
+    var tasks: [AlarmTask]
 
     static let featureDefaults = SharedAlarmSettings(
         snoozeEnabled: false,
@@ -115,8 +129,27 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         maxSnoozes: 3,
         wakeUpCheckEnabled: false,
         wakeUpCheckDelayMinutes: 5,
-        wakeUpCheckResponseTimeoutMinutes: 3
+        wakeUpCheckResponseTimeoutMinutes: 3,
+        tasks: []
     )
+
+    init(
+        snoozeEnabled: Bool,
+        snoozeDurationMinutes: Int,
+        maxSnoozes: Int?,
+        wakeUpCheckEnabled: Bool,
+        wakeUpCheckDelayMinutes: Int,
+        wakeUpCheckResponseTimeoutMinutes: Int,
+        tasks: [AlarmTask] = []
+    ) {
+        self.snoozeEnabled = snoozeEnabled
+        self.snoozeDurationMinutes = snoozeDurationMinutes
+        self.maxSnoozes = maxSnoozes
+        self.wakeUpCheckEnabled = wakeUpCheckEnabled
+        self.wakeUpCheckDelayMinutes = wakeUpCheckDelayMinutes
+        self.wakeUpCheckResponseTimeoutMinutes = wakeUpCheckResponseTimeoutMinutes
+        self.tasks = tasks
+    }
 }
 
 // MARK: - Minimal AlarmDefinition

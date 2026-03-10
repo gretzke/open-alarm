@@ -31,6 +31,16 @@ struct AppRootView: View {
             alarmStore.handleAppOpened()
             evaluateWakeCheckPermissionGuard()
         }
+        .fullScreenCover(item: $alarmStore.disarmPresentation) { presentation in
+            TaskContainerView(
+                alarm: presentation.alarm,
+                tasks: presentation.tasks
+            ) {
+                Task {
+                    await alarmStore.completeDisarmChallenge(for: presentation.id)
+                }
+            }
+        }
         .fullScreenCover(isPresented: $showWakeCheckPermissionDeniedPrompt) {
             WakeCheckPermissionDeniedView(
                 onOpenSettings: {
@@ -50,6 +60,8 @@ struct AppRootView: View {
     }
 
     private func evaluateWakeCheckPermissionGuard() {
+        // Don't show permission prompts during a disarm challenge
+        guard alarmStore.disarmPresentation == nil else { return }
         Task { @MainActor in
             showWakeCheckPermissionDeniedPrompt = await alarmStore.shouldPresentWakeCheckPermissionDeniedPromptOnLaunch()
         }

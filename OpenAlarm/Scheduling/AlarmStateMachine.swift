@@ -7,6 +7,7 @@ enum AlarmSchedulingPhase: Equatable, Sendable {
     case scheduled(alarmKitIDs: Set<UUID>)
     case alerting(alarmKitID: UUID)
     case snoozed(alarmKitID: UUID)
+    case awaitingDisarmChallenge(alarmKitID: UUID)
     case awaitingWakeCheck
     case completed
 }
@@ -20,6 +21,7 @@ enum AlarmEvent: Equatable, Sendable {
     case alarmKitStateChanged(alarmKitID: UUID, newState: AlarmKitRuntimeState)
     case stopped(alarmKitID: UUID)
     case snoozed(alarmKitID: UUID)
+    case challengeCompleted(alarmKitID: UUID)
     case wakeCheckStarted
     case wakeCheckConfirmed
     case updated
@@ -125,6 +127,14 @@ enum AlarmStateMachine {
         // MARK: - Stop
 
         case (.alerting(let akID), .stopped(let stoppedID)) where akID == stoppedID:
+            return TransitionResult(
+                phase: .awaitingDisarmChallenge(alarmKitID: akID),
+                effects: []
+            )
+
+        // MARK: - Challenge completed → post-stop logic
+
+        case (.awaitingDisarmChallenge(let akID), .challengeCompleted(let completedID)) where akID == completedID:
             if resolvedSettings.wakeUpCheckEnabled {
                 return TransitionResult(
                     phase: .awaitingWakeCheck,
@@ -150,6 +160,10 @@ enum AlarmStateMachine {
                 phase: .completed,
                 effects: [.cancelAlarmKit(ids: [akID])]
             )
+
+        // MARK: - Awaiting disarm challenge: force-close alarm re-fired
+        case (.awaitingDisarmChallenge(let akID), .stopped):
+            return TransitionResult(phase: .awaitingDisarmChallenge(alarmKitID: akID), effects: [])
 
         // MARK: - Awaiting wake check: backup alarm fired (stop → stays in wake-check)
 
@@ -190,6 +204,7 @@ enum AlarmStateMachine {
         case .scheduled(let ids): return ids
         case .alerting(let id): return [id]
         case .snoozed(let id): return [id]
+        case .awaitingDisarmChallenge(let id): return [id]
         }
     }
 }

@@ -80,7 +80,7 @@ struct AlarmSchedulingCoreChecks {
             try expectTrue(result.effects.contains(.deleteAlarm(alarm.id)), "delete should remove alarm")
         }
 
-        // 3) AlarmStateMachine: stop one-shot delete-after-use completes and deletes
+        // 3) AlarmStateMachine: stop always transitions to awaitingDisarmChallenge
         do {
             let alarm = AlarmDefinition(trigger: .time(hour: 7, minute: 0), deleteAfterUse: true)
             let result = AlarmStateMachine.transition(
@@ -89,8 +89,8 @@ struct AlarmSchedulingCoreChecks {
                 alarm: alarm,
                 resolvedSettings: defaults
             )
-            try expectEqual(result.phase, .completed, "stop one-shot should complete")
-            try expectTrue(result.effects.contains(.deleteAlarm(alarm.id)), "stop one-shot should delete")
+            try expectEqual(result.phase, .awaitingDisarmChallenge(alarmKitID: alarm.id), "stop should transition to awaitingDisarmChallenge")
+            try expectTrue(result.effects.isEmpty, "stop to awaitingDisarmChallenge should have no effects")
         }
 
         // 4) AlarmStateMachine: disable from idle is no-op
@@ -118,7 +118,7 @@ struct AlarmSchedulingCoreChecks {
             try expectEqual(result.phase, .snoozed(alarmKitID: alarm.id), "snooze should transition to snoozed")
         }
 
-        // 6) AlarmStateMachine: stop with wake-check transitions to awaitingWakeCheck
+        // 6) AlarmStateMachine: stop with wake-check transitions to awaitingDisarmChallenge
         do {
             let alarm = AlarmDefinition(trigger: .time(hour: 7, minute: 0))
             let result = AlarmStateMachine.transition(
@@ -127,8 +127,8 @@ struct AlarmSchedulingCoreChecks {
                 alarm: alarm,
                 resolvedSettings: wakeCheckSettings
             )
-            try expectEqual(result.phase, .awaitingWakeCheck, "stop with wake-check should await wake-check")
-            try expectEqual(result.effects, [.cancelAlarmKit(ids: [alarm.id])], "should cancel alarm kit")
+            try expectEqual(result.phase, .awaitingDisarmChallenge(alarmKitID: alarm.id), "stop should always transition to awaitingDisarmChallenge")
+            try expectTrue(result.effects.isEmpty, "stop to awaitingDisarmChallenge should have no effects")
         }
 
         // 7) AlarmStateMachine: wake-check confirmed repeating reschedules

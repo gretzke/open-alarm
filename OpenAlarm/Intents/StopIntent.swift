@@ -6,7 +6,7 @@ import UserNotifications
 struct StopIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Stop"
     static var description = IntentDescription("Stop an alarm")
-    static var openAppWhenRun: Bool = false
+    static var openAppWhenRun: Bool = true
 
     @Parameter(title: "alarmID")
     var alarmID: String
@@ -24,116 +24,25 @@ struct StopIntent: LiveActivityIntent {
             return .result()
         }
 
+        // Mark as pending disarm FIRST (tiny write, near-instant).
+        // The app handles all lifecycle logic when it opens.
         let persistence = AlarmPersistence(defaults: .standard)
-        let defaultSharedSettings = persistence.loadDefaultSharedSettings()
-        var alarms = persistence.loadUserAlarms()
+        var pendingDisarm = persistence.loadPendingDisarmAlarmIDs()
+        pendingDisarm.insert(id)
+        persistence.savePendingDisarmAlarmIDs(pendingDisarm)
 
-        guard let index = alarms.firstIndex(where: { $0.id == id }) else {
-            try? AlarmManager.shared.stop(id: id)
-            return .result()
+        // Silence the alarm
+        try? AlarmManager.shared.stop(id: id)
+
+        // Also stop any active force-close alarm (has a different UUID)
+        if let forceCloseIDStr = UserDefaults.standard.string(forKey: "OPENALARM_FORCE_CLOSE_ALARM_ID"),
+           let forceCloseID = UUID(uuidString: forceCloseIDStr) {
+            try? AlarmManager.shared.stop(id: forceCloseID)
+            try? AlarmManager.shared.cancel(id: forceCloseID)
         }
 
-        var alarm = alarms[index]
-        let effectiveDefaults: SharedAlarmSettings = alarm.isNap
-            ? (persistence.loadNapDefaultSharedSettings() ?? defaultSharedSettings)
-            : defaultSharedSettings
-        let settings = alarm.resolvedSharedSettings(defaults: effectiveDefaults)
-
-        if settings.wakeUpCheckEnabled {
-            // Mark alarm as awaiting wake-check BEFORE stopping,
-            // so applyRemoteAlarms doesn't clean it up during the async gap
-            alarm.lifecycleState = .awaitingWakeCheck
-            alarm.snoozeCount = 0
-            alarm.updatedAt = .now
-            alarms[index] = alarm
-            persistence.saveUserAlarms(alarms)
-
-            // Now stop and cancel the alerting alarm
-            try? AlarmManager.shared.stop(id: id)
-            try? AlarmManager.shared.cancel(id: id)
-
-            // Create/advance wake-check session
-            var sessions = persistence.loadWakeCheckSessions()
-            let previousSession = sessions[id]
-            let existingCycle = previousSession?.cycle ?? 0
-            let newCycle = existingCycle + 1
-
-            // Cancel previous cycle's notification
-            if let previousNotificationID = previousSession?.notificationID {
-                let notifCenter = UNUserNotificationCenter.current()
-                notifCenter.removeDeliveredNotifications(withIdentifiers: [previousNotificationID])
-                notifCenter.removePendingNotificationRequests(withIdentifiers: [previousNotificationID])
-            }
-
-            // Clear grace period flag
-            var graceApplied = Self.loadGraceAppliedIDs()
-            graceApplied.remove(id)
-            Self.saveGraceAppliedIDs(graceApplied)
-
-            // Clear pending confirm UI ID from previous cycle
-            var pendingConfirmUIIDs = persistence.loadPendingWakeUpCheckShowConfirmUIIDs()
-            pendingConfirmUIIDs.remove(id)
-            persistence.savePendingWakeUpCheckShowConfirmUIIDs(pendingConfirmUIIDs)
-
-            let checkDelay = WakeUpCheckTimingPolicy.checkDelayInterval(for: settings.wakeUpCheckDelayMinutes)
-            let responseTimeout = WakeUpCheckTimingPolicy.responseTimeoutInterval(for: settings.wakeUpCheckResponseTimeoutMinutes)
-            let checkAt = Date.now.addingTimeInterval(checkDelay)
-            let deadlineAt = checkAt.addingTimeInterval(responseTimeout)
-            let notificationID = WakeUpCheckNotificationConstants.notificationID(alarmID: id, cycle: newCycle)
-
-            let session = WakeCheckSession(
-                alarmID: id,
-                cycle: newCycle,
-                checkAt: checkAt,
-                deadlineAt: deadlineAt,
-                notificationID: notificationID
-            )
-            sessions[id] = session
-            persistence.saveWakeCheckSessions(sessions)
-
-            // Schedule notification
-            let notifCenter = UNUserNotificationCenter.current()
-            let notifSettings = await notifCenter.notificationSettings()
-            if notifSettings.authorizationStatus == .authorized {
-                let content = UNMutableNotificationContent()
-                content.title = String(localized: "wake_check_notification_title")
-                content.body = String(localized: "wake_check_notification_body")
-                content.sound = .default
-                content.categoryIdentifier = WakeUpCheckNotificationConstants.categoryID
-                content.userInfo = [
-                    WakeUpCheckNotificationConstants.alarmIDUserInfoKey: id.uuidString,
-                    WakeUpCheckNotificationConstants.cycleUserInfoKey: newCycle,
-                ]
-
-                let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, checkDelay), repeats: false)
-                let request = UNNotificationRequest(identifier: notificationID, content: content, trigger: trigger)
-                try? await notifCenter.add(request)
-            }
-
-            // Schedule backup alarm at deadline
-            let config = AlarmConfigurationBuilder.makeWakeCheckBackupConfiguration(for: alarm, deadlineAt: deadlineAt)
-            _ = try? await AlarmManager.shared.schedule(id: id, configuration: config)
-
-        } else {
-            // Normal stop path
-            try? AlarmManager.shared.stop(id: id)
-
-            alarm.snoozeCount = 0
-            alarm.updatedAt = .now
-
-            if alarm.isNap || alarm.isTryOut || (alarm.deleteAfterUse && !alarm.isRepeating) {
-                alarms.remove(at: index)
-            } else if alarm.isRepeating {
-                alarm.lifecycleState = .scheduled
-                alarms[index] = alarm
-            } else {
-                alarm.isEnabled = false
-                alarm.lifecycleState = .completed
-                alarms[index] = alarm
-            }
-
-            persistence.saveUserAlarms(alarms)
-        }
+        // Notify AlarmStore if it's alive (in-process notification)
+        NotificationCenter.default.post(name: .disarmChallengeRequested, object: nil)
 
         return .result()
     }

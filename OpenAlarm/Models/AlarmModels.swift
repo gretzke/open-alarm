@@ -46,6 +46,7 @@ enum AlarmTypePolicy {
 enum AlarmLifecycleState: String, Codable, CaseIterable, Sendable {
     case scheduled
     case alerting
+    case awaitingDisarmChallenge
     case awaitingWakeCheck
     case completed
 }
@@ -96,6 +97,25 @@ public enum WakeUpCheckTimingPolicy {
     }
 }
 
+// MARK: - Disarm Tasks
+
+enum MathDifficulty: String, Codable, CaseIterable, Sendable {
+    case simple
+    case hard
+}
+
+enum AlarmTask: Codable, Equatable, Sendable {
+    case dummy
+    case math(difficulty: MathDifficulty, count: Int)
+
+    var displayName: String {
+        switch self {
+        case .dummy: String(localized: "task_dummy_name")
+        case .math: String(localized: "task_math_name")
+        }
+    }
+}
+
 // MARK: - SharedAlarmSettings
 
 struct SharedAlarmSettings: Codable, Equatable, Sendable {
@@ -105,6 +125,7 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
     var wakeUpCheckEnabled: Bool
     var wakeUpCheckDelayMinutes: Int
     var wakeUpCheckResponseTimeoutMinutes: Int
+    var tasks: [AlarmTask]
 
     static let featureDefaults = SharedAlarmSettings(
         snoozeEnabled: false,
@@ -112,7 +133,8 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         maxSnoozes: 3,
         wakeUpCheckEnabled: false,
         wakeUpCheckDelayMinutes: WakeUpCheckTimingPolicy.defaultCheckDelayMinutes,
-        wakeUpCheckResponseTimeoutMinutes: WakeUpCheckTimingPolicy.defaultResponseTimeoutMinutes
+        wakeUpCheckResponseTimeoutMinutes: WakeUpCheckTimingPolicy.defaultResponseTimeoutMinutes,
+        tasks: []
     )
 
     func canSnoozeAgain(currentCount: Int) -> Bool {
@@ -148,6 +170,7 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         case wakeUpCheckEnabled
         case wakeUpCheckDelayMinutes
         case wakeUpCheckResponseTimeoutMinutes
+        case tasks
     }
 
     init(
@@ -156,7 +179,8 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         maxSnoozes: Int?,
         wakeUpCheckEnabled: Bool,
         wakeUpCheckDelayMinutes: Int,
-        wakeUpCheckResponseTimeoutMinutes: Int
+        wakeUpCheckResponseTimeoutMinutes: Int,
+        tasks: [AlarmTask] = []
     ) {
         self.snoozeEnabled = snoozeEnabled
         self.snoozeDurationMinutes = snoozeDurationMinutes
@@ -164,6 +188,7 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         self.wakeUpCheckEnabled = wakeUpCheckEnabled
         self.wakeUpCheckDelayMinutes = WakeUpCheckTimingPolicy.clampCheckDelayMinutes(wakeUpCheckDelayMinutes)
         self.wakeUpCheckResponseTimeoutMinutes = WakeUpCheckTimingPolicy.normalizeResponseTimeoutMinutes(wakeUpCheckResponseTimeoutMinutes)
+        self.tasks = tasks
     }
 
     init(from decoder: Decoder) throws {
@@ -178,6 +203,7 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         wakeUpCheckResponseTimeoutMinutes = WakeUpCheckTimingPolicy.normalizeResponseTimeoutMinutes(
             try container.decodeIfPresent(Int.self, forKey: .wakeUpCheckResponseTimeoutMinutes) ?? SharedAlarmSettings.featureDefaults.wakeUpCheckResponseTimeoutMinutes
         )
+        tasks = try container.decodeIfPresent([AlarmTask].self, forKey: .tasks) ?? []
     }
 }
 
@@ -471,6 +497,7 @@ enum AlarmStoreError: Error {
 
 extension Notification.Name {
     static let wakeUpCheckConfirmationRequested = Notification.Name("wakeUpCheckConfirmationRequested")
+    static let disarmChallengeRequested = Notification.Name("disarmChallengeRequested")
 }
 
 // MARK: - WakeUpCheckNotificationService
@@ -551,6 +578,7 @@ final class AlarmPersistence: Sendable {
     private let defaultNapDurationMinutesKey = "OPENALARM_DEFAULT_NAP_DURATION_MINUTES_V1"
     private let pendingWakeUpCheckShowConfirmUIIDsKey = "OPENALARM_PENDING_WAKE_CHECK_SHOW_CONFIRM_UI_IDS_V1"
     private let wakeCheckSessionsKey = "OPENALARM_WAKE_CHECK_SESSIONS_V1"
+    private let pendingDisarmAlarmIDsKey = "OPENALARM_PENDING_DISARM_ALARM_IDS_V1"
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
     }
@@ -681,6 +709,16 @@ final class AlarmPersistence: Sendable {
         } catch {
             Self.logger.error("Failed to encode wake check sessions: \(error.localizedDescription)")
         }
+    }
+
+    // MARK: - Pending Disarm Alarm IDs
+
+    func loadPendingDisarmAlarmIDs() -> Set<UUID> {
+        loadUUIDSet(forKey: pendingDisarmAlarmIDsKey)
+    }
+
+    func savePendingDisarmAlarmIDs(_ ids: Set<UUID>) {
+        saveUUIDSet(ids, forKey: pendingDisarmAlarmIDsKey)
     }
 
     // MARK: - Private helpers

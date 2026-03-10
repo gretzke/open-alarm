@@ -83,6 +83,37 @@ enum AlarmConfigurationBuilder {
         )
     }
 
+    // MARK: - Force-close alarm configuration (anti-circumvention during challenges)
+
+    static func makeForceCloseAlarmConfiguration(
+        for alarm: AlarmDefinition,
+        fireAt: Date
+    ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
+        let title = resolvedTitle(for: alarm)
+        let titleResource = localizedResource(from: title)
+        let alertPresentation = AlarmPresentation.Alert(
+            title: titleResource,
+            stopButton: .stopButton,
+            secondaryButton: nil,
+            secondaryButtonBehavior: nil
+        )
+        let presentation = AlarmPresentation(alert: alertPresentation)
+        let attributes = AlarmAttributes(
+            presentation: presentation,
+            metadata: OpenAlarmMetadata(source: alarm.id.uuidString, isShadowTrial: alarm.isTryOut),
+            tintColor: OAColor.actionCyan
+        )
+
+        return .init(
+            countdownDuration: nil,
+            schedule: .fixed(fireAt),
+            attributes: attributes,
+            stopIntent: StopIntent(alarmID: alarm.id.uuidString),
+            secondaryIntent: nil,
+            sound: .default
+        )
+    }
+
     // MARK: - Helpers
 
     static func resolvedTitle(for alarm: AlarmDefinition) -> String {

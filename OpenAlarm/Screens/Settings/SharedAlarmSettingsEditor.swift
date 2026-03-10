@@ -144,6 +144,8 @@ struct SharedAlarmSettingsEditor: View {
                 }
             }
 
+            TaskPickerView(tasks: $settings.tasks)
+
             Button {
                 runTryOut(after: 5)
             } label: {

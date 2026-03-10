@@ -140,3 +140,22 @@
 "wake_check_confirm_title" = "Are you awake?";
 "wake_check_confirm_subtitle" = "Backup alarm rings in";
 "wake_check_confirm_action" = "I'm awake";
+
+"task_dummy_name" = "Dismiss";
+"task_math_name" = "Math";
+"task_dummy_description" = "Tap a button to dismiss the alarm. No challenge required.";
+"task_dummy_instruction" = "Tap the button to disable the alarm.";
+"task_dummy_button" = "Disable Alarm";
+"task_add_button" = "Add Task";
+"task_save_button" = "Save";
+"task_picker_title" = "Tasks";
+"task_picker_choose_type" = "Choose Task";
+"task_dismiss_title" = "Alarm";
+"task_dismiss_alarm_button" = "Dismiss Alarm";
+"task_progress %lld %lld" = "Task %lld of %lld";
+"task_math_progress %lld %lld" = "Problem %lld of %lld";
+"task_math_submit" = "Submit";
+"task_math_wrong_answer" = "Wrong answer. Try again!";
+"task_math_difficulty_simple" = "Simple";
+"task_math_difficulty_hard" = "Hard";
+"task_math_count %lld" = "%lld problems";

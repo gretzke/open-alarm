@@ -92,7 +92,7 @@ final class AlarmStateMachineTests: XCTestCase {
         XCTAssertEqual(result.effects, [])
     }
 
-    // MARK: - Stop (one-shot, deleteAfterUse)
+    // MARK: - Stop (always transitions to awaitingDisarmChallenge)
 
     func testStopOneShotDeleteAfterUseCompletesAndDeletes() {
         let alarm = makeAlarm(deleteAfterUse: true)
@@ -103,12 +103,9 @@ final class AlarmStateMachineTests: XCTestCase {
             resolvedSettings: defaultSettings
         )
 
-        XCTAssertEqual(result.phase, .completed)
-        XCTAssertTrue(result.effects.contains(.deleteAlarm(alarm.id)))
-        XCTAssertTrue(result.effects.contains(.cancelAlarmKit(ids: [alarm.id])))
+        XCTAssertEqual(result.phase, .awaitingDisarmChallenge(alarmKitID: alarm.id))
+        XCTAssertEqual(result.effects, [])
     }
-
-    // MARK: - Stop (one-shot, keep after use)
 
     func testStopOneShotKeepAfterUseCompletesWithoutDelete() {
         let alarm = makeAlarm(deleteAfterUse: false)
@@ -119,9 +116,21 @@ final class AlarmStateMachineTests: XCTestCase {
             resolvedSettings: defaultSettings
         )
 
-        XCTAssertEqual(result.phase, .completed)
-        XCTAssertEqual(result.effects, [.cancelAlarmKit(ids: [alarm.id])])
-        XCTAssertFalse(result.effects.contains(.deleteAlarm(alarm.id)))
+        XCTAssertEqual(result.phase, .awaitingDisarmChallenge(alarmKitID: alarm.id))
+        XCTAssertEqual(result.effects, [])
+    }
+
+    func testStopAlwaysTransitionsToAwaitingDisarmChallenge() {
+        let alarm = makeAlarm()
+        let result = AlarmStateMachine.transition(
+            current: .alerting(alarmKitID: alarm.id),
+            event: .stopped(alarmKitID: alarm.id),
+            alarm: alarm,
+            resolvedSettings: defaultSettings
+        )
+
+        XCTAssertEqual(result.phase, .awaitingDisarmChallenge(alarmKitID: alarm.id))
+        XCTAssertEqual(result.effects, [])
     }
 
     // MARK: - Delete
@@ -185,7 +194,7 @@ final class AlarmStateMachineTests: XCTestCase {
 
     // MARK: - Stop with wake-check
 
-    func testStopWithWakeCheckTransitionsToAwaitingWakeCheck() {
+    func testStopWithWakeCheckTransitionsToAwaitingDisarmChallenge() {
         let alarm = makeAlarm()
         let result = AlarmStateMachine.transition(
             current: .alerting(alarmKitID: alarm.id),
@@ -194,8 +203,8 @@ final class AlarmStateMachineTests: XCTestCase {
             resolvedSettings: wakeCheckSettings
         )
 
-        XCTAssertEqual(result.phase, .awaitingWakeCheck)
-        XCTAssertEqual(result.effects, [.cancelAlarmKit(ids: [alarm.id])])
+        XCTAssertEqual(result.phase, .awaitingDisarmChallenge(alarmKitID: alarm.id))
+        XCTAssertEqual(result.effects, [])
     }
 
     func testStopFromAwaitingWakeCheckStaysInWakeCheck() {
@@ -342,9 +351,95 @@ final class AlarmStateMachineTests: XCTestCase {
             resolvedSettings: defaultSettings
         )
 
+        XCTAssertEqual(result.phase, .awaitingDisarmChallenge(alarmKitID: alarm.id))
+        XCTAssertEqual(result.effects, [])
+    }
+
+    // MARK: - Challenge completed
+
+    func testChallengeCompletedWithWakeCheckTransitionsToAwaitingWakeCheck() {
+        let alarm = makeAlarm()
+        let result = AlarmStateMachine.transition(
+            current: .awaitingDisarmChallenge(alarmKitID: alarm.id),
+            event: .challengeCompleted(alarmKitID: alarm.id),
+            alarm: alarm,
+            resolvedSettings: wakeCheckSettings
+        )
+
+        XCTAssertEqual(result.phase, .awaitingWakeCheck)
+        XCTAssertEqual(result.effects, [.cancelAlarmKit(ids: [alarm.id])])
+    }
+
+    func testChallengeCompletedRepeatingReschedules() {
+        let alarm = makeAlarm(repeatDays: [.monday, .wednesday, .friday])
+        let result = AlarmStateMachine.transition(
+            current: .awaitingDisarmChallenge(alarmKitID: alarm.id),
+            event: .challengeCompleted(alarmKitID: alarm.id),
+            alarm: alarm,
+            resolvedSettings: defaultSettings
+        )
+
         XCTAssertEqual(result.phase, .scheduled(alarmKitIDs: [alarm.id]))
         XCTAssertEqual(result.effects, [
             .scheduleAlarmKit(alarmID: alarm.id, trigger: alarm.trigger, recurrence: alarm.recurrence)
         ])
+    }
+
+    func testChallengeCompletedOneShotDeleteAfterUseDeletes() {
+        let alarm = makeAlarm(deleteAfterUse: true)
+        let result = AlarmStateMachine.transition(
+            current: .awaitingDisarmChallenge(alarmKitID: alarm.id),
+            event: .challengeCompleted(alarmKitID: alarm.id),
+            alarm: alarm,
+            resolvedSettings: defaultSettings
+        )
+
+        XCTAssertEqual(result.phase, .completed)
+        XCTAssertTrue(result.effects.contains(.cancelAlarmKit(ids: [alarm.id])))
+        XCTAssertTrue(result.effects.contains(.deleteAlarm(alarm.id)))
+    }
+
+    func testChallengeCompletedOneShotKeepCompletes() {
+        let alarm = makeAlarm(deleteAfterUse: false)
+        let result = AlarmStateMachine.transition(
+            current: .awaitingDisarmChallenge(alarmKitID: alarm.id),
+            event: .challengeCompleted(alarmKitID: alarm.id),
+            alarm: alarm,
+            resolvedSettings: defaultSettings
+        )
+
+        XCTAssertEqual(result.phase, .completed)
+        XCTAssertEqual(result.effects, [.cancelAlarmKit(ids: [alarm.id])])
+        XCTAssertFalse(result.effects.contains(.deleteAlarm(alarm.id)))
+    }
+
+    // MARK: - Awaiting disarm challenge edge cases
+
+    func testStopFromAwaitingDisarmChallengeStays() {
+        let alarm = makeAlarm()
+        let otherID = UUID()
+        let result = AlarmStateMachine.transition(
+            current: .awaitingDisarmChallenge(alarmKitID: alarm.id),
+            event: .stopped(alarmKitID: otherID),
+            alarm: alarm,
+            resolvedSettings: defaultSettings
+        )
+
+        XCTAssertEqual(result.phase, .awaitingDisarmChallenge(alarmKitID: alarm.id))
+        XCTAssertEqual(result.effects, [])
+    }
+
+    func testDeleteFromAwaitingDisarmChallengeCancelsAndDeletes() {
+        let alarm = makeAlarm()
+        let result = AlarmStateMachine.transition(
+            current: .awaitingDisarmChallenge(alarmKitID: alarm.id),
+            event: .deleted,
+            alarm: alarm,
+            resolvedSettings: defaultSettings
+        )
+
+        XCTAssertEqual(result.phase, .idle)
+        XCTAssertTrue(result.effects.contains(.cancelAlarmKit(ids: [alarm.id])))
+        XCTAssertTrue(result.effects.contains(.deleteAlarm(alarm.id)))
     }
 }

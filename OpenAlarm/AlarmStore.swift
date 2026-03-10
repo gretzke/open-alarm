@@ -4,6 +4,15 @@ import Combine
 import Foundation
 import os
 import SwiftUI
+import UserNotifications
+
+// MARK: - DisarmPresentation
+
+struct DisarmPresentation: Identifiable {
+    let id: UUID  // alarm ID
+    let alarm: AlarmDefinition
+    let tasks: [AlarmTask]
+}
 
 // MARK: - AlarmStore
 
@@ -22,6 +31,7 @@ final class AlarmStore: ObservableObject {
     @Published var notificationPermissionStatus: NotificationPermissionStatus = .notDetermined
     @Published var remoteStates: [UUID: Alarm.State] = [:]
 
+    @Published var disarmPresentation: DisarmPresentation?
     @Published var wakeUpCheckConfirmationPresentation: WakeUpCheckConfirmationPresentation?
     private(set) var wakeCheckSessions: [UUID: WakeCheckSession] = [:]
 
@@ -56,6 +66,7 @@ final class AlarmStore: ObservableObject {
     private let wakeCheckNotificationService: WakeUpCheckNotificationService
     private var alarmUpdatesTask: Task<Void, Never>?
     private var wakeCheckConfirmationObserver: Any?
+    private var disarmChallengeObserver: Any?
 
     // MARK: - Init
 
@@ -92,10 +103,25 @@ final class AlarmStore: ObservableObject {
                 self?.processPendingWakeCheckConfirmations()
             }
         }
+
+        disarmChallengeObserver = NotificationCenter.default.addObserver(
+            forName: .disarmChallengeRequested,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.load()
+                self?.processPendingDisarmChallenges()
+            }
+        }
+
     }
 
     deinit {
         alarmUpdatesTask?.cancel()
+        if let observer = disarmChallengeObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
         if let observer = wakeCheckConfirmationObserver {
             NotificationCenter.default.removeObserver(observer)
         }
@@ -114,10 +140,10 @@ final class AlarmStore: ObservableObject {
         load()
         refreshRemoteState()
         loadWakeCheckSessionsFromPersistence()
-        cleanupStaleAlarms()
         rebuildRuntimePhases()
         processPendingWakeCheckConfirmations()
         showWakeCheckConfirmationIfNeeded()
+        processPendingDisarmChallenges()
     }
 
     private func refreshRemoteState() {
@@ -184,6 +210,15 @@ final class AlarmStore: ObservableObject {
     // MARK: - Delete Alarm
 
     func deleteAlarm(_ alarm: UserAlarm) {
+        // Clean up pending disarm state if active
+        var pendingDisarm = persistence.loadPendingDisarmAlarmIDs()
+        if pendingDisarm.remove(alarm.id) != nil {
+            persistence.savePendingDisarmAlarmIDs(pendingDisarm)
+        }
+        if disarmPresentation?.id == alarm.id {
+            disarmPresentation = nil
+        }
+
         // Clean up wake-check session if active
         if let session = wakeCheckSessions[alarm.id] {
             wakeCheckNotificationService.cancelNotification(id: session.notificationID)
@@ -619,6 +654,159 @@ final class AlarmStore: ObservableObject {
         return hasWakeCheckEnabled
     }
 
+    // MARK: - Disarm Challenge
+
+    private func processPendingDisarmChallenges() {
+        // If challenge screen is already showing, don't replace it.
+        // Re-creating the presentation causes a sound race between old/new TaskSoundManager.
+        guard disarmPresentation == nil else { return }
+
+        var pendingIDs = persistence.loadPendingDisarmAlarmIDs()
+        guard let alarmID = pendingIDs.first else { return }
+
+        // Clean up stale IDs for alarms that no longer exist
+        guard let index = alarms.firstIndex(where: { $0.id == alarmID }) else {
+            pendingIDs.remove(alarmID)
+            persistence.savePendingDisarmAlarmIDs(pendingIDs)
+            return
+        }
+
+        // Mark alarm as awaiting disarm challenge (StopIntent only writes the pending ID,
+        // all lifecycle logic lives here in the app).
+        if alarms[index].lifecycleState != .awaitingDisarmChallenge {
+            alarms[index].lifecycleState = .awaitingDisarmChallenge
+            alarms[index].snoozeCount = 0
+            alarms[index].updatedAt = .now
+            saveAlarms()
+            runtimePhases[alarmID] = .awaitingDisarmChallenge(alarmKitID: alarmID)
+        }
+
+        let alarm = alarms[index]
+        let settings = resolvedSettingsForAlarm(alarm)
+        disarmPresentation = DisarmPresentation(
+            id: alarmID,
+            alarm: alarm,
+            tasks: settings.tasks
+        )
+    }
+
+    func completeDisarmChallenge(for alarmID: UUID) async {
+        // Remove from pending disarm
+        var pendingIDs = persistence.loadPendingDisarmAlarmIDs()
+        pendingIDs.remove(alarmID)
+        persistence.savePendingDisarmAlarmIDs(pendingIDs)
+
+        // Dismiss the UI
+        if disarmPresentation?.id == alarmID {
+            disarmPresentation = nil
+        }
+
+        guard let alarm = alarms.first(where: { $0.id == alarmID }) else { return }
+        let settings = resolvedSettingsForAlarm(alarm)
+
+        // Process through state machine
+        await process(event: .challengeCompleted(alarmKitID: alarmID), for: alarmID)
+
+        let phase = runtimePhases[alarmID]
+
+        // Handle wake-check (previously in StopIntent) — trust the state machine
+        if phase == .awaitingWakeCheck {
+            await startWakeCheckSession(for: alarmID, alarm: alarm, settings: settings)
+        }
+
+        // Handle completion for non-repeating kept alarms
+        if phase == .completed {
+            if let index = alarms.firstIndex(where: { $0.id == alarmID }) {
+                if !alarms[index].isRepeating && !alarms[index].deleteAfterUse {
+                    alarms[index].isEnabled = false
+                    alarms[index].lifecycleState = .completed
+                    alarms[index].updatedAt = .now
+                    saveAlarms()
+                }
+            }
+        }
+
+        // Handle repeating re-arm
+        if case .scheduled = phase {
+            if let index = alarms.firstIndex(where: { $0.id == alarmID }) {
+                alarms[index].snoozeCount = 0
+                alarms[index].lifecycleState = .scheduled
+                alarms[index].updatedAt = .now
+                saveAlarms()
+            }
+        }
+
+        // Process next pending disarm if any
+        processPendingDisarmChallenges()
+    }
+
+    private func startWakeCheckSession(for alarmID: UUID, alarm: AlarmDefinition, settings: SharedAlarmSettings) async {
+        let previousSession = wakeCheckSessions[alarmID]
+        let existingCycle = previousSession?.cycle ?? 0
+        let newCycle = existingCycle + 1
+
+        // Cancel previous notification
+        if let previousNotificationID = previousSession?.notificationID {
+            wakeCheckNotificationService.cancelNotification(id: previousNotificationID)
+        }
+
+        // Clear grace period
+        var graceApplied = loadGraceAppliedIDs()
+        graceApplied.remove(alarmID)
+        saveGraceAppliedIDs(graceApplied)
+
+        // Clear pending confirm UI
+        var pendingConfirmUIIDs = persistence.loadPendingWakeUpCheckShowConfirmUIIDs()
+        pendingConfirmUIIDs.remove(alarmID)
+        persistence.savePendingWakeUpCheckShowConfirmUIIDs(pendingConfirmUIIDs)
+
+        let checkDelay = WakeUpCheckTimingPolicy.checkDelayInterval(for: settings.wakeUpCheckDelayMinutes)
+        let responseTimeout = WakeUpCheckTimingPolicy.responseTimeoutInterval(for: settings.wakeUpCheckResponseTimeoutMinutes)
+        let checkAt = Date.now.addingTimeInterval(checkDelay)
+        let deadlineAt = checkAt.addingTimeInterval(responseTimeout)
+        let notificationID = WakeUpCheckNotificationConstants.notificationID(alarmID: alarmID, cycle: newCycle)
+
+        let session = WakeCheckSession(
+            alarmID: alarmID,
+            cycle: newCycle,
+            checkAt: checkAt,
+            deadlineAt: deadlineAt,
+            notificationID: notificationID
+        )
+        wakeCheckSessions[alarmID] = session
+        persistence.saveWakeCheckSessions(wakeCheckSessions)
+
+        // Update lifecycle state
+        if let index = alarms.firstIndex(where: { $0.id == alarmID }) {
+            alarms[index].lifecycleState = .awaitingWakeCheck
+            alarms[index].updatedAt = .now
+            saveAlarms()
+        }
+
+        // Schedule notification
+        let notifCenter = UNUserNotificationCenter.current()
+        let notifSettings = await notifCenter.notificationSettings()
+        if notifSettings.authorizationStatus == .authorized {
+            let content = UNMutableNotificationContent()
+            content.title = String(localized: "wake_check_notification_title")
+            content.body = String(localized: "wake_check_notification_body")
+            content.sound = .default
+            content.categoryIdentifier = WakeUpCheckNotificationConstants.categoryID
+            content.userInfo = [
+                WakeUpCheckNotificationConstants.alarmIDUserInfoKey: alarmID.uuidString,
+                WakeUpCheckNotificationConstants.cycleUserInfoKey: newCycle,
+            ]
+
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, checkDelay), repeats: false)
+            let request = UNNotificationRequest(identifier: notificationID, content: content, trigger: trigger)
+            try? await notifCenter.add(request)
+        }
+
+        // Schedule backup alarm at deadline
+        let config = AlarmConfigurationBuilder.makeWakeCheckBackupConfiguration(for: alarm, deadlineAt: deadlineAt)
+        _ = try? await alarmManager.schedule(id: alarmID, configuration: config)
+    }
+
     // MARK: - Error Display
 
     func userFacingErrorMessage(for error: Error) -> LocalizedStringKey {
@@ -641,6 +829,8 @@ final class AlarmStore: ObservableObject {
         case .scheduled:
             return L10n.alarmStateScheduled
         case .alerting:
+            return L10n.alarmStateAlerting
+        case .awaitingDisarmChallenge:
             return L10n.alarmStateAlerting
         case .awaitingWakeCheck:
             return L10n.alarmStateAwaitingWakeCheck
@@ -774,7 +964,13 @@ final class AlarmStore: ObservableObject {
         let runtimeByID = Dictionary(uniqueKeysWithValues: runtimeAlarms.map { ($0.id, $0) })
 
         for alarm in alarms {
-            if let runtime = runtimeByID[alarm.id] {
+            // Persisted lifecycle state takes priority for post-alerting phases.
+            // AlarmKit may still report .alerting briefly after StopIntent runs.
+            if alarm.lifecycleState == .awaitingDisarmChallenge {
+                runtimePhases[alarm.id] = .awaitingDisarmChallenge(alarmKitID: alarm.id)
+            } else if alarm.lifecycleState == .awaitingWakeCheck {
+                runtimePhases[alarm.id] = .awaitingWakeCheck
+            } else if let runtime = runtimeByID[alarm.id] {
                 switch runtime.state {
                 case .alerting:
                     runtimePhases[alarm.id] = .alerting(alarmKitID: alarm.id)
@@ -789,8 +985,6 @@ final class AlarmStore: ObservableObject {
                 @unknown default:
                     runtimePhases[alarm.id] = .idle
                 }
-            } else if alarm.lifecycleState == .awaitingWakeCheck {
-                runtimePhases[alarm.id] = .awaitingWakeCheck
             } else if alarm.isEnabled {
                 runtimePhases[alarm.id] = .idle
             } else {
@@ -825,44 +1019,20 @@ final class AlarmStore: ObservableObject {
         remoteStates = newRemoteStates
 
         // Pure reload — no cleanup, no deletion, no races with intents.
-        // Stale alarm cleanup happens in handleAppOpened → cleanupStaleAlarms.
         alarms = sortAlarms(persistedAlarms)
 
         rebuildRuntimePhases()
 
         // Process any pending wake-check confirmation UI
         processPendingWakeCheckConfirmations()
+
+        // Process any pending disarm challenges
+        processPendingDisarmChallenges()
     }
 
-    /// Cleans up stale ephemeral alarms on app open (cold start recovery).
-    /// Called from handleAppOpened(), NOT from applyRemoteAlarms().
-    private func cleanupStaleAlarms() {
-        let runtimeIDs: Set<UUID>
-        do {
-            runtimeIDs = Set(try alarmManager.alarms.map(\.id))
-        } catch {
-            return
-        }
-
-        var changed = false
-        alarms.removeAll { alarm in
-            guard wakeCheckSessions[alarm.id] == nil else { return false }
-            guard alarm.lifecycleState != .awaitingWakeCheck else { return false }
-
-            let isEphemeral = alarm.isNap || alarm.isTryOut || (alarm.deleteAfterUse && !alarm.isRepeating)
-            guard isEphemeral else { return false }
-            guard !runtimeIDs.contains(alarm.id) else { return false }
-            guard let fixedDate = alarm.fixedTriggerDate, fixedDate <= .now else { return false }
-            guard !alarm.isPaused else { return false }
-
-            changed = true
-            return true
-        }
-
-        if changed {
-            saveAlarms()
-        }
-    }
+    // cleanupStaleAlarms removed — every alarm that fires goes through
+    // StopIntent → pendingDisarm → completeDisarmChallenge → state machine,
+    // which handles deletion/re-arm. No cleanup needed on the hot path.
 
     // MARK: - Wake-Up Check Helpers
 

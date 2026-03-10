@@ -1,0 +1,68 @@
+import AlarmKit
+import Foundation
+import os
+
+@MainActor
+final class ForceCloseAlarmManager {
+    private static let logger = Logger(subsystem: "com.openalarm", category: "ForceCloseAlarm")
+
+    private let alarmManager: AlarmManager
+    private var timer: Timer?
+    private var currentForceCloseAlarmID: UUID?
+    private let mainAlarm: AlarmDefinition
+
+    private static let forceCloseAlarmIDKey = "OPENALARM_FORCE_CLOSE_ALARM_ID"
+
+    init(alarm: AlarmDefinition, alarmManager: AlarmManager = .shared) {
+        self.mainAlarm = alarm
+        self.alarmManager = alarmManager
+    }
+
+    func start() {
+        scheduleNextForceCloseAlarm()
+        timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.scheduleNextForceCloseAlarm()
+            }
+        }
+    }
+
+    func stop() {
+        timer?.invalidate()
+        timer = nil
+        cancelCurrentForceCloseAlarm()
+    }
+
+    private func scheduleNextForceCloseAlarm() {
+        let newID = UUID()
+        let fireDate = Date.now.addingTimeInterval(20)
+        let config = AlarmConfigurationBuilder.makeForceCloseAlarmConfiguration(for: mainAlarm, fireAt: fireDate)
+
+        Task {
+            _ = try? await alarmManager.schedule(id: newID, configuration: config)
+
+            // Cancel previous after new one is scheduled (no gap)
+            if let previousID = currentForceCloseAlarmID {
+                try? alarmManager.stop(id: previousID)
+                try? alarmManager.cancel(id: previousID)
+            }
+
+            currentForceCloseAlarmID = newID
+            UserDefaults.standard.set(newID.uuidString, forKey: Self.forceCloseAlarmIDKey)
+        }
+    }
+
+    private func cancelCurrentForceCloseAlarm() {
+        if let id = currentForceCloseAlarmID {
+            try? alarmManager.stop(id: id)
+            try? alarmManager.cancel(id: id)
+        }
+        currentForceCloseAlarmID = nil
+        UserDefaults.standard.removeObject(forKey: Self.forceCloseAlarmIDKey)
+    }
+
+    static func loadPersistedForceCloseAlarmID() -> UUID? {
+        guard let str = UserDefaults.standard.string(forKey: forceCloseAlarmIDKey) else { return nil }
+        return UUID(uuidString: str)
+    }
+}

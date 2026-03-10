@@ -38,6 +38,16 @@
 		AA000001AAAA00000000000B /* AlarmSchedulingCoreTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002AAAA00000000000B /* AlarmSchedulingCoreTypes.swift */; };
 		AA000001AAAA000000000008 /* StopIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002AAAA000000000008 /* StopIntent.swift */; };
 		AA000001AAAA000000000009 /* SnoozeIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002AAAA000000000009 /* SnoozeIntent.swift */; };
+		AA000001AAAA000000000010 /* TaskModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002AAAA000000000010 /* TaskModels.swift */; };
+		AA000001AAAA000000000011 /* DummySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002AAAA000000000011 /* DummySettingsView.swift */; };
+		AA000001AAAA000000000012 /* DummyTaskView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002AAAA000000000012 /* DummyTaskView.swift */; };
+		AA000001AAAA000000000013 /* MathProblemGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002AAAA000000000013 /* MathProblemGenerator.swift */; };
+		AA000001AAAA000000000014 /* MathTaskView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002AAAA000000000014 /* MathTaskView.swift */; };
+		AA000001AAAA000000000015 /* MathSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002AAAA000000000015 /* MathSettingsView.swift */; };
+		AA000001AAAA000000000016 /* TaskSoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002AAAA000000000016 /* TaskSoundManager.swift */; };
+		AA000001AAAA000000000017 /* ForceCloseAlarmManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002AAAA000000000017 /* ForceCloseAlarmManager.swift */; };
+		AA000001AAAA000000000018 /* TaskContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002AAAA000000000018 /* TaskContainerView.swift */; };
+		AA000001AAAA000000000019 /* TaskPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002AAAA000000000019 /* TaskPickerView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -87,6 +97,16 @@
 		AA000002AAAA00000000000B /* AlarmSchedulingCoreTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmSchedulingCoreTypes.swift; sourceTree = "<group>"; };
 		AA000002AAAA000000000008 /* StopIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StopIntent.swift; sourceTree = "<group>"; };
 		AA000002AAAA000000000009 /* SnoozeIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnoozeIntent.swift; sourceTree = "<group>"; };
+		AA000002AAAA000000000010 /* TaskModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskModels.swift; sourceTree = "<group>"; };
+		AA000002AAAA000000000011 /* DummySettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DummySettingsView.swift; sourceTree = "<group>"; };
+		AA000002AAAA000000000012 /* DummyTaskView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DummyTaskView.swift; sourceTree = "<group>"; };
+		AA000002AAAA000000000013 /* MathProblemGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathProblemGenerator.swift; sourceTree = "<group>"; };
+		AA000002AAAA000000000014 /* MathTaskView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathTaskView.swift; sourceTree = "<group>"; };
+		AA000002AAAA000000000015 /* MathSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathSettingsView.swift; sourceTree = "<group>"; };
+		AA000002AAAA000000000016 /* TaskSoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSoundManager.swift; sourceTree = "<group>"; };
+		AA000002AAAA000000000017 /* ForceCloseAlarmManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForceCloseAlarmManager.swift; sourceTree = "<group>"; };
+		AA000002AAAA000000000018 /* TaskContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskContainerView.swift; sourceTree = "<group>"; };
+		AA000002AAAA000000000019 /* TaskPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskPickerView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -228,6 +248,47 @@
 			path = OpenAlarm;
 			sourceTree = "<group>";
 		};
+		AA000003AAAA000000000020 /* Tasks */ = {
+			isa = PBXGroup;
+			children = (
+				AA000003AAAA000000000021 /* Challenges */,
+				AA000002AAAA000000000018 /* TaskContainerView.swift */,
+				AA000002AAAA000000000010 /* TaskModels.swift */,
+				AA000002AAAA000000000019 /* TaskPickerView.swift */,
+				AA000002AAAA000000000016 /* TaskSoundManager.swift */,
+				AA000002AAAA000000000017 /* ForceCloseAlarmManager.swift */,
+			);
+			path = Tasks;
+			sourceTree = "<group>";
+		};
+		AA000003AAAA000000000021 /* Challenges */ = {
+			isa = PBXGroup;
+			children = (
+				AA000003AAAA000000000022 /* Dummy */,
+				AA000003AAAA000000000023 /* Math */,
+			);
+			path = Challenges;
+			sourceTree = "<group>";
+		};
+		AA000003AAAA000000000022 /* Dummy */ = {
+			isa = PBXGroup;
+			children = (
+				AA000002AAAA000000000011 /* DummySettingsView.swift */,
+				AA000002AAAA000000000012 /* DummyTaskView.swift */,
+			);
+			path = Dummy;
+			sourceTree = "<group>";
+		};
+		AA000003AAAA000000000023 /* Math */ = {
+			isa = PBXGroup;
+			children = (
+				AA000002AAAA000000000013 /* MathProblemGenerator.swift */,
+				AA000002AAAA000000000015 /* MathSettingsView.swift */,
+				AA000002AAAA000000000014 /* MathTaskView.swift */,
+			);
+			path = Math;
+			sourceTree = "<group>";
+		};
 		BD853A1B3783B54238C796B0 /* Screens */ = {
 			isa = PBXGroup;
 			children = (
@@ -235,6 +296,7 @@
 				0A8CE3FB687201507588590D /* Nap */,
 				21C855E76DAE2E6C1AEC02D8 /* Onboarding */,
 				D0AF9828ACEDF8EBACCD6C99 /* Settings */,
+				AA000003AAAA000000000020 /* Tasks */,
 				85F1AF767BAAACB99F6F07F7 /* WakeUpCheck */,
 			);
 			path = Screens;
@@ -386,6 +448,16 @@
 				AA000001AAAA000000000009 /* SnoozeIntent.swift in Sources */,
 				AA000001AAAA000000000008 /* StopIntent.swift in Sources */,
 				1B1488ECC64F591938DEA880 /* WakeUpCheckConfirmationView.swift in Sources */,
+				AA000001AAAA000000000010 /* TaskModels.swift in Sources */,
+				AA000001AAAA000000000011 /* DummySettingsView.swift in Sources */,
+				AA000001AAAA000000000012 /* DummyTaskView.swift in Sources */,
+				AA000001AAAA000000000013 /* MathProblemGenerator.swift in Sources */,
+				AA000001AAAA000000000014 /* MathTaskView.swift in Sources */,
+				AA000001AAAA000000000015 /* MathSettingsView.swift in Sources */,
+				AA000001AAAA000000000016 /* TaskSoundManager.swift in Sources */,
+				AA000001AAAA000000000017 /* ForceCloseAlarmManager.swift in Sources */,
+				AA000001AAAA000000000018 /* TaskContainerView.swift in Sources */,
+				AA000001AAAA000000000019 /* TaskPickerView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
