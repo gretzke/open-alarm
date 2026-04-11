@@ -27,7 +27,12 @@ struct SnoozeIntent: LiveActivityIntent {
         let defaultSharedSettings = persistence.loadDefaultSharedSettings()
         var alarms = persistence.loadUserAlarms()
 
-        guard let index = alarms.firstIndex(where: { $0.id == id }) else {
+        // Look up by direct ID first, then by bridge ID
+        var index = alarms.firstIndex(where: { $0.id == id })
+        if index == nil {
+            index = alarms.firstIndex(where: { $0.activeOverride?.bridgeAlarmIDs.contains(id) == true })
+        }
+        guard let index else {
             try? AlarmManager.shared.stop(id: id)
             return .result()
         }
@@ -57,11 +62,22 @@ struct SnoozeIntent: LiveActivityIntent {
         alarms[index] = alarm
         persistence.saveUserAlarms(alarms)
 
-        let config = AlarmConfigurationBuilder.makeConfiguration(
-            for: alarm,
-            schedule: .fixed(snoozeDate),
-            defaultSharedSettings: effectiveDefaults
-        )
+        let isBridgeAlarm = alarm.activeOverride?.bridgeAlarmIDs.contains(id) == true
+        let config: AlarmManager.AlarmConfiguration<OpenAlarmMetadata>
+        if isBridgeAlarm {
+            config = AlarmConfigurationBuilder.makeBridgeConfiguration(
+                for: alarm,
+                bridgeID: id,
+                schedule: .fixed(snoozeDate),
+                defaultSharedSettings: effectiveDefaults
+            )
+        } else {
+            config = AlarmConfigurationBuilder.makeConfiguration(
+                for: alarm,
+                schedule: .fixed(snoozeDate),
+                defaultSharedSettings: effectiveDefaults
+            )
+        }
 
         // Stop first, cancel, then schedule fresh
         try? AlarmManager.shared.stop(id: id)

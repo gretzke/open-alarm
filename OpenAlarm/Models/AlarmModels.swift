@@ -424,7 +424,7 @@ struct AlarmDraft: Equatable {
             settingsMode: resolvedSettingsMode,
             nextTriggerOverrideDate: nil,
             isEnabled: true,
-            skipNextUntilDate: nil,
+            activeOverride: nil,
             snoozeCount: 0,
             lifecycleState: .scheduled,
             createdAt: existingCreatedAt ?? .now,

@@ -20,7 +20,7 @@ struct AppRootView: View {
         .preferredColorScheme(.dark)
         .onAppear {
             onboardingEngine.handleAppOpened()
-            alarmStore.handleAppOpened()
+            Task { await alarmStore.handleAppOpened() }
             evaluateWakeCheckPermissionGuard()
         }
         .onChange(of: scenePhase) { _, newPhase in
@@ -28,7 +28,7 @@ struct AppRootView: View {
                 return
             }
             onboardingEngine.handleAppOpened()
-            alarmStore.handleAppOpened()
+            Task { await alarmStore.handleAppOpened() }
             evaluateWakeCheckPermissionGuard()
         }
         .fullScreenCover(item: $alarmStore.disarmPresentation) { presentation in

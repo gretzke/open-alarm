@@ -19,6 +19,19 @@ final class AlarmStateMachineTests: XCTestCase {
         )
     }
 
+    private func makeOverrideAlarm(
+        bridgeAlarmIDs: [UUID],
+        repeatDays: [AlarmWeekday] = [.monday, .wednesday, .friday]
+    ) -> AlarmDefinition {
+        var alarm = makeAlarm(repeatDays: repeatDays, deleteAfterUse: false)
+        alarm.activeOverride = OverrideState(
+            kind: .modifyNext,
+            bridgeAlarmIDs: bridgeAlarmIDs,
+            restoreAnchorDate: .now
+        )
+        return alarm
+    }
+
     private let defaultSettings = SharedAlarmSettings.featureDefaults
 
     private var wakeCheckSettings: SharedAlarmSettings {
@@ -441,5 +454,138 @@ final class AlarmStateMachineTests: XCTestCase {
         XCTAssertEqual(result.phase, .idle)
         XCTAssertTrue(result.effects.contains(.cancelAlarmKit(ids: [alarm.id])))
         XCTAssertTrue(result.effects.contains(.deleteAlarm(alarm.id)))
+    }
+
+    // MARK: - Override
+
+    func testOverrideActivatedFromScheduled() {
+        let alarm = makeAlarm(repeatDays: [.monday, .wednesday, .friday])
+        let bridgeIDs: Set<UUID> = [UUID(), UUID(), UUID(), UUID(), UUID()]
+
+        let result = AlarmStateMachine.transition(
+            current: .scheduled(alarmKitIDs: [alarm.id]),
+            event: .overrideActivated(bridgeAlarmIDs: bridgeIDs),
+            alarm: alarm,
+            resolvedSettings: defaultSettings
+        )
+
+        XCTAssertEqual(result.phase, .overrideActive(bridgeAlarmIDs: bridgeIDs))
+        XCTAssertTrue(result.effects.contains(.cancelAlarmKit(ids: [alarm.id])))
+    }
+
+    func testOverrideRestoredCancelsBridgesAndSchedulesCanonical() {
+        let alarm = makeAlarm(repeatDays: [.monday, .wednesday, .friday])
+        let bridgeIDs: Set<UUID> = [UUID(), UUID(), UUID()]
+
+        let result = AlarmStateMachine.transition(
+            current: .overrideActive(bridgeAlarmIDs: bridgeIDs),
+            event: .overrideRestored,
+            alarm: alarm,
+            resolvedSettings: defaultSettings
+        )
+
+        XCTAssertEqual(result.phase, .scheduled(alarmKitIDs: [alarm.id]))
+        XCTAssertTrue(result.effects.contains(.cancelAlarmKit(ids: bridgeIDs)))
+        XCTAssertTrue(result.effects.contains(
+            .scheduleAlarmKit(alarmID: alarm.id, trigger: alarm.trigger, recurrence: alarm.recurrence)
+        ))
+    }
+
+    func testBridgeAlarmFiresTransitionsToAlerting() {
+        let alarm = makeAlarm(repeatDays: [.monday, .wednesday, .friday])
+        let bridgeID = UUID()
+        let bridgeIDs: Set<UUID> = [bridgeID, UUID(), UUID()]
+
+        let result = AlarmStateMachine.transition(
+            current: .overrideActive(bridgeAlarmIDs: bridgeIDs),
+            event: .alarmKitStateChanged(alarmKitID: bridgeID, newState: .alerting),
+            alarm: alarm,
+            resolvedSettings: defaultSettings
+        )
+
+        XCTAssertEqual(result.phase, .alerting(alarmKitID: bridgeID))
+    }
+
+    func testChallengeCompletedBridgeAlarmReturnsToOverrideActive() {
+        let bridgeID = UUID()
+        let remainingBridgeID = UUID()
+        let alarm = makeOverrideAlarm(bridgeAlarmIDs: [bridgeID, remainingBridgeID])
+
+        let result = AlarmStateMachine.transition(
+            current: .awaitingDisarmChallenge(alarmKitID: bridgeID),
+            event: .challengeCompleted(alarmKitID: bridgeID),
+            alarm: alarm,
+            resolvedSettings: defaultSettings
+        )
+
+        XCTAssertEqual(result.phase, .overrideActive(bridgeAlarmIDs: [remainingBridgeID]))
+        XCTAssertEqual(result.effects, [.cancelAlarmKit(ids: [bridgeID])])
+        XCTAssertFalse(result.effects.contains(
+            .scheduleAlarmKit(alarmID: alarm.id, trigger: alarm.trigger, recurrence: alarm.recurrence)
+        ))
+    }
+
+    func testWakeCheckConfirmedBridgeAlarmReturnsToOverrideActive() {
+        let bridgeIDs = [UUID(), UUID()]
+        let alarm = makeOverrideAlarm(bridgeAlarmIDs: bridgeIDs)
+
+        let result = AlarmStateMachine.transition(
+            current: .awaitingWakeCheck,
+            event: .wakeCheckConfirmed,
+            alarm: alarm,
+            resolvedSettings: wakeCheckSettings
+        )
+
+        XCTAssertEqual(result.phase, .overrideActive(bridgeAlarmIDs: Set(bridgeIDs)))
+        XCTAssertEqual(result.effects, [])
+    }
+
+    func testDisableFromOverrideActiveCancelsBridges() {
+        let alarm = makeAlarm(repeatDays: [.monday, .wednesday, .friday])
+        let bridgeIDs: Set<UUID> = [UUID(), UUID(), UUID()]
+
+        let result = AlarmStateMachine.transition(
+            current: .overrideActive(bridgeAlarmIDs: bridgeIDs),
+            event: .disabled,
+            alarm: alarm,
+            resolvedSettings: defaultSettings
+        )
+
+        XCTAssertEqual(result.phase, .idle)
+        XCTAssertTrue(result.effects.contains(.cancelAlarmKit(ids: bridgeIDs)))
+    }
+
+    func testDeleteFromOverrideActiveCancelsBridgesAndDeletes() {
+        let alarm = makeAlarm(repeatDays: [.monday, .wednesday, .friday])
+        let bridgeIDs: Set<UUID> = [UUID(), UUID(), UUID()]
+
+        let result = AlarmStateMachine.transition(
+            current: .overrideActive(bridgeAlarmIDs: bridgeIDs),
+            event: .deleted,
+            alarm: alarm,
+            resolvedSettings: defaultSettings
+        )
+
+        XCTAssertEqual(result.phase, .idle)
+        XCTAssertTrue(result.effects.contains(.cancelAlarmKit(ids: bridgeIDs)))
+        XCTAssertTrue(result.effects.contains(.deleteAlarm(alarm.id)))
+    }
+
+    func testUpdatedFromOverrideActiveCancelsBridgesAndReschedules() {
+        let alarm = makeAlarm(repeatDays: [.monday, .wednesday, .friday])
+        let bridgeIDs: Set<UUID> = [UUID(), UUID(), UUID()]
+
+        let result = AlarmStateMachine.transition(
+            current: .overrideActive(bridgeAlarmIDs: bridgeIDs),
+            event: .updated,
+            alarm: alarm,
+            resolvedSettings: defaultSettings
+        )
+
+        XCTAssertEqual(result.phase, .scheduled(alarmKitIDs: [alarm.id]))
+        XCTAssertTrue(result.effects.contains(.cancelAlarmKit(ids: bridgeIDs)))
+        XCTAssertTrue(result.effects.contains(
+            .scheduleAlarmKit(alarmID: alarm.id, trigger: alarm.trigger, recurrence: alarm.recurrence)
+        ))
     }
 }

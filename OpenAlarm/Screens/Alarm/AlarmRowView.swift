@@ -33,10 +33,32 @@ struct AlarmRowView: View {
         return calendar.date(from: components) ?? now
     }
 
+    private var activeOverrideDate: Date? {
+        guard let overrideDate = alarm.nextTriggerOverrideDate, overrideDate > now else {
+            return nil
+        }
+        return overrideDate
+    }
+
+    private var isSkippingNextDisplayActive: Bool {
+        guard alarm.isSkippingNext,
+              let restoreAnchorDate = alarm.activeOverride?.restoreAnchorDate else {
+            return false
+        }
+        return now < restoreAnchorDate
+    }
+
+    private var effectiveToggleIsOn: Bool {
+        if isSkippingNextDisplayActive {
+            return false
+        }
+        return alarm.isEnabled || alarm.activeOverride?.kind == .skipNext
+    }
+
     private var showsOverrideTime: Bool {
         guard alarm.isRepeating,
               alarm.isEnabled,
-              let overrideDate = alarm.nextTriggerOverrideDate else {
+              let overrideDate = activeOverrideDate else {
             return false
         }
 
@@ -71,18 +93,22 @@ struct AlarmRowView: View {
         }
 
         if alarm.isRepeating {
-            if alarm.isSkippingNext, let skipUntil = alarm.skipNextUntilDate {
+            if isSkippingNextDisplayActive, let skipUntil = alarm.activeOverride?.restoreAnchorDate {
                 return nextRepeatingDate(after: skipUntil)
             }
 
-            if let overrideDate = alarm.nextTriggerOverrideDate, overrideDate > now {
+            if let overrideDate = activeOverrideDate {
                 return overrideDate
+            }
+
+             if let override = alarm.activeOverride, override.kind == .modifyNext {
+                return nextRepeatingDate(after: override.restoreAnchorDate)
             }
 
             return nextRepeatingDate(after: now)
         }
 
-        if let overrideDate = alarm.nextTriggerOverrideDate, overrideDate > now {
+        if let overrideDate = activeOverrideDate {
             return overrideDate
         }
 
@@ -217,7 +243,7 @@ struct AlarmRowView: View {
 
     private var toggleWithPopover: some View {
         Toggle(isOn: Binding(
-            get: { alarm.isEnabled },
+            get: { effectiveToggleIsOn },
             set: { onToggle($0) }
         )) {
             EmptyView()
@@ -253,9 +279,9 @@ struct AlarmRowView: View {
 
     @ViewBuilder
     private var statusStrip: some View {
-        if alarm.isSkippingNext || nextRunText != nil || hasRepeatingDays {
+        if isSkippingNextDisplayActive || nextRunText != nil || hasRepeatingDays {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
-                if alarm.isSkippingNext {
+                if isSkippingNextDisplayActive {
                     Text(L10n.alarmRowSkippingNextStatus)
                         .font(.caption)
                         .foregroundStyle(OAColor.textSecondary)

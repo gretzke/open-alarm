@@ -135,10 +135,10 @@ final class AlarmStore: ObservableObject {
 
     // MARK: - App Lifecycle
 
-    func handleAppOpened() {
+    func handleAppOpened() async {
         permissionStatus = permissionService.currentStatus()
         load()
-        refreshRemoteState()
+        await refreshRemoteState()
         loadWakeCheckSessionsFromPersistence()
         rebuildRuntimePhases()
         processPendingWakeCheckConfirmations()
@@ -146,10 +146,10 @@ final class AlarmStore: ObservableObject {
         processPendingDisarmChallenges()
     }
 
-    private func refreshRemoteState() {
+    private func refreshRemoteState() async {
         do {
             let remote = try alarmManager.alarms
-            applyRemoteAlarms(remote)
+            await applyRemoteAlarms(remote)
         } catch {
             remoteStates = [:]
         }
@@ -195,6 +195,19 @@ final class AlarmStore: ObservableObject {
         )
 
         alarms[index] = updated
+
+        // Any schedule change clears overrides
+        alarms[index].activeOverride = nil
+        alarms[index].nextTriggerOverrideDate = nil
+
+        // Cancel any active bridge alarms from the old alarm
+        if let override = alarm.activeOverride {
+            for bridgeID in override.bridgeAlarmIDs {
+                try? alarmManager.stop(id: bridgeID)
+                try? alarmManager.cancel(id: bridgeID)
+            }
+        }
+
         alarms = sortAlarms(alarms)
         saveAlarms()
 
@@ -204,7 +217,66 @@ final class AlarmStore: ObservableObject {
     // MARK: - Update Next Alarm Occurrence
 
     func updateNextAlarmOccurrence(_ alarm: UserAlarm, with draft: AlarmDraft) async throws {
-        // NOOP: Phase 5
+        if permissionStatus != .authorized {
+            let status = await requestPermissionIfNeeded()
+            guard status == .authorized else {
+                throw AlarmStoreError.permissionDenied
+            }
+        }
+
+        guard let index = alarms.firstIndex(where: { $0.id == alarm.id }) else { return }
+        guard alarm.isRepeating else { return }
+
+        let calendar = Calendar.autoupdatingCurrent
+        let draftComponents = calendar.dateComponents([.hour, .minute], from: draft.time)
+        let modifiedHour = draftComponents.hour ?? alarm.hour
+        let modifiedMinute = draftComponents.minute ?? alarm.minute
+
+        let result = BridgeDateCalculator.bridgeDates(
+            hour: alarm.hour, minute: alarm.minute,
+            repeatDays: alarm.repeatDays,
+            overrideKind: .modifyNext,
+            modifiedTime: (hour: modifiedHour, minute: modifiedMinute),
+            referenceDate: .now,
+            calendar: calendar
+        )
+
+        // Cancel existing override if any
+        if let existingOverride = alarms[index].activeOverride {
+            for bridgeID in existingOverride.bridgeAlarmIDs {
+                try? alarmManager.stop(id: bridgeID)
+                try? alarmManager.cancel(id: bridgeID)
+            }
+        }
+
+        let bridgeIDs = (0..<5).map { _ in UUID() }
+
+        alarms[index].activeOverride = OverrideState(
+            kind: .modifyNext,
+            bridgeAlarmIDs: bridgeIDs,
+            restoreAnchorDate: result.restoreAnchorDate
+        )
+        alarms[index].nextTriggerOverrideDate = result.bridgeDates[0]  // the modified first bridge date
+        alarms[index].snoozeCount = 0
+        alarms[index].updatedAt = .now
+        alarms = sortAlarms(alarms)
+        saveAlarms()
+
+        // Cancel canonical schedule
+        try? alarmManager.stop(id: alarm.id)
+        try? alarmManager.cancel(id: alarm.id)
+
+        // Schedule bridge alarms
+        let parentAlarm = alarms.first(where: { $0.id == alarm.id }) ?? alarm
+        for (i, bridgeID) in bridgeIDs.enumerated() {
+            await scheduleBridgeAlarm(
+                bridgeID: bridgeID,
+                trigger: .fixed(result.bridgeDates[i]),
+                parentAlarm: parentAlarm
+            )
+        }
+
+        runtimePhases[alarm.id] = .overrideActive(bridgeAlarmIDs: Set(bridgeIDs))
     }
 
     // MARK: - Delete Alarm
@@ -272,10 +344,28 @@ final class AlarmStore: ObservableObject {
 
         guard let index = alarms.firstIndex(where: { $0.id == alarm.id }) else { return }
 
-        // skipNext is Phase 5 — for now treat as full disable
+        // Un-skip: toggling on while skip-next is active
+        if enabled, alarms[index].activeOverride?.kind == .skipNext {
+            await clearOverrideAndRestore(alarmIndex: index)
+            return
+        }
+
+        // Skip-next: only for repeating alarms
+        if !enabled, skipNext == true, alarm.isRepeating {
+            await activateSkipNext(alarmIndex: index)
+            return
+        }
+
+        // Normal enable/disable
         alarms[index].isEnabled = enabled
         alarms[index].snoozeCount = 0
         alarms[index].updatedAt = .now
+
+        // If disabling and there's an active override, clear it
+        if !enabled, alarms[index].activeOverride != nil {
+            alarms[index].activeOverride = nil
+            alarms[index].nextTriggerOverrideDate = nil
+        }
 
         if enabled {
             alarms[index].lifecycleState = .scheduled
@@ -385,7 +475,7 @@ final class AlarmStore: ObservableObject {
             settingsMode: .custom(sharedSettings),
             nextTriggerOverrideDate: nil,
             isEnabled: true,
-            skipNextUntilDate: nil,
+            activeOverride: nil,
             snoozeCount: 0,
             lifecycleState: .scheduled,
             createdAt: .now,
@@ -582,6 +672,15 @@ final class AlarmStore: ObservableObject {
                 saveAlarms()
             }
         }
+
+        if case .overrideActive = result.phase {
+            if let index = alarms.firstIndex(where: { $0.id == alarmID }) {
+                alarms[index].snoozeCount = 0
+                alarms[index].lifecycleState = .scheduled
+                alarms[index].updatedAt = .now
+                saveAlarms()
+            }
+        }
     }
 
     /// Tracks which alarm IDs have already received a notification-tap grace
@@ -662,11 +761,11 @@ final class AlarmStore: ObservableObject {
         guard disarmPresentation == nil else { return }
 
         var pendingIDs = persistence.loadPendingDisarmAlarmIDs()
-        guard let alarmID = pendingIDs.first else { return }
+        guard let alarmKitID = pendingIDs.first else { return }
 
-        // Clean up stale IDs for alarms that no longer exist
-        guard let index = alarms.firstIndex(where: { $0.id == alarmID }) else {
-            pendingIDs.remove(alarmID)
+        // Resolve parent alarm — alarmKitID may be a bridge UUID
+        guard let (_, index) = resolveParentAlarm(for: alarmKitID) else {
+            pendingIDs.remove(alarmKitID)
             persistence.savePendingDisarmAlarmIDs(pendingIDs)
             return
         }
@@ -678,22 +777,36 @@ final class AlarmStore: ObservableObject {
             alarms[index].snoozeCount = 0
             alarms[index].updatedAt = .now
             saveAlarms()
-            runtimePhases[alarmID] = .awaitingDisarmChallenge(alarmKitID: alarmID)
+            runtimePhases[alarms[index].id] = .awaitingDisarmChallenge(alarmKitID: alarmKitID)
         }
 
         let alarm = alarms[index]
         let settings = resolvedSettingsForAlarm(alarm)
         disarmPresentation = DisarmPresentation(
-            id: alarmID,
+            id: alarms[index].id,
             alarm: alarm,
             tasks: settings.tasks
         )
     }
 
     func completeDisarmChallenge(for alarmID: UUID) async {
-        // Remove from pending disarm
+        let completedAlarmKitID: UUID
+        if case .awaitingDisarmChallenge(let activeAlarmKitID) = runtimePhases[alarmID] {
+            completedAlarmKitID = activeAlarmKitID
+        } else {
+            completedAlarmKitID = alarmID
+        }
+
+        // Remove from pending disarm — pending set may contain bridge UUID or parent ID
         var pendingIDs = persistence.loadPendingDisarmAlarmIDs()
         pendingIDs.remove(alarmID)
+        pendingIDs.remove(completedAlarmKitID)
+        // Also remove any bridge IDs for this alarm
+        if let override = alarms.first(where: { $0.id == alarmID })?.activeOverride {
+            for bridgeID in override.bridgeAlarmIDs {
+                pendingIDs.remove(bridgeID)
+            }
+        }
         persistence.savePendingDisarmAlarmIDs(pendingIDs)
 
         // Dismiss the UI
@@ -705,7 +818,7 @@ final class AlarmStore: ObservableObject {
         let settings = resolvedSettingsForAlarm(alarm)
 
         // Process through state machine
-        await process(event: .challengeCompleted(alarmKitID: alarmID), for: alarmID)
+        await process(event: .challengeCompleted(alarmKitID: completedAlarmKitID), for: alarmID)
 
         let phase = runtimePhases[alarmID]
 
@@ -734,6 +847,21 @@ final class AlarmStore: ObservableObject {
                 alarms[index].updatedAt = .now
                 saveAlarms()
             }
+        }
+
+        if case .overrideActive = phase, let index = alarms.firstIndex(where: { $0.id == alarmID }) {
+            alarms[index].snoozeCount = 0
+            alarms[index].lifecycleState = .scheduled
+            alarms[index].updatedAt = .now
+            saveAlarms()
+        }
+
+        // Refresh bridge runtime IDs after returning to override-active.
+        if case .overrideActive = phase, let override = alarms.first(where: { $0.id == alarmID })?.activeOverride {
+            let runtimeAlarms = (try? alarmManager.alarms) ?? []
+            let runtimeIDs = Set(runtimeAlarms.map { $0.id })
+            let liveBridgeIDs = Set(override.bridgeAlarmIDs.filter { runtimeIDs.contains($0) })
+            runtimePhases[alarmID] = .overrideActive(bridgeAlarmIDs: liveBridgeIDs)
         }
 
         // Process next pending disarm if any
@@ -855,19 +983,73 @@ final class AlarmStore: ObservableObject {
     /// Force-reschedule: stops and cancels before scheduling.
     /// Used when updating config on an already-active alarm.
     private func forceRescheduleAlarm(_ alarm: UserAlarm) async {
-        try? alarmManager.stop(id: alarm.id)
-        try? alarmManager.cancel(id: alarm.id)
+        if let override = alarm.activeOverride {
+            // Cancel all existing bridge alarms
+            for bridgeID in override.bridgeAlarmIDs {
+                try? alarmManager.stop(id: bridgeID)
+                try? alarmManager.cancel(id: bridgeID)
+            }
 
-        let runtimeSchedule = AlarmScheduleResolver.runtimeSchedule(for: alarm)
-        let config = makeConfiguration(for: alarm, schedule: runtimeSchedule)
-        do {
-            _ = try await alarmManager.schedule(id: alarm.id, configuration: config)
-        } catch {
-            Self.logger.error("Force reschedule failed for \(alarm.id): \(error.localizedDescription)")
+            // Recalculate bridge dates and create fresh UUIDs
+            let calendar = Calendar.autoupdatingCurrent
+            let modifiedTime: (hour: Int, minute: Int)? = override.kind == .modifyNext
+                ? alarm.nextTriggerOverrideDate.map { date in
+                    (calendar.component(.hour, from: date), calendar.component(.minute, from: date))
+                }
+                : nil
+
+            let result = BridgeDateCalculator.bridgeDates(
+                hour: alarm.hour, minute: alarm.minute,
+                repeatDays: alarm.repeatDays,
+                overrideKind: override.kind,
+                modifiedTime: modifiedTime,
+                referenceDate: .now,
+                calendar: calendar
+            )
+
+            let newBridgeIDs = (0..<5).map { _ in UUID() }
+            var updatedAlarm = alarm
+            updatedAlarm.activeOverride = OverrideState(
+                kind: override.kind,
+                bridgeAlarmIDs: newBridgeIDs,
+                restoreAnchorDate: override.restoreAnchorDate
+            )
+
+            if let index = alarms.firstIndex(where: { $0.id == alarm.id }) {
+                alarms[index] = updatedAlarm
+                saveAlarms()
+            }
+
+            runtimePhases[alarm.id] = .overrideActive(bridgeAlarmIDs: Set(newBridgeIDs))
+
+            for (i, bridgeID) in newBridgeIDs.enumerated() {
+                await scheduleBridgeAlarm(
+                    bridgeID: bridgeID,
+                    trigger: .fixed(result.bridgeDates[i]),
+                    parentAlarm: updatedAlarm
+                )
+            }
+        } else {
+            // Normal reschedule (existing path)
+            try? alarmManager.stop(id: alarm.id)
+            try? alarmManager.cancel(id: alarm.id)
+
+            let runtimeSchedule = AlarmScheduleResolver.runtimeSchedule(for: alarm)
+            let config = makeConfiguration(for: alarm, schedule: runtimeSchedule)
+            do {
+                _ = try await alarmManager.schedule(id: alarm.id, configuration: config)
+            } catch {
+                Self.logger.error("Force reschedule failed for \(alarm.id): \(error.localizedDescription)")
+            }
         }
     }
 
     private func scheduleAlarm(_ alarm: UserAlarm) async {
+        if alarm.activeOverride != nil {
+            Self.logger.warning("Skipping canonical schedule for \(alarm.id) because override is still active")
+            return
+        }
+
         let runtimeSchedule = AlarmScheduleResolver.runtimeSchedule(for: alarm)
         let config = makeConfiguration(for: alarm, schedule: runtimeSchedule)
 
@@ -881,6 +1063,104 @@ final class AlarmStore: ObservableObject {
                 _ = try await alarmManager.schedule(id: alarm.id, configuration: config)
             } catch {
                 Self.logger.error("Retry schedule failed for \(alarm.id): \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func activateSkipNext(alarmIndex index: Int) async {
+        let alarm = alarms[index]
+        let calendar = Calendar.autoupdatingCurrent
+
+        let result = BridgeDateCalculator.bridgeDates(
+            hour: alarm.hour, minute: alarm.minute,
+            repeatDays: alarm.repeatDays,
+            overrideKind: .skipNext,
+            modifiedTime: nil,
+            referenceDate: .now,
+            calendar: calendar
+        )
+
+        let bridgeIDs = (0..<5).map { _ in UUID() }
+
+        if let existingOverride = alarms[index].activeOverride {
+            for bridgeID in existingOverride.bridgeAlarmIDs {
+                try? alarmManager.stop(id: bridgeID)
+                try? alarmManager.cancel(id: bridgeID)
+            }
+        }
+
+        alarms[index].isEnabled = false
+        alarms[index].snoozeCount = 0
+        alarms[index].activeOverride = OverrideState(
+            kind: .skipNext,
+            bridgeAlarmIDs: bridgeIDs,
+            restoreAnchorDate: result.restoreAnchorDate
+        )
+        alarms[index].nextTriggerOverrideDate = nil
+        alarms[index].updatedAt = .now
+        alarms = sortAlarms(alarms)
+        saveAlarms()
+
+        // Cancel canonical schedule
+        try? alarmManager.stop(id: alarm.id)
+        try? alarmManager.cancel(id: alarm.id)
+
+        // Schedule bridge alarms
+        let parentAlarm = alarms.first(where: { $0.id == alarm.id }) ?? alarm
+        for (i, bridgeID) in bridgeIDs.enumerated() {
+            await scheduleBridgeAlarm(
+                bridgeID: bridgeID,
+                trigger: .fixed(result.bridgeDates[i]),
+                parentAlarm: parentAlarm
+            )
+        }
+
+        runtimePhases[alarm.id] = .overrideActive(bridgeAlarmIDs: Set(bridgeIDs))
+    }
+
+    private func clearOverrideAndRestore(alarmIndex index: Int) async {
+        let alarm = alarms[index]
+
+        // Cancel bridge alarms
+        if let override = alarm.activeOverride {
+            for bridgeID in override.bridgeAlarmIDs {
+                try? alarmManager.stop(id: bridgeID)
+                try? alarmManager.cancel(id: bridgeID)
+            }
+        }
+
+        alarms[index].activeOverride = nil
+        alarms[index].nextTriggerOverrideDate = nil
+        alarms[index].isEnabled = true
+        alarms[index].snoozeCount = 0
+        alarms[index].lifecycleState = .scheduled
+        alarms[index].updatedAt = .now
+        alarms = sortAlarms(alarms)
+        saveAlarms()
+
+        await process(event: .enabled, for: alarm.id)
+    }
+
+    private func scheduleBridgeAlarm(bridgeID: UUID, trigger: AlarmTrigger, parentAlarm: AlarmDefinition) async {
+        guard case .fixed(let date) = trigger else { return }
+
+        let config = AlarmConfigurationBuilder.makeBridgeConfiguration(
+            for: parentAlarm,
+            bridgeID: bridgeID,
+            schedule: .fixed(date),
+            defaultSharedSettings: resolvedDefaultsForAlarm(parentAlarm)
+        )
+
+        do {
+            _ = try await alarmManager.schedule(id: bridgeID, configuration: config)
+        } catch {
+            Self.logger.warning("Bridge schedule failed for \(bridgeID), retrying: \(error.localizedDescription)")
+            try? alarmManager.stop(id: bridgeID)
+            try? alarmManager.cancel(id: bridgeID)
+            do {
+                _ = try await alarmManager.schedule(id: bridgeID, configuration: config)
+            } catch {
+                Self.logger.error("Bridge retry failed for \(bridgeID): \(error.localizedDescription)")
             }
         }
     }
@@ -905,6 +1185,20 @@ final class AlarmStore: ObservableObject {
     /// Returns the fully resolved settings for the given alarm (custom or cascaded defaults).
     private func resolvedSettingsForAlarm(_ alarm: UserAlarm) -> SharedAlarmSettings {
         alarm.resolvedSharedSettings(defaults: resolvedDefaultsForAlarm(alarm))
+    }
+
+    // MARK: - Bridge Alarm Resolution
+
+    /// Resolves the parent alarm for a given AlarmKit ID. Returns the alarm directly if the ID
+    /// matches an alarm's own ID, or scans activeOverride.bridgeAlarmIDs for bridge alarms.
+    private func resolveParentAlarm(for alarmKitID: UUID) -> (alarm: AlarmDefinition, index: Int)? {
+        if let index = alarms.firstIndex(where: { $0.id == alarmKitID }) {
+            return (alarms[index], index)
+        }
+        if let index = alarms.firstIndex(where: { $0.activeOverride?.bridgeAlarmIDs.contains(alarmKitID) == true }) {
+            return (alarms[index], index)
+        }
+        return nil
     }
 
     // MARK: - State Machine
@@ -963,13 +1257,38 @@ final class AlarmStore: ObservableObject {
         }
         let runtimeByID = Dictionary(uniqueKeysWithValues: runtimeAlarms.map { ($0.id, $0) })
 
-        for alarm in alarms {
+        alarmLoop: for alarm in alarms {
             // Persisted lifecycle state takes priority for post-alerting phases.
             // AlarmKit may still report .alerting briefly after StopIntent runs.
             if alarm.lifecycleState == .awaitingDisarmChallenge {
                 runtimePhases[alarm.id] = .awaitingDisarmChallenge(alarmKitID: alarm.id)
             } else if alarm.lifecycleState == .awaitingWakeCheck {
                 runtimePhases[alarm.id] = .awaitingWakeCheck
+            } else if let override = alarm.activeOverride {
+                // Override-active alarms: check bridge IDs in AlarmKit
+                // The canonical alarm.id is NOT in AlarmKit when an override is active —
+                // only bridge IDs are registered.
+                for bridgeID in override.bridgeAlarmIDs {
+                    if let bridgeRuntime = runtimeByID[bridgeID] {
+                        switch bridgeRuntime.state {
+                        case .alerting:
+                            runtimePhases[alarm.id] = .alerting(alarmKitID: bridgeID)
+                            continue alarmLoop
+                        case .paused:
+                            runtimePhases[alarm.id] = .snoozed(alarmKitID: bridgeID)
+                            continue alarmLoop
+                        case .scheduled, .countdown:
+                            break  // bridge is alive, will be collected below
+                        @unknown default:
+                            break
+                        }
+                    }
+                }
+
+                // No bridge in active lifecycle — set to overrideActive with live bridge IDs
+                let liveBridgeIDs = Set(override.bridgeAlarmIDs.filter { runtimeByID[$0] != nil })
+                runtimePhases[alarm.id] = .overrideActive(bridgeAlarmIDs: liveBridgeIDs)
+                continue alarmLoop
             } else if let runtime = runtimeByID[alarm.id] {
                 switch runtime.state {
                 case .alerting:
@@ -1000,12 +1319,12 @@ final class AlarmStore: ObservableObject {
             guard let self else { return }
             for await incoming in alarmManager.alarmUpdates {
                 guard !Task.isCancelled else { return }
-                self.applyRemoteAlarms(incoming)
+                await self.applyRemoteAlarms(incoming)
             }
         }
     }
 
-    private func applyRemoteAlarms(_ incoming: [Alarm]) {
+    private func applyRemoteAlarms(_ incoming: [Alarm]) async {
         // Intents write the truth to persistence. We just reload and sync.
         let persistedAlarms = persistence.loadUserAlarms()
         wakeCheckSessions = persistence.loadWakeCheckSessions()
@@ -1023,11 +1342,62 @@ final class AlarmStore: ObservableObject {
 
         rebuildRuntimePhases()
 
+        // Restore canonical schedule for any overrides whose restore anchor has passed
+        await reconcileOverrides()
+
         // Process any pending wake-check confirmation UI
         processPendingWakeCheckConfirmations()
 
         // Process any pending disarm challenges
         processPendingDisarmChallenges()
+    }
+
+    private func reconcileOverrides() async {
+        let now = Date.now
+
+        for (index, alarm) in alarms.enumerated() {
+            guard let override = alarm.activeOverride else { continue }
+            guard now > override.restoreAnchorDate else { continue }
+
+            // Don't restore if a bridge alarm is mid-lifecycle
+            let phase = runtimePhases[alarm.id] ?? .idle
+            switch phase {
+            case .alerting, .snoozed, .awaitingDisarmChallenge, .awaitingWakeCheck:
+                continue  // bridge in flight, skip until lifecycle completes
+            default:
+                break
+            }
+
+            // Cancel remaining bridge alarms
+            for bridgeID in override.bridgeAlarmIDs {
+                try? alarmManager.stop(id: bridgeID)
+                try? alarmManager.cancel(id: bridgeID)
+            }
+
+            // Restore alarm state
+            alarms[index].activeOverride = nil
+            alarms[index].nextTriggerOverrideDate = nil
+            if alarm.isSkippingNext {
+                alarms[index].isEnabled = true
+            }
+            alarms[index].lifecycleState = .scheduled
+            alarms[index].snoozeCount = 0
+            alarms[index].updatedAt = .now
+
+            // Schedule canonical repeating alarm
+            let restoredAlarm = alarms[index]
+            let runtimeSchedule = AlarmScheduleResolver.runtimeSchedule(for: restoredAlarm)
+            let config = makeConfiguration(for: restoredAlarm, schedule: runtimeSchedule)
+            do {
+                _ = try await alarmManager.schedule(id: restoredAlarm.id, configuration: config)
+                runtimePhases[restoredAlarm.id] = .scheduled(alarmKitIDs: [restoredAlarm.id])
+            } catch {
+                Self.logger.error("Override restore schedule failed for \(restoredAlarm.id): \(error.localizedDescription)")
+            }
+        }
+
+        alarms = sortAlarms(alarms)
+        saveAlarms()
     }
 
     // cleanupStaleAlarms removed — every alarm that fires goes through

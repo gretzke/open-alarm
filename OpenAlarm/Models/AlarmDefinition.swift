@@ -40,6 +40,19 @@ enum SettingsMode: Codable, Equatable, Sendable {
     case custom(SharedAlarmSettings)
 }
 
+// MARK: - Override State
+
+enum OverrideKind: String, Codable, Equatable, Sendable {
+    case skipNext
+    case modifyNext
+}
+
+struct OverrideState: Codable, Equatable, Sendable {
+    var kind: OverrideKind
+    var bridgeAlarmIDs: [UUID]  // ordered by fire date, 5 entries
+    var restoreAnchorDate: Date
+}
+
 // MARK: - Alarm Definition
 
 struct AlarmDefinition: Identifiable, Codable, Equatable, Sendable {
@@ -59,7 +72,7 @@ struct AlarmDefinition: Identifiable, Codable, Equatable, Sendable {
     var snoozeCount: Int
     var lifecycleState: AlarmLifecycleState
     var nextTriggerOverrideDate: Date?
-    var skipNextUntilDate: Date?
+    var activeOverride: OverrideState?
 
     init(
         id: UUID = UUID(),
@@ -71,7 +84,7 @@ struct AlarmDefinition: Identifiable, Codable, Equatable, Sendable {
         settingsMode: SettingsMode = .useDefault,
         nextTriggerOverrideDate: Date? = nil,
         isEnabled: Bool = true,
-        skipNextUntilDate: Date? = nil,
+        activeOverride: OverrideState? = nil,
         snoozeCount: Int = 0,
         lifecycleState: AlarmLifecycleState = .scheduled,
         createdAt: Date = .now,
@@ -91,7 +104,7 @@ struct AlarmDefinition: Identifiable, Codable, Equatable, Sendable {
         self.settingsMode = settingsMode
         self.nextTriggerOverrideDate = nextTriggerOverrideDate
         self.isEnabled = isEnabled
-        self.skipNextUntilDate = skipNextUntilDate
+        self.activeOverride = activeOverride
         self.snoozeCount = snoozeCount
         self.lifecycleState = lifecycleState
         self.createdAt = createdAt
@@ -221,14 +234,16 @@ struct AlarmDefinition: Identifiable, Codable, Equatable, Sendable {
         }
     }
 
-    // MARK: - Skip / Disable
+    // MARK: - Override / Disable
+
+    var isOverrideActive: Bool { activeOverride != nil }
 
     var isSkippingNext: Bool {
-        !isEnabled && skipNextUntilDate != nil
+        !isEnabled && activeOverride?.kind == .skipNext
     }
 
     var isFullyDisabled: Bool {
-        !isEnabled && skipNextUntilDate == nil
+        !isEnabled && activeOverride == nil
     }
 
     // MARK: - Remaining Seconds
@@ -264,7 +279,7 @@ struct AlarmDefinition: Identifiable, Codable, Equatable, Sendable {
             settingsMode: napSettingsMode,
             nextTriggerOverrideDate: nil,
             isEnabled: true,
-            skipNextUntilDate: nil,
+            activeOverride: nil,
             snoozeCount: 0,
             lifecycleState: .scheduled,
             createdAt: now,
@@ -316,7 +331,8 @@ struct AlarmDefinition: Identifiable, Codable, Equatable, Sendable {
         case customSharedSettings
         case nextTriggerOverrideDate
         case isEnabled
-        case skipNextUntilDate
+        case activeOverride
+        case skipNextUntilDate  // legacy, read-only for migration
         case snoozeCount
         case lifecycleState
         case createdAt
@@ -388,7 +404,15 @@ struct AlarmDefinition: Identifiable, Codable, Equatable, Sendable {
 
         nextTriggerOverrideDate = try container.decodeIfPresent(Date.self, forKey: .nextTriggerOverrideDate)
         isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
-        skipNextUntilDate = try container.decodeIfPresent(Date.self, forKey: .skipNextUntilDate)
+        activeOverride = try container.decodeIfPresent(OverrideState.self, forKey: .activeOverride)
+
+        // Legacy migration: if old skipNextUntilDate exists but no activeOverride, clear skip state
+        if activeOverride == nil {
+            let legacySkipUntil = try container.decodeIfPresent(Date.self, forKey: .skipNextUntilDate)
+            if legacySkipUntil != nil {
+                isEnabled = true
+            }
+        }
 
         snoozeCount = try container.decodeIfPresent(Int.self, forKey: .snoozeCount) ?? 0
 
@@ -414,7 +438,7 @@ struct AlarmDefinition: Identifiable, Codable, Equatable, Sendable {
         try container.encode(customSharedSettings, forKey: .customSharedSettings)
         try container.encodeIfPresent(nextTriggerOverrideDate, forKey: .nextTriggerOverrideDate)
         try container.encode(isEnabled, forKey: .isEnabled)
-        try container.encodeIfPresent(skipNextUntilDate, forKey: .skipNextUntilDate)
+        try container.encodeIfPresent(activeOverride, forKey: .activeOverride)
         try container.encode(snoozeCount, forKey: .snoozeCount)
         try container.encode(lifecycleState, forKey: .lifecycleState)
         try container.encode(createdAt, forKey: .createdAt)

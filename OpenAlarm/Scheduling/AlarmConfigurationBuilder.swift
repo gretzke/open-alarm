@@ -52,6 +52,54 @@ enum AlarmConfigurationBuilder {
         )
     }
 
+    // MARK: - Bridge alarm configuration
+
+    /// Creates a configuration for a bridge alarm (one-shot override).
+    /// Uses the parent alarm's settings but the bridge's own UUID in intent parameters.
+    static func makeBridgeConfiguration(
+        for parentAlarm: AlarmDefinition,
+        bridgeID: UUID,
+        schedule: Alarm.Schedule,
+        defaultSharedSettings: SharedAlarmSettings
+    ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
+        let title = resolvedTitle(for: parentAlarm)
+        let sharedSettings = parentAlarm.resolvedSharedSettings(defaults: defaultSharedSettings)
+        let showSnooze = sharedSettings.canSnoozeAgain(currentCount: 0)
+
+        let alertPresentation = AlarmPresentation.Alert(
+            title: localizedResource(from: title),
+            stopButton: .stopButton,
+            secondaryButton: showSnooze ? .snoozeButton : nil,
+            secondaryButtonBehavior: showSnooze ? .custom : nil
+        )
+
+        let presentation = AlarmPresentation(alert: alertPresentation)
+
+        let attributes = AlarmAttributes(
+            presentation: presentation,
+            metadata: OpenAlarmMetadata(source: parentAlarm.id.uuidString, isShadowTrial: false),
+            tintColor: OAColor.actionCyan
+        )
+
+        let snoozeInterval: TimeInterval = sharedSettings.snoozeDurationMinutes == 0
+            ? 5
+            : TimeInterval(sharedSettings.snoozeDurationMinutes * 60)
+
+        let hasSnoozeConfig = sharedSettings.snoozeEnabled
+        let countdownDuration: Alarm.CountdownDuration? = hasSnoozeConfig
+            ? .init(preAlert: nil, postAlert: snoozeInterval)
+            : nil
+
+        return .init(
+            countdownDuration: countdownDuration,
+            schedule: schedule,
+            attributes: attributes,
+            stopIntent: StopIntent(alarmID: bridgeID.uuidString),
+            secondaryIntent: showSnooze ? SnoozeIntent(alarmID: bridgeID.uuidString) : nil,
+            sound: .default
+        )
+    }
+
     // MARK: - Wake-check backup alarm configuration
 
     static func makeWakeCheckBackupConfiguration(

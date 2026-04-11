@@ -48,6 +48,7 @@
 		AA000001AAAA000000000017 /* ForceCloseAlarmManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002AAAA000000000017 /* ForceCloseAlarmManager.swift */; };
 		AA000001AAAA000000000018 /* TaskContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002AAAA000000000018 /* TaskContainerView.swift */; };
 		AA000001AAAA000000000019 /* TaskPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002AAAA000000000019 /* TaskPickerView.swift */; };
+		AA000001AAAA00000000001A /* BridgeDateCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002AAAA00000000001A /* BridgeDateCalculator.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -107,6 +108,7 @@
 		AA000002AAAA000000000017 /* ForceCloseAlarmManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForceCloseAlarmManager.swift; sourceTree = "<group>"; };
 		AA000002AAAA000000000018 /* TaskContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskContainerView.swift; sourceTree = "<group>"; };
 		AA000002AAAA000000000019 /* TaskPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskPickerView.swift; sourceTree = "<group>"; };
+		AA000002AAAA00000000001A /* BridgeDateCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeDateCalculator.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -215,6 +217,7 @@
 				AA000002AAAA00000000000A /* AlarmConfigurationBuilder.swift */,
 				AA000002AAAA00000000000B /* AlarmSchedulingCoreTypes.swift */,
 				AA000002AAAA000000000006 /* AlarmStateMachine.swift */,
+				AA000002AAAA00000000001A /* BridgeDateCalculator.swift */,
 			);
 			path = Scheduling;
 			sourceTree = "<group>";
@@ -430,6 +433,7 @@
 				AA000001AAAA00000000000A /* AlarmConfigurationBuilder.swift in Sources */,
 				AA000001AAAA00000000000B /* AlarmSchedulingCoreTypes.swift in Sources */,
 				AA000001AAAA000000000006 /* AlarmStateMachine.swift in Sources */,
+				AA000001AAAA00000000001A /* BridgeDateCalculator.swift in Sources */,
 				75F6F1776DF5731E152893A0 /* AlarmStore.swift in Sources */,
 				CEEB02817569AB0C4EDD35C2 /* AppRootView.swift in Sources */,
 				1068E5E14AAA376BDD6E846B /* L10n.swift in Sources */,

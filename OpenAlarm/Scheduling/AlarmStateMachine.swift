@@ -5,6 +5,7 @@ import Foundation
 enum AlarmSchedulingPhase: Equatable, Sendable {
     case idle
     case scheduled(alarmKitIDs: Set<UUID>)
+    case overrideActive(bridgeAlarmIDs: Set<UUID>)
     case alerting(alarmKitID: UUID)
     case snoozed(alarmKitID: UUID)
     case awaitingDisarmChallenge(alarmKitID: UUID)
@@ -25,6 +26,8 @@ enum AlarmEvent: Equatable, Sendable {
     case wakeCheckStarted
     case wakeCheckConfirmed
     case updated
+    case overrideActivated(bridgeAlarmIDs: Set<UUID>)
+    case overrideRestored
 }
 
 enum AlarmKitRuntimeState: Equatable, Sendable {
@@ -142,6 +145,14 @@ enum AlarmStateMachine {
                 )
             }
 
+            if let override = alarm.activeOverride, override.bridgeAlarmIDs.contains(akID) {
+                let remainingBridgeIDs = Set(override.bridgeAlarmIDs).subtracting([akID])
+                return TransitionResult(
+                    phase: .overrideActive(bridgeAlarmIDs: remainingBridgeIDs),
+                    effects: [.cancelAlarmKit(ids: [akID])]
+                )
+            }
+
             if alarm.isRepeating {
                 return TransitionResult(
                     phase: .scheduled(alarmKitIDs: [alarm.id]),
@@ -173,6 +184,13 @@ enum AlarmStateMachine {
         // MARK: - Wake-check confirmed
 
         case (.awaitingWakeCheck, .wakeCheckConfirmed):
+            if let override = alarm.activeOverride {
+                return TransitionResult(
+                    phase: .overrideActive(bridgeAlarmIDs: Set(override.bridgeAlarmIDs)),
+                    effects: []
+                )
+            }
+
             if alarm.isRepeating {
                 return TransitionResult(
                     phase: .scheduled(alarmKitIDs: [alarm.id]),
@@ -189,6 +207,29 @@ enum AlarmStateMachine {
 
             return TransitionResult(phase: .completed, effects: [])
 
+        // MARK: - Override activated
+
+        case (.scheduled, .overrideActivated(let bridgeIDs)):
+            return TransitionResult(
+                phase: .overrideActive(bridgeAlarmIDs: bridgeIDs),
+                effects: [.cancelAlarmKit(ids: [alarm.id])]
+            )
+
+        // MARK: - Override restored
+
+        case (.overrideActive(let bridgeIDs), .overrideRestored):
+            var effects: [SchedulingSideEffect] = []
+            if !bridgeIDs.isEmpty {
+                effects.append(.cancelAlarmKit(ids: bridgeIDs))
+            }
+            effects.append(.scheduleAlarmKit(alarmID: alarm.id, trigger: alarm.trigger, recurrence: alarm.recurrence))
+            return TransitionResult(phase: .scheduled(alarmKitIDs: [alarm.id]), effects: effects)
+
+        // MARK: - Bridge alarm fires
+
+        case (.overrideActive(let bridgeIDs), .alarmKitStateChanged(let akID, .alerting)) where bridgeIDs.contains(akID):
+            return TransitionResult(phase: .alerting(alarmKitID: akID), effects: [])
+
         // MARK: - Default: no transition
 
         default:
@@ -202,6 +243,7 @@ enum AlarmStateMachine {
         switch phase {
         case .idle, .completed, .awaitingWakeCheck: return []
         case .scheduled(let ids): return ids
+        case .overrideActive(let ids): return ids
         case .alerting(let id): return [id]
         case .snoozed(let id): return [id]
         case .awaitingDisarmChallenge(let id): return [id]

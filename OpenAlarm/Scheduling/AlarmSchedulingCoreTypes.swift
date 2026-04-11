@@ -152,6 +152,19 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
     }
 }
 
+// MARK: - Override State
+
+enum OverrideKind: String, Codable, Equatable, Sendable {
+    case skipNext
+    case modifyNext
+}
+
+struct OverrideState: Codable, Equatable, Sendable {
+    var kind: OverrideKind
+    var bridgeAlarmIDs: [UUID]  // ordered by fire date, 5 entries
+    var restoreAnchorDate: Date
+}
+
 // MARK: - Minimal AlarmDefinition
 
 struct AlarmDefinition: Identifiable, Codable, Equatable, Sendable {
@@ -164,7 +177,7 @@ struct AlarmDefinition: Identifiable, Codable, Equatable, Sendable {
     var settingsMode: SettingsMode
     var nextTriggerOverrideDate: Date?
     var isEnabled: Bool
-    var skipNextUntilDate: Date?
+    var activeOverride: OverrideState?
     var snoozeCount: Int
     var lifecycleState: AlarmLifecycleState
     var createdAt: Date
@@ -180,7 +193,7 @@ struct AlarmDefinition: Identifiable, Codable, Equatable, Sendable {
         settingsMode: SettingsMode = .useDefault,
         nextTriggerOverrideDate: Date? = nil,
         isEnabled: Bool = true,
-        skipNextUntilDate: Date? = nil,
+        activeOverride: OverrideState? = nil,
         snoozeCount: Int = 0,
         lifecycleState: AlarmLifecycleState = .scheduled,
         createdAt: Date = .now,
@@ -195,7 +208,7 @@ struct AlarmDefinition: Identifiable, Codable, Equatable, Sendable {
         self.settingsMode = settingsMode
         self.nextTriggerOverrideDate = nextTriggerOverrideDate
         self.isEnabled = isEnabled
-        self.skipNextUntilDate = skipNextUntilDate
+        self.activeOverride = activeOverride
         self.snoozeCount = snoozeCount
         self.lifecycleState = lifecycleState
         self.createdAt = createdAt
