@@ -136,12 +136,51 @@ UPLOAD_OPTIONS_PATH="$ROOT_DIR/build/UploadOptions.plist"
 log "Deterministic TestFlight upload+attach starting"
 log "Scheme=$SCHEME TeamID=$(mask_value "$TEAM_ID") Bundle=$BUNDLE_ID AppID=$(mask_value "$APP_ID") GroupID=$(mask_value "$BETA_GROUP_ID")"
 
-VERSION_INFO="$(python3 - "$PBXPROJ_PATH" <<'PY'
+LATEST_ASC_BUILD="$(python3 - <<'PY'
+import json
+import os
+import subprocess
+import urllib.parse
+import urllib.request
+
+proc = subprocess.run([
+    'xcrun', 'altool', '--generate-jwt',
+    '--apiKey', os.environ['ASC_KEY_ID'],
+    '--apiIssuer', os.environ['ASC_ISSUER_ID'],
+    '--p8-file-path', os.environ['ASC_KEY_PATH'],
+], capture_output=True, text=True)
+out = (proc.stdout or '') + '\n' + (proc.stderr or '')
+tok = next((l.strip() for l in out.splitlines() if l.strip().count('.') == 2 and ' ' not in l.strip()), None)
+if not tok:
+    print('0')
+    raise SystemExit(0)
+params = urllib.parse.urlencode({
+    'filter[app]': os.environ['APP_ID'],
+    'sort': '-uploadedDate',
+    'limit': '1',
+})
+req = urllib.request.Request(
+    f'https://api.appstoreconnect.apple.com/v1/builds?{params}',
+    headers={'Authorization': f'Bearer {tok}', 'Accept': 'application/json'},
+)
+try:
+    with urllib.request.urlopen(req, timeout=60) as r:
+        data = json.loads(r.read().decode())
+    builds = data.get('data', [])
+    print((builds[0].get('attributes', {}) or {}).get('version', '0') if builds else '0')
+except Exception:
+    print('0')
+PY
+)"
+log "Latest ASC build detected: ${LATEST_ASC_BUILD}"
+
+VERSION_INFO="$(python3 - "$PBXPROJ_PATH" "$LATEST_ASC_BUILD" <<'PY'
 import re
 import sys
 from pathlib import Path
 
 pbxproj_path = Path(sys.argv[1])
+asc_build = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isdigit() else 0
 text = pbxproj_path.read_text(encoding="utf-8")
 
 build_matches = re.findall(r"CURRENT_PROJECT_VERSION = ([0-9]+);", text)
@@ -158,7 +197,8 @@ if len(unique_builds) != 1:
     raise SystemExit(1)
 
 current_build = int(unique_builds[0])
-next_build = current_build + 1
+base_build = max(current_build, asc_build)
+next_build = base_build + 1
 text = re.sub(
     r"CURRENT_PROJECT_VERSION = [0-9]+;",
     f"CURRENT_PROJECT_VERSION = {next_build};",
