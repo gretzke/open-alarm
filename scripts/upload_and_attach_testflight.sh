@@ -257,6 +257,8 @@ cat > "$UPLOAD_OPTIONS_PATH" <<'PLIST'
 PLIST
 
 log "Uploading archive to App Store Connect"
+UPLOAD_LOG_PATH="$ROOT_DIR/build/upload-export.log"
+set +e
 xcodebuild -quiet \
   -exportArchive \
   -archivePath "$ABS_ARCHIVE_PATH" \
@@ -265,8 +267,18 @@ xcodebuild -quiet \
   -allowProvisioningUpdates \
   -authenticationKeyPath "$ASC_KEY_PATH" \
   -authenticationKeyID "$ASC_KEY_ID" \
-  -authenticationKeyIssuerID "$ASC_ISSUER_ID"
-ok "Upload complete; polling App Store Connect"
+  -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+  2>&1 | tee "$UPLOAD_LOG_PATH"
+UPLOAD_STATUS=${PIPESTATUS[0]}
+set -e
+
+if (( UPLOAD_STATUS == 0 )); then
+  ok "Upload complete; polling App Store Connect"
+elif grep -Eq '(^|[^0-9])90189([^0-9]|$)|Redundant Binary Upload' "$UPLOAD_LOG_PATH"; then
+  warn "Detected App Store Connect redundant upload error (90189). Continuing by locating existing build and attaching it to beta group."
+else
+  die "Upload failed (exit ${UPLOAD_STATUS}). Check log: ${UPLOAD_LOG_PATH}"
+fi
 
 python3 - "$APP_ID" "$BETA_GROUP_ID" "$MARKETING_VERSION" "$NEXT_BUILD" "$POLL_SECONDS" "$POLL_TIMEOUT_SECONDS" <<'PY'
 import json
