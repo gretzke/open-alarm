@@ -10,3 +10,4 @@ xcuserdata/
 AuthKey_*.p8
 *.jwt
 .env*.local
+.env
