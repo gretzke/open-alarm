@@ -187,6 +187,10 @@ xcodebuild -quiet \
   -archivePath "$ABS_ARCHIVE_PATH" \
   DEVELOPMENT_TEAM="$TEAM_ID" \
   PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+  -allowProvisioningUpdates \
+  -authenticationKeyPath "$ASC_KEY_PATH" \
+  -authenticationKeyID "$ASC_KEY_ID" \
+  -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
   clean archive
 ok "Archive created at ${ABS_ARCHIVE_PATH}"
 
