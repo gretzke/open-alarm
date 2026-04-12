@@ -26,7 +26,7 @@ struct StopIntent: LiveActivityIntent {
 
         // Mark as pending disarm FIRST (tiny write, near-instant).
         // The app handles all lifecycle logic when it opens.
-        let persistence = AlarmPersistence(defaults: .standard)
+        let persistence = AlarmPersistence(defaults: OpenAlarmSharedDefaults.userDefaults)
         var pendingDisarm = persistence.loadPendingDisarmAlarmIDs()
         pendingDisarm.insert(id)
         persistence.savePendingDisarmAlarmIDs(pendingDisarm)
@@ -35,7 +35,7 @@ struct StopIntent: LiveActivityIntent {
         try? AlarmManager.shared.stop(id: id)
 
         // Also stop any active force-close alarm (has a different UUID)
-        if let forceCloseIDStr = UserDefaults.standard.string(forKey: "OPENALARM_FORCE_CLOSE_ALARM_ID"),
+        if let forceCloseIDStr = OpenAlarmSharedDefaults.userDefaults.string(forKey: "OPENALARM_FORCE_CLOSE_ALARM_ID"),
            let forceCloseID = UUID(uuidString: forceCloseIDStr) {
             try? AlarmManager.shared.stop(id: forceCloseID)
             try? AlarmManager.shared.cancel(id: forceCloseID)
@@ -52,13 +52,13 @@ struct StopIntent: LiveActivityIntent {
     private static let graceAppliedKey = "OPENALARM_WAKE_CHECK_GRACE_APPLIED_IDS"
 
     static func loadGraceAppliedIDs() -> Set<UUID> {
-        guard let raw = UserDefaults.standard.array(forKey: graceAppliedKey) as? [String] else {
+        guard let raw = OpenAlarmSharedDefaults.userDefaults.array(forKey: graceAppliedKey) as? [String] else {
             return []
         }
         return Set(raw.compactMap(UUID.init(uuidString:)))
     }
 
     static func saveGraceAppliedIDs(_ ids: Set<UUID>) {
-        UserDefaults.standard.set(ids.map(\.uuidString), forKey: graceAppliedKey)
+        OpenAlarmSharedDefaults.userDefaults.set(ids.map(\.uuidString), forKey: graceAppliedKey)
     }
 }

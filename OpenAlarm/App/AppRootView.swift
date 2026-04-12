@@ -31,6 +31,16 @@ struct AppRootView: View {
             Task { await alarmStore.handleAppOpened() }
             evaluateWakeCheckPermissionGuard()
         }
+        .onOpenURL { url in
+            guard url.scheme == "openalarm" else {
+                return
+            }
+            onboardingEngine.handleAppOpened()
+            Task {
+                await alarmStore.handleAppOpened()
+                await alarmStore.handleOpenURL(url)
+            }
+        }
         .fullScreenCover(item: $alarmStore.disarmPresentation) { presentation in
             TaskContainerView(
                 alarm: presentation.alarm,

@@ -47,6 +47,9 @@ struct ActiveNapRowView: View {
     let now: Date
     let onPause: () -> Void
     let onContinue: () -> Void
+    let onAddOneMinute: () -> Void
+    let onAddFiveMinutes: () -> Void
+    let onAddTenMinutes: () -> Void
     let onDelete: () -> Void
 
     private var remainingTimeString: String {
@@ -64,12 +67,22 @@ struct ActiveNapRowView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
+            HStack(alignment: .top) {
                 Text(nap.snoozeCount > 0 ? L10n.napActiveSnoozingTitle : L10n.napActiveTitle)
                     .font(.headline.weight(.semibold))
                     .foregroundStyle(OAColor.textPrimary)
+                    .padding(.trailing, !nap.isPaused ? 156 : 0)
 
                 Spacer(minLength: 0)
+            }
+            .overlay(alignment: .topTrailing) {
+                if !nap.isPaused {
+                    HStack(spacing: 8) {
+                        extraTimeButton("+1", accessibilityLabel: L10n.napActiveAddOneMinute, action: onAddOneMinute)
+                        extraTimeButton("+5", accessibilityLabel: L10n.napActiveAddFiveMinutes, action: onAddFiveMinutes)
+                        extraTimeButton("+10", accessibilityLabel: L10n.napActiveAddTenMinutes, action: onAddTenMinutes)
+                    }
+                }
             }
 
             Text(remainingTimeString)
@@ -93,7 +106,7 @@ struct ActiveNapRowView: View {
                 .buttonStyle(GlassButtonStyle())
 
                 Button(action: onDelete) {
-                    Label(L10n.actionDelete, systemImage: "trash")
+                    Label(L10n.actionDelete, systemImage: "xmark")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(OAColor.danger)
                         .frame(maxWidth: .infinity, minHeight: 48)
@@ -105,5 +118,23 @@ struct ActiveNapRowView: View {
         .padding(18)
         .oaGlassCard()
         .padding(.vertical, 6)
+    }
+
+    private func extraTimeButton(
+        _ title: String,
+        accessibilityLabel: LocalizedStringKey,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.footnote.weight(.bold))
+                .foregroundStyle(OAColor.actionCyan)
+                .padding(.horizontal, 10)
+                .frame(minWidth: 44, minHeight: 34)
+                .contentShape(RoundedRectangle(cornerRadius: OARadius.chip, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .oaGlassPanel(cornerRadius: OARadius.chip)
+        .accessibilityLabel(accessibilityLabel)
     }
 }

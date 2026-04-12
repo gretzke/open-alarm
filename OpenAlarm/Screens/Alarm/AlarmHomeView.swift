@@ -75,6 +75,21 @@ struct AlarmHomeView: View {
                             await alarmStore.resumeNap()
                         }
                     },
+                    onAddOneMinute: {
+                        Task {
+                            await alarmStore.extendNap(byMinutes: 1)
+                        }
+                    },
+                    onAddFiveMinutes: {
+                        Task {
+                            await alarmStore.extendNap(byMinutes: 5)
+                        }
+                    },
+                    onAddTenMinutes: {
+                        Task {
+                            await alarmStore.extendNap(byMinutes: 10)
+                        }
+                    },
                     onDelete: {
                         alarmStore.deleteNap()
                     }

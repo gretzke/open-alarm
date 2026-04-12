@@ -566,8 +566,9 @@ final class WakeUpCheckNotificationService {
 
 final class AlarmPersistence: Sendable {
     private static let logger = Logger(subsystem: "com.openalarm", category: "AlarmPersistence")
+    private static let appGroupMigrationKey = "OPENALARM_APP_GROUP_STORE_MIGRATED_V1"
 
-    static let shared = AlarmPersistence()
+    static let shared = AlarmPersistence(defaults: OpenAlarmSharedDefaults.userDefaults)
 
     private nonisolated(unsafe) let defaults: UserDefaults
 
@@ -576,11 +577,47 @@ final class AlarmPersistence: Sendable {
     private let testingModeEnabledKey = "OPENALARM_TESTING_MODE_ENABLED_V1"
     private let napDefaultSharedSettingsKey = "OPENALARM_NAP_DEFAULT_SHARED_SETTINGS_V1"
     private let defaultNapDurationMinutesKey = "OPENALARM_DEFAULT_NAP_DURATION_MINUTES_V1"
+    private let liveActivitiesEnabledKey = "OPENALARM_LIVE_ACTIVITIES_ENABLED_V1"
     private let pendingWakeUpCheckShowConfirmUIIDsKey = "OPENALARM_PENDING_WAKE_CHECK_SHOW_CONFIRM_UI_IDS_V1"
     private let wakeCheckSessionsKey = "OPENALARM_WAKE_CHECK_SESSIONS_V1"
     private let pendingDisarmAlarmIDsKey = "OPENALARM_PENDING_DISARM_ALARM_IDS_V1"
-    init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = OpenAlarmSharedDefaults.userDefaults) {
         self.defaults = defaults
+    }
+
+    static func migrateStandardStoreIfNeeded() {
+        let sharedDefaults = OpenAlarmSharedDefaults.userDefaults
+        let standardDefaults = UserDefaults.standard
+
+        guard sharedDefaults !== standardDefaults else {
+            return
+        }
+
+        guard !sharedDefaults.bool(forKey: appGroupMigrationKey) else {
+            return
+        }
+
+        let keysToMigrate = [
+            "OPENALARM_USER_ALARMS_V1",
+            "OPENALARM_DEFAULT_SHARED_SETTINGS_V1",
+            "OPENALARM_TESTING_MODE_ENABLED_V1",
+            "OPENALARM_NAP_DEFAULT_SHARED_SETTINGS_V1",
+            "OPENALARM_DEFAULT_NAP_DURATION_MINUTES_V1",
+            "OPENALARM_LIVE_ACTIVITIES_ENABLED_V1",
+            "OPENALARM_PENDING_WAKE_CHECK_SHOW_CONFIRM_UI_IDS_V1",
+            "OPENALARM_WAKE_CHECK_SESSIONS_V1",
+            "OPENALARM_PENDING_DISARM_ALARM_IDS_V1",
+            "OPENALARM_FORCE_CLOSE_ALARM_ID",
+            "OPENALARM_WAKE_CHECK_GRACE_APPLIED_IDS"
+        ]
+
+        for key in keysToMigrate where sharedDefaults.object(forKey: key) == nil {
+            if let value = standardDefaults.object(forKey: key) {
+                sharedDefaults.set(value, forKey: key)
+            }
+        }
+
+        sharedDefaults.set(true, forKey: appGroupMigrationKey)
     }
 
     // MARK: - User Alarms
@@ -676,6 +713,19 @@ final class AlarmPersistence: Sendable {
 
     func saveDefaultNapDurationMinutes(_ minutes: Int) {
         defaults.set(max(0, minutes), forKey: defaultNapDurationMinutesKey)
+    }
+
+    // MARK: - Live Activity Settings
+
+    func loadLiveActivitiesEnabled() -> Bool {
+        if defaults.object(forKey: liveActivitiesEnabledKey) == nil {
+            return true
+        }
+        return defaults.bool(forKey: liveActivitiesEnabledKey)
+    }
+
+    func saveLiveActivitiesEnabled(_ enabled: Bool) {
+        defaults.set(enabled, forKey: liveActivitiesEnabledKey)
     }
 
     // MARK: - Pending Wake-Up Check Show Confirm UI IDs

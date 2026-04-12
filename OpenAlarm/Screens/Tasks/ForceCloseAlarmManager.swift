@@ -48,7 +48,7 @@ final class ForceCloseAlarmManager {
             }
 
             currentForceCloseAlarmID = newID
-            UserDefaults.standard.set(newID.uuidString, forKey: Self.forceCloseAlarmIDKey)
+            OpenAlarmSharedDefaults.userDefaults.set(newID.uuidString, forKey: Self.forceCloseAlarmIDKey)
         }
     }
 
@@ -58,11 +58,11 @@ final class ForceCloseAlarmManager {
             try? alarmManager.cancel(id: id)
         }
         currentForceCloseAlarmID = nil
-        UserDefaults.standard.removeObject(forKey: Self.forceCloseAlarmIDKey)
+        OpenAlarmSharedDefaults.userDefaults.removeObject(forKey: Self.forceCloseAlarmIDKey)
     }
 
     static func loadPersistedForceCloseAlarmID() -> UUID? {
-        guard let str = UserDefaults.standard.string(forKey: forceCloseAlarmIDKey) else { return nil }
+        guard let str = OpenAlarmSharedDefaults.userDefaults.string(forKey: forceCloseAlarmIDKey) else { return nil }
         return UUID(uuidString: str)
     }
 }

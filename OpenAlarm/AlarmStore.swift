@@ -1,3 +1,4 @@
+import ActivityKit
 import AlarmKit
 import AppIntents
 import Combine
@@ -27,6 +28,8 @@ final class AlarmStore: ObservableObject {
     @Published var napDefaultSharedSettings: SharedAlarmSettings?  // nil = use global defaults
     @Published var defaultNapDurationMinutes: Int
     @Published var testingModeEnabled: Bool
+    @Published var liveActivitiesEnabled: Bool
+    @Published var liveActivitiesSystemEnabled: Bool
     @Published var permissionStatus: AlarmPermissionStatus
     @Published var notificationPermissionStatus: NotificationPermissionStatus = .notDetermined
     @Published var remoteStates: [UUID: Alarm.State] = [:]
@@ -57,6 +60,10 @@ final class AlarmStore: ObservableObject {
         napDefaultSharedSettings ?? defaultSharedSettings
     }
 
+    var areNapLiveActivitiesEnabled: Bool {
+        liveActivitiesSystemEnabled && liveActivitiesEnabled
+    }
+
     // MARK: - Dependencies
 
     private let alarmManager: AlarmManager
@@ -74,18 +81,29 @@ final class AlarmStore: ObservableObject {
         alarmManager: AlarmManager = .shared,
         permissionService: AlarmPermissionService? = nil,
         notificationPermissionService: NotificationPermissionService? = nil,
-        userDefaults: UserDefaults = .standard
+        userDefaults: UserDefaults? = nil
     ) {
+        let resolvedDefaults = userDefaults ?? OpenAlarmSharedDefaults.userDefaults
+        if userDefaults == nil {
+            AlarmPersistence.migrateStandardStoreIfNeeded()
+        }
         self.alarmManager = alarmManager
         self.permissionService = permissionService ?? AlarmPermissionService(manager: alarmManager)
         self.notificationPermissionService = notificationPermissionService ?? NotificationPermissionService()
-        self.persistence = AlarmPersistence(defaults: userDefaults)
+        self.persistence = AlarmPersistence(defaults: resolvedDefaults)
         self.wakeCheckNotificationService = WakeUpCheckNotificationService()
         self.defaultSharedSettings = persistence.loadDefaultSharedSettings()
         self.napDefaultSharedSettings = persistence.loadNapDefaultSharedSettings()
         self.defaultNapDurationMinutes = persistence.loadDefaultNapDurationMinutes()
         self.testingModeEnabled = persistence.loadTestingModeEnabled()
+        self.liveActivitiesEnabled = persistence.loadLiveActivitiesEnabled()
+        self.liveActivitiesSystemEnabled = ActivityAuthorizationInfo().areActivitiesEnabled
         self.permissionStatus = self.permissionService.currentStatus()
+
+        if !liveActivitiesSystemEnabled && liveActivitiesEnabled {
+            self.liveActivitiesEnabled = false
+            persistence.saveLiveActivitiesEnabled(false)
+        }
 
         wakeCheckNotificationService.ensureCategoryRegistered()
 
@@ -133,10 +151,20 @@ final class AlarmStore: ObservableObject {
         alarms = sortAlarms(persistence.loadUserAlarms())
     }
 
+    private func syncNapLiveActivity() {
+        guard areNapLiveActivitiesEnabled else {
+            NapCountdownLiveActivityManager.shared.stop()
+            return
+        }
+
+        NapCountdownLiveActivityManager.shared.sync(with: activeNap)
+    }
+
     // MARK: - App Lifecycle
 
     func handleAppOpened() async {
         permissionStatus = permissionService.currentStatus()
+        refreshLiveActivityAuthorizationStatus()
         load()
         await refreshRemoteState()
         loadWakeCheckSessionsFromPersistence()
@@ -144,6 +172,27 @@ final class AlarmStore: ObservableObject {
         processPendingWakeCheckConfirmations()
         showWakeCheckConfirmationIfNeeded()
         processPendingDisarmChallenges()
+        syncNapLiveActivity()
+    }
+
+    func handleOpenURL(_ url: URL) async {
+        guard url.scheme == "openalarm" else {
+            return
+        }
+
+        guard url.host == "nap", url.path == "/extend",
+              let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let minutesValue = components.queryItems?.first(where: { $0.name == "minutes" })?.value,
+              let minutes = Int(minutesValue) else {
+            return
+        }
+
+        let napID = components.queryItems?
+            .first(where: { $0.name == "id" })?
+            .value
+            .flatMap(UUID.init(uuidString:))
+
+        await extendNap(byMinutes: minutes, matchingID: napID)
     }
 
     private func refreshRemoteState() async {
@@ -282,6 +331,8 @@ final class AlarmStore: ObservableObject {
     // MARK: - Delete Alarm
 
     func deleteAlarm(_ alarm: UserAlarm) {
+        let shouldStopNapActivity = alarm.isNap
+
         // Clean up pending disarm state if active
         var pendingDisarm = persistence.loadPendingDisarmAlarmIDs()
         if pendingDisarm.remove(alarm.id) != nil {
@@ -329,6 +380,10 @@ final class AlarmStore: ObservableObject {
             case .scheduleAlarmKit, .persist:
                 break
             }
+        }
+
+        if shouldStopNapActivity {
+            NapCountdownLiveActivityManager.shared.stop()
         }
     }
 
@@ -406,6 +461,7 @@ final class AlarmStore: ObservableObject {
         saveAlarms()
 
         await process(event: .enabled, for: alarm.id)
+        syncNapLiveActivity()
     }
 
     // MARK: - Pause Nap
@@ -421,6 +477,7 @@ final class AlarmStore: ObservableObject {
         saveAlarms()
 
         await process(event: .disabled, for: nap.id)
+        syncNapLiveActivity()
     }
 
     // MARK: - Resume Nap
@@ -438,6 +495,37 @@ final class AlarmStore: ObservableObject {
         saveAlarms()
 
         await process(event: .enabled, for: nap.id)
+        syncNapLiveActivity()
+    }
+
+    // MARK: - Extend Nap
+
+    func extendNap(byMinutes minutes: Int) async {
+        await extendNap(byMinutes: minutes, matchingID: nil)
+    }
+
+    func extendNap(byMinutes minutes: Int, matchingID napID: UUID?) async {
+        guard minutes > 0, let nap = activeNap,
+              napID == nil || nap.id == napID,
+              let index = alarms.firstIndex(where: { $0.id == nap.id }) else { return }
+
+        let addedSeconds = TimeInterval(minutes * 60)
+        alarms[index].durationMinutes = max(0, (alarms[index].durationMinutes ?? 0) + minutes)
+        alarms[index].updatedAt = .now
+
+        if let pausedRemaining = alarms[index].pausedRemainingSeconds {
+            alarms[index].pausedRemainingSeconds = pausedRemaining + addedSeconds
+            saveAlarms()
+            syncNapLiveActivity()
+            return
+        }
+
+        let currentTarget = alarms[index].fixedTriggerDate ?? .now
+        alarms[index].fixedTriggerDate = currentTarget.addingTimeInterval(addedSeconds)
+        saveAlarms()
+
+        await process(event: .updated, for: nap.id)
+        syncNapLiveActivity()
     }
 
     // MARK: - Delete Nap
@@ -514,6 +602,37 @@ final class AlarmStore: ObservableObject {
     func updateTestingModeEnabled(_ enabled: Bool) {
         testingModeEnabled = enabled
         persistence.saveTestingModeEnabled(enabled)
+    }
+
+    @discardableResult
+    func refreshLiveActivityAuthorizationStatus() -> Bool {
+        let enabled = ActivityAuthorizationInfo().areActivitiesEnabled
+        liveActivitiesSystemEnabled = enabled
+
+        if !enabled && liveActivitiesEnabled {
+            liveActivitiesEnabled = false
+            persistence.saveLiveActivitiesEnabled(false)
+        }
+
+        if areNapLiveActivitiesEnabled {
+            syncNapLiveActivity()
+        } else {
+            NapCountdownLiveActivityManager.shared.stop()
+        }
+
+        return enabled
+    }
+
+    func updateLiveActivitiesEnabled(_ enabled: Bool) {
+        guard liveActivitiesEnabled != enabled else { return }
+        liveActivitiesEnabled = enabled
+        persistence.saveLiveActivitiesEnabled(enabled)
+
+        if areNapLiveActivitiesEnabled {
+            syncNapLiveActivity()
+        } else {
+            NapCountdownLiveActivityManager.shared.stop()
+        }
     }
 
     func updateNapDefaultSharedSettings(_ settings: SharedAlarmSettings?) {

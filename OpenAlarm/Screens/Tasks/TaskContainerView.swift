@@ -31,10 +31,17 @@ struct TaskContainerView: View {
                 try? AlarmManager.shared.cancel(id: orphanedID)
             }
 
+            if alarm.isNap {
+                NapCountdownLiveActivityManager.shared.stop()
+            }
             soundManager.startPlaying()
+            AlarmSoundLiveActivityManager.shared.start(alarm: alarm)
             let manager = ForceCloseAlarmManager(alarm: alarm)
             manager.start()
             forceCloseManager = manager
+        }
+        .onDisappear {
+            AlarmSoundLiveActivityManager.shared.stop()
         }
     }
 
@@ -105,6 +112,7 @@ struct TaskContainerView: View {
 
     private func complete() {
         soundManager.stopPlaying()
+        AlarmSoundLiveActivityManager.shared.stop()
         forceCloseManager?.stop()
         onCompleted()
     }

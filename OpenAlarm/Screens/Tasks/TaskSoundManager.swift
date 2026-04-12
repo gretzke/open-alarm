@@ -7,33 +7,45 @@ final class TaskSoundManager: ObservableObject {
     private var audioPlayer: AVAudioPlayer?
     private var volumeObservation: NSKeyValueObservation?
     private var volumePollingTimer: Timer?
+    private var notificationObservers: [NSObjectProtocol] = []
     private var capturedVolume: Float?
     private var hiddenVolumeView: MPVolumeView?
     private var isResettingVolume = false
+    private var isPlaybackRequested = false
+    private var alarmSoundURL: URL?
 
     /// Target volume for alarm playback. Future: make this configurable per alarm.
     private let alarmVolume: Float = 0.2
 
     func startPlaying() {
+        isPlaybackRequested = true
+        alarmSoundURL = resolveAlarmSoundURL()
         configureAudioSession()
+        registerForAudioSessionNotifications()
         setupHiddenVolumeView()
         setSystemVolume(alarmVolume)
         capturedVolume = alarmVolume
-        playAlarmSound()
+        ensurePlaybackActive(forceRestart: true)
         observeVolumeChanges()
         startVolumePolling()
     }
 
     func stopPlaying() {
+        isPlaybackRequested = false
         volumePollingTimer?.invalidate()
         volumePollingTimer = nil
         audioPlayer?.stop()
         audioPlayer = nil
         volumeObservation?.invalidate()
         volumeObservation = nil
+        notificationObservers.forEach(NotificationCenter.default.removeObserver)
+        notificationObservers.removeAll()
         capturedVolume = nil
         hiddenVolumeView?.removeFromSuperview()
         hiddenVolumeView = nil
+        alarmSoundURL = nil
+        let session = AVAudioSession.sharedInstance()
+        try? session.setActive(false, options: [.notifyOthersOnDeactivation])
     }
 
     private func configureAudioSession() {
@@ -42,30 +54,52 @@ final class TaskSoundManager: ObservableObject {
         try? session.setActive(true)
     }
 
-    private func playAlarmSound() {
-        // Try bundled sound first, fall back to system alarm sound
-        let url = Bundle.main.url(forResource: "alarm_sound", withExtension: "caf")
+    private func resolveAlarmSoundURL() -> URL {
+        Bundle.main.url(forResource: "alarm_sound", withExtension: "caf")
             ?? Bundle.main.url(forResource: "alarm_sound", withExtension: "mp3")
             ?? URL(fileURLWithPath: "/System/Library/Audio/UISounds/alarm.caf")
+    }
+
+    private func ensurePlaybackActive(forceRestart: Bool = false) {
+        guard isPlaybackRequested, let url = alarmSoundURL else { return }
+
+        configureAudioSession()
+
+        if let player = audioPlayer, !forceRestart {
+            if !player.isPlaying {
+                player.play()
+            }
+            if player.isPlaying {
+                return
+            }
+        }
 
         attemptPlay(url: url, retriesLeft: 3)
     }
 
     private func attemptPlay(url: URL, retriesLeft: Int) {
+        audioPlayer?.stop()
         guard let player = try? AVAudioPlayer(contentsOf: url) else { return }
         player.numberOfLoops = -1
+        player.volume = 1.0
         player.prepareToPlay()
-        player.play()
+        guard player.play() else {
+            if retriesLeft > 0 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+                    self?.ensurePlaybackActive(forceRestart: true)
+                }
+            }
+            return
+        }
         audioPlayer = player
 
         // Verify playback actually started; if not, retry.
         // play() can return true but produce no audio if the session isn't routed yet.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             guard let self else { return }
-            if self.audioPlayer?.isPlaying != true, retriesLeft > 0 {
+            if self.isPlaybackRequested, self.audioPlayer?.isPlaying != true, retriesLeft > 0 {
                 self.audioPlayer = nil
-                self.configureAudioSession()
-                self.attemptPlay(url: url, retriesLeft: retriesLeft - 1)
+                self.ensurePlaybackActive(forceRestart: true)
             }
         }
     }
@@ -98,6 +132,91 @@ final class TaskSoundManager: ObservableObject {
         guard let capturedVolume, !isResettingVolume else { return }
         guard abs(newVolume - capturedVolume) > 0.01 else { return }
         setSystemVolume(capturedVolume)
+    }
+
+    private func registerForAudioSessionNotifications() {
+        guard notificationObservers.isEmpty else { return }
+
+        let center = NotificationCenter.default
+
+        notificationObservers.append(
+            center.addObserver(
+                forName: UIApplication.didBecomeActiveNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.ensurePlaybackActive()
+                }
+            }
+        )
+
+        notificationObservers.append(
+            center.addObserver(
+                forName: AVAudioSession.interruptionNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] notification in
+                Task { @MainActor [weak self] in
+                    self?.handleAudioInterruption(notification)
+                }
+            }
+        )
+
+        notificationObservers.append(
+            center.addObserver(
+                forName: AVAudioSession.routeChangeNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.handleRouteChange()
+                }
+            }
+        )
+
+        notificationObservers.append(
+            center.addObserver(
+                forName: AVAudioSession.mediaServicesWereResetNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.handleMediaServicesReset()
+                }
+            }
+        )
+    }
+
+    private func handleAudioInterruption(_ notification: Notification) {
+        guard isPlaybackRequested else { return }
+
+        let typeValue = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt
+        let type = typeValue.flatMap(AVAudioSession.InterruptionType.init(rawValue:))
+
+        switch type {
+        case .began:
+            audioPlayer?.pause()
+        case .ended:
+            ensurePlaybackActive(forceRestart: true)
+        case .none:
+            break
+        @unknown default:
+            ensurePlaybackActive(forceRestart: true)
+        }
+    }
+
+    private func handleRouteChange() {
+        guard isPlaybackRequested else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            self?.ensurePlaybackActive()
+        }
+    }
+
+    private func handleMediaServicesReset() {
+        guard isPlaybackRequested else { return }
+        audioPlayer = nil
+        ensurePlaybackActive(forceRestart: true)
     }
 
     private func setupHiddenVolumeView() {

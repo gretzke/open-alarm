@@ -18,6 +18,19 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.gretzke.openalarm</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>openalarm</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>en</string>
@@ -31,6 +44,8 @@
 	<string>OpenAlarm needs alarm access to schedule alarms and timers you create.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>arm64</string>

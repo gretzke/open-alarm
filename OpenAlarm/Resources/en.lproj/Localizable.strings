@@ -12,6 +12,9 @@
 "nap_active_title" = "Napping";
 "nap_active_paused" = "Paused";
 "nap_active_snoozing_title" = "Snoozing";
+"nap_active_add_one_minute" = "Add 1 minute";
+"nap_active_add_five_minutes" = "Add 5 minutes";
+"nap_active_add_ten_minutes" = "Add 10 minutes";
 "nap_default_alarm_label" = "Nap";
 
 "alarm_row_repeat_one_time" = "One time";
@@ -95,6 +98,12 @@
 "settings_nap_defaults_config_button" = "Configure nap defaults";
 "settings_nap_defaults_use_global_toggle" = "Use global defaults";
 "settings_nap_defaults_use_global_hint" = "When enabled, nap alarms use the same defaults as regular alarms.";
+"settings_live_activities_title" = "Live Activities";
+"settings_live_activities_body" = "Control which Live Activities OpenAlarm shows. The alarm-ringing activity always stays enabled.";
+"settings_live_activities_global_toggle" = "Enable Live Activities";
+"settings_live_activities_system_disabled_hint" = "Live Activities are currently disabled in iOS settings for this app.";
+"settings_live_activities_prompt_title" = "Enable Live Activities in Settings";
+"settings_live_activities_prompt_body" = "To use Live Activities here, enable Live Activities in the system settings for OpenAlarm.";
 "settings_testing_mode_title" = "Testing mode";
 "settings_testing_mode_body" = "Enable development-only alarm options like 5-second snooze and wake-check timeout.";
 "settings_testing_mode_toggle" = "Enable testing mode";
@@ -140,6 +149,9 @@
 "wake_check_confirm_title" = "Are you awake?";
 "wake_check_confirm_subtitle" = "Backup alarm rings in";
 "wake_check_confirm_action" = "I'm awake";
+"live_activity_alarm_ringing_title" = "Alarm Ringing";
+"live_activity_alarm_ringing_return_hint" = "Tap to return to OpenAlarm";
+"nap_live_activity_extend_title" = "Extend nap";
 
 "task_dummy_name" = "Dismiss";
 "task_math_name" = "Math";

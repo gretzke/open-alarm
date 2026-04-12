@@ -7,12 +7,15 @@
 "alarm_list_empty_title" = "Noch keine Alarme";
 "alarm_list_empty_subtitle" = "Tippe auf +, um deinen ersten Alarm zu erstellen.";
 
-"nap_banner_title" = "Schläfchen machen";
+"nap_banner_title" = "Nickerchen machen";
 "nap_banner_subtitle" = "Schnell mit Zzz-Energie auftanken";
 "nap_active_title" = "Nickerchen";
 "nap_active_paused" = "Pausiert";
 "nap_active_snoozing_title" = "Schlummern";
-"nap_default_alarm_label" = "Schläfchen";
+"nap_active_add_one_minute" = "1 Minute hinzufügen";
+"nap_active_add_five_minutes" = "5 Minuten hinzufügen";
+"nap_active_add_ten_minutes" = "10 Minuten hinzufügen";
+"nap_default_alarm_label" = "Nickerchen";
 
 "alarm_row_repeat_one_time" = "Einmalig";
 "alarm_row_repeat_prefix" = "Wiederholt";
@@ -69,7 +72,7 @@
 "alarm_editor_try_out" = "Ausprobieren";
 "alarm_editor_try_out_starts_in_5_seconds" = "Test-Alarm klingelt in 5 Sekunden";
 
-"nap_editor_title" = "Schläfchen";
+"nap_editor_title" = "Nickerchen";
 "nap_editor_duration_title" = "Dauer";
 "nap_editor_hours_label" = "Stunden";
 "nap_editor_minutes_label" = "Minuten";
@@ -85,8 +88,8 @@
 "settings_default_config_body" = "Geteiltes Alarmverhalten für alle Alarme mit Standard-Einstellungen.";
 "settings_default_config_manage_button" = "Standards konfigurieren";
 "settings_default_config_page_body" = "Änderungen werden sofort gespeichert und auf Alarme mit Standard-Einstellungen angewendet.";
-"settings_nap_defaults_title" = "Schläfchen-Timer";
-"settings_nap_defaults_body" = "Lege die Standarddauer für „Schläfchen machen“ fest.";
+"settings_nap_defaults_title" = "Nap-Timer";
+"settings_nap_defaults_body" = "Lege die Standarddauer für „Nickerchen machen“ fest.";
 "settings_nap_defaults_manage_button" = "Standard-Napdauer";
 "settings_nap_defaults_page_body" = "Änderungen werden sofort gespeichert.";
 "settings_nap_defaults_duration_title" = "Standard-Napdauer";
@@ -95,6 +98,12 @@
 "settings_nap_defaults_config_button" = "Nap-Standardeinstellungen";
 "settings_nap_defaults_use_global_toggle" = "Globale Standards verwenden";
 "settings_nap_defaults_use_global_hint" = "Wenn aktiviert, verwenden Nap-Alarme dieselben Standards wie reguläre Alarme.";
+"settings_live_activities_title" = "Live-Aktivitäten";
+"settings_live_activities_body" = "Steuere, welche Live-Aktivitäten OpenAlarm anzeigt. Die Alarm-Klingel-Aktivität bleibt immer aktiviert.";
+"settings_live_activities_global_toggle" = "Live-Aktivitäten aktivieren";
+"settings_live_activities_system_disabled_hint" = "Live-Aktivitäten sind aktuell in den iOS-Einstellungen für diese App deaktiviert.";
+"settings_live_activities_prompt_title" = "Live-Aktivitäten in den Einstellungen aktivieren";
+"settings_live_activities_prompt_body" = "Um Live-Aktivitäten hier zu verwenden, aktiviere Live-Aktivitäten in den Systemeinstellungen für OpenAlarm.";
 "settings_testing_mode_title" = "Testmodus";
 "settings_testing_mode_body" = "Aktiviert entwicklungsbezogene Alarmoptionen wie 5-Sekunden-Snooze und 5-Sekunden-Aufwach-Timeout.";
 "settings_testing_mode_toggle" = "Testmodus aktivieren";
@@ -140,6 +149,9 @@
 "wake_check_confirm_title" = "Bist du wach?";
 "wake_check_confirm_subtitle" = "Backup-Alarm klingelt in";
 "wake_check_confirm_action" = "Ich bin wach";
+"live_activity_alarm_ringing_title" = "Alarm klingelt";
+"live_activity_alarm_ringing_return_hint" = "Tippe, um zu OpenAlarm zurückzukehren";
+"nap_live_activity_extend_title" = "Schläfchen verlängern";
 
 "task_dummy_name" = "Bestätigen";
 "task_math_name" = "Mathe";

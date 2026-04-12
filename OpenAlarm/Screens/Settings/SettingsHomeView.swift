@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsHomeView: View {
     @EnvironmentObject private var alarmStore: AlarmStore
+    @State private var showLiveActivitiesSettingsPrompt = false
 
     private func napDurationSummary(minutes: Int) -> String {
         if minutes == 0 {
@@ -105,6 +106,42 @@ struct SettingsHomeView: View {
                     .oaGlassCard()
 
                     VStack(alignment: .leading, spacing: 12) {
+                        Text(L10n.settingsLiveActivitiesTitle)
+                            .font(.headline)
+                            .foregroundStyle(OAColor.textPrimary)
+
+                        Text(L10n.settingsLiveActivitiesBody)
+                            .font(.footnote)
+                            .foregroundStyle(OAColor.textSecondary)
+
+                        Toggle(isOn: Binding(
+                            get: { alarmStore.liveActivitiesSystemEnabled && alarmStore.liveActivitiesEnabled },
+                            set: { newValue in
+                                let systemEnabled = alarmStore.refreshLiveActivityAuthorizationStatus()
+                                if newValue && !systemEnabled {
+                                    showLiveActivitiesSettingsPrompt = true
+                                    return
+                                }
+                                alarmStore.updateLiveActivitiesEnabled(newValue)
+                            }
+                        )) {
+                            Text(L10n.settingsLiveActivitiesGlobalToggle)
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(OAColor.textPrimary)
+                        }
+                        .tint(OAColor.actionCyan)
+
+                        if !alarmStore.liveActivitiesSystemEnabled {
+                            Text(L10n.settingsLiveActivitiesSystemDisabledHint)
+                                .font(.footnote)
+                                .foregroundStyle(OAColor.textSecondary)
+                        }
+
+                    }
+                    .padding(20)
+                    .oaGlassCard()
+
+                    VStack(alignment: .leading, spacing: 12) {
                         Text(L10n.settingsTestingModeTitle)
                             .font(.headline)
                             .foregroundStyle(OAColor.textPrimary)
@@ -148,6 +185,17 @@ struct SettingsHomeView: View {
             .background(OAColor.background.ignoresSafeArea())
             .navigationTitle(L10n.settingsTitle)
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                alarmStore.refreshLiveActivityAuthorizationStatus()
+            }
+            .alert(L10n.settingsLiveActivitiesPromptTitle, isPresented: $showLiveActivitiesSettingsPrompt) {
+                Button(L10n.actionCancel, role: .cancel) {}
+                Button(L10n.actionOpenSettings) {
+                    alarmStore.openSettings()
+                }
+            } message: {
+                Text(L10n.settingsLiveActivitiesPromptBody)
+            }
         }
     }
 }

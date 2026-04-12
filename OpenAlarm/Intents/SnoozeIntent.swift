@@ -23,7 +23,7 @@ struct SnoozeIntent: LiveActivityIntent {
             return .result()
         }
 
-        let persistence = AlarmPersistence(defaults: .standard)
+        let persistence = AlarmPersistence(defaults: OpenAlarmSharedDefaults.userDefaults)
         let defaultSharedSettings = persistence.loadDefaultSharedSettings()
         var alarms = persistence.loadUserAlarms()
 
@@ -83,6 +83,13 @@ struct SnoozeIntent: LiveActivityIntent {
         try? AlarmManager.shared.stop(id: id)
         try? AlarmManager.shared.cancel(id: id)
         _ = try? await AlarmManager.shared.schedule(id: id, configuration: config)
+
+        if alarm.isNap {
+            let updatedNap = alarm
+            await MainActor.run {
+                NapCountdownLiveActivityManager.shared.sync(with: updatedNap)
+            }
+        }
 
         return .result()
     }

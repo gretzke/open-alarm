@@ -13,6 +13,9 @@ targets:
     deploymentTarget: "26.0"
     sources:
       - path: OpenAlarm
+    dependencies:
+      - target: OpenAlarmLiveActivities
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.gretzke.openalarm
@@ -24,6 +27,7 @@ targets:
         MARKETING_VERSION: 0.1.0
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: OpenAlarm/Info.plist
+        CODE_SIGN_ENTITLEMENTS: OpenAlarm/OpenAlarm.entitlements
         LOCALIZATIONS: "en de"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1"
@@ -42,3 +46,37 @@ targets:
         PRODUCT_NAME: OpenAlarmTests
         SWIFT_VERSION: 5.0
         GENERATE_INFOPLIST_FILE: YES
+
+  OpenAlarmLiveActivities:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: OpenAlarmLiveActivities
+      - path: OpenAlarm/LiveActivities/AlarmSoundLiveActivityAttributes.swift
+      - path: OpenAlarm/LiveActivities/NapCountdownLiveActivityManager.swift
+      - path: OpenAlarm/LiveActivities/NapCountdownLiveActivityAttributes.swift
+      - path: OpenAlarm/Shared/OpenAlarmSharedDefaults.swift
+      - path: OpenAlarm/Models/AlarmDefinition.swift
+      - path: OpenAlarm/Models/AlarmModels.swift
+      - path: OpenAlarm/Scheduling/AlarmConfigurationBuilder.swift
+      - path: OpenAlarm/Theme/OpenAlarmTheme.swift
+      - path: OpenAlarm/Intents
+        includes:
+          - "*.swift"
+      - path: OpenAlarm/Resources
+        includes:
+          - "*.lproj/Localizable.strings"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.gretzke.openalarm.liveactivities
+        PRODUCT_NAME: OpenAlarmLiveActivities
+        DEVELOPMENT_TEAM: 7P7CKKPH5L
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_VERSION: 5.0
+        CURRENT_PROJECT_VERSION: 41
+        MARKETING_VERSION: 0.1.0
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: OpenAlarmLiveActivities/Info.plist
+        CODE_SIGN_ENTITLEMENTS: OpenAlarmLiveActivities/OpenAlarmLiveActivities.entitlements
+        APPLICATION_EXTENSION_API_ONLY: YES
