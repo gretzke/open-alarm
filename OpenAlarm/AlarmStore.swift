@@ -1456,8 +1456,11 @@ final class AlarmStore: ObservableObject {
         }
         remoteStates = newRemoteStates
 
-        // Pure reload — no cleanup, no deletion, no races with intents.
+        // Reload persisted truth, then reconcile alarms that have already fired and
+        // no longer exist in AlarmKit. Pending disarm / wake-check flows win over
+        // reconciliation, so active challenge state is never bypassed.
         alarms = sortAlarms(persistedAlarms)
+        reconcilePostRingAlarms(liveAlarmKitIDs: Set(remoteByID.keys))
 
         rebuildRuntimePhases()
 
@@ -1469,6 +1472,63 @@ final class AlarmStore: ObservableObject {
 
         // Process any pending disarm challenges
         processPendingDisarmChallenges()
+    }
+
+    private func reconcilePostRingAlarms(liveAlarmKitIDs: Set<UUID>) {
+        let pendingDisarmIDs = persistence.loadPendingDisarmAlarmIDs()
+        let wakeCheckAlarmIDs = Set(wakeCheckSessions.keys)
+        var reconciledAlarms: [UserAlarm] = []
+        var deletedIDs: Set<UUID> = []
+        var changed = false
+        let now = Date.now
+
+        for var alarm in alarms {
+            switch AlarmPostRingReconciler.action(
+                for: alarm,
+                liveAlarmKitIDs: liveAlarmKitIDs,
+                pendingDisarmAlarmKitIDs: pendingDisarmIDs,
+                wakeCheckAlarmIDs: wakeCheckAlarmIDs,
+                now: now
+            ) {
+            case .keep:
+                reconciledAlarms.append(alarm)
+            case .delete:
+                cancelResidualAlarmKitIDs(for: alarm)
+                deletedIDs.insert(alarm.id)
+                changed = true
+                if alarm.isNap {
+                    NapCountdownLiveActivityManager.shared.stop()
+                }
+            case .completeWithoutDeleting:
+                cancelResidualAlarmKitIDs(for: alarm)
+                alarm.isEnabled = false
+                alarm.snoozeCount = 0
+                alarm.lifecycleState = .completed
+                alarm.updatedAt = now
+                reconciledAlarms.append(alarm)
+                changed = true
+            }
+        }
+
+        guard changed else { return }
+
+        alarms = sortAlarms(reconciledAlarms)
+        for id in deletedIDs {
+            runtimePhases.removeValue(forKey: id)
+            remoteStates.removeValue(forKey: id)
+        }
+        saveAlarms()
+    }
+
+    private func cancelResidualAlarmKitIDs(for alarm: UserAlarm) {
+        var ids: Set<UUID> = [alarm.id]
+        if let override = alarm.activeOverride {
+            ids.formUnion(override.bridgeAlarmIDs)
+        }
+        for id in ids {
+            try? alarmManager.stop(id: id)
+            try? alarmManager.cancel(id: id)
+        }
     }
 
     private func reconcileOverrides() async {
@@ -1519,9 +1579,9 @@ final class AlarmStore: ObservableObject {
         saveAlarms()
     }
 
-    // cleanupStaleAlarms removed — every alarm that fires goes through
-    // StopIntent → pendingDisarm → completeDisarmChallenge → state machine,
-    // which handles deletion/re-arm. No cleanup needed on the hot path.
+    // Post-ring reconciliation is deliberately separated from pending disarm /
+    // wake-check flows: those flows own active user challenges, while this path
+    // handles due one-shot alarms that AlarmKit no longer reports.
 
     // MARK: - Wake-Up Check Helpers
 
