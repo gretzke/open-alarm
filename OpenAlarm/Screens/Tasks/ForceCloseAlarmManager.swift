@@ -10,11 +10,17 @@ final class ForceCloseAlarmManager {
     private var timer: Timer?
     private var currentForceCloseAlarmID: UUID?
     private let mainAlarm: AlarmDefinition
+    private let resolvedSettings: SharedAlarmSettings
 
     private static let forceCloseAlarmIDKey = "OPENALARM_FORCE_CLOSE_ALARM_ID"
 
-    init(alarm: AlarmDefinition, alarmManager: AlarmManager = .shared) {
+    init(
+        alarm: AlarmDefinition,
+        resolvedSettings: SharedAlarmSettings,
+        alarmManager: AlarmManager = .shared
+    ) {
         self.mainAlarm = alarm
+        self.resolvedSettings = resolvedSettings
         self.alarmManager = alarmManager
     }
 
@@ -36,7 +42,11 @@ final class ForceCloseAlarmManager {
     private func scheduleNextForceCloseAlarm() {
         let newID = UUID()
         let fireDate = Date.now.addingTimeInterval(20)
-        let config = AlarmConfigurationBuilder.makeForceCloseAlarmConfiguration(for: mainAlarm, fireAt: fireDate)
+        let config = AlarmConfigurationBuilder.makeForceCloseAlarmConfiguration(
+            for: mainAlarm,
+            fireAt: fireDate,
+            resolvedSettings: resolvedSettings
+        )
 
         Task {
             _ = try? await alarmManager.schedule(id: newID, configuration: config)

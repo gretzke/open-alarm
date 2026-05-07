@@ -4,6 +4,8 @@ build/
 DerivedData/
 docs/plans/
 xcuserdata/
+__pycache__/
+*.py[cod]
 *.swp
 
 # Never commit App Store Connect credentials or generated auth artifacts.

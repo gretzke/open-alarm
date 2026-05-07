@@ -88,7 +88,8 @@ Use the automation script below to perform a deterministic TestFlight flow:
 1. bump `CURRENT_PROJECT_VERSION` and commit it,
 2. archive + upload using Xcode,
 3. poll App Store Connect until the uploaded build is ready,
-4. attach the build to your internal beta group.
+4. attach the build to your beta group,
+5. when `TESTFLIGHT_DISTRIBUTION=external`, submit the attached build to Beta App Review.
 
 Sensitive values and account/private IDs are read from environment variables at runtime only.
 Do not hardcode them in scripts or commit them to the repository.
@@ -121,3 +122,6 @@ Optional overrides:
 - `ARCHIVE_PATH` (default: `build/OpenAlarm.xcarchive`)
 - `POLL_SECONDS` (default: `20`)
 - `POLL_TIMEOUT_SECONDS` (default: `1800`)
+- `TESTFLIGHT_DISTRIBUTION` (default: `internal`; set `external` to omit the internal-only upload flag and submit Beta App Review after the build is attached)
+
+External publishing intentionally does not call the optional beta build notification endpoint; use the default TestFlight notification behavior configured in App Store Connect.

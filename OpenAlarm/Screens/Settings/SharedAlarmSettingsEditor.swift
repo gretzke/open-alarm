@@ -60,8 +60,43 @@ struct SharedAlarmSettingsEditor: View {
         return options
     }
 
+    private var volumeSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(L10n.alarmEditorTaskVolumeTitle)
+                    .font(.headline)
+                    .foregroundStyle(OAColor.textPrimary)
+
+                Spacer(minLength: 0)
+
+                Text(verbatim: "\(settings.volume.targetPercent)%")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(OAColor.textSecondary)
+            }
+
+            Slider(
+                value: Binding(
+                    get: { Double(settings.volume.targetPercent) },
+                    set: { settings.volume = AlarmVolumeSettings(targetPercent: Int($0.rounded())) }
+                ),
+                in: 0...100,
+                step: 1
+            )
+            .tint(OAColor.actionCyan)
+
+            Text(L10n.alarmEditorTaskVolumeExplainer)
+                .font(.footnote)
+                .foregroundStyle(OAColor.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .oaGlassPanel()
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            volumeSection
+
             HStack {
                 Text(L10n.alarmEditorSnoozeTitle)
                     .font(.headline)

@@ -44,7 +44,8 @@ struct AppRootView: View {
         .fullScreenCover(item: $alarmStore.disarmPresentation) { presentation in
             TaskContainerView(
                 alarm: presentation.alarm,
-                tasks: presentation.tasks
+                tasks: presentation.tasks,
+                resolvedSettings: presentation.resolvedSettings
             ) {
                 Task {
                     await alarmStore.completeDisarmChallenge(for: presentation.id)

@@ -13,6 +13,7 @@ struct DisarmPresentation: Identifiable {
     let id: UUID  // alarm ID
     let alarm: AlarmDefinition
     let tasks: [AlarmTask]
+    let resolvedSettings: SharedAlarmSettings
 }
 
 // MARK: - AlarmStore
@@ -832,7 +833,12 @@ final class AlarmStore: ObservableObject {
 
                 // Reschedule backup alarm
                 if let alarm = alarms.first(where: { $0.id == alarmID }) {
-                    let config = AlarmConfigurationBuilder.makeWakeCheckBackupConfiguration(for: alarm, deadlineAt: newDeadline)
+                    let settings = resolvedSettingsForAlarm(alarm)
+                    let config = AlarmConfigurationBuilder.makeWakeCheckBackupConfiguration(
+                        for: alarm,
+                        deadlineAt: newDeadline,
+                        resolvedSettings: settings
+                    )
                     try? alarmManager.stop(id: alarmID)
                     try? alarmManager.cancel(id: alarmID)
                     _ = try? await alarmManager.schedule(id: alarmID, configuration: config)
@@ -904,7 +910,8 @@ final class AlarmStore: ObservableObject {
         disarmPresentation = DisarmPresentation(
             id: alarms[index].id,
             alarm: alarm,
-            tasks: settings.tasks
+            tasks: settings.tasks,
+            resolvedSettings: settings
         )
     }
 
@@ -1050,7 +1057,11 @@ final class AlarmStore: ObservableObject {
         }
 
         // Schedule backup alarm at deadline
-        let config = AlarmConfigurationBuilder.makeWakeCheckBackupConfiguration(for: alarm, deadlineAt: deadlineAt)
+        let config = AlarmConfigurationBuilder.makeWakeCheckBackupConfiguration(
+            for: alarm,
+            deadlineAt: deadlineAt,
+            resolvedSettings: settings
+        )
         _ = try? await alarmManager.schedule(id: alarmID, configuration: config)
     }
 

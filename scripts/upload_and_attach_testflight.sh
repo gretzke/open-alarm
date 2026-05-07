@@ -98,6 +98,7 @@ PROJECT="${PROJECT:-OpenAlarm.xcodeproj}"
 ARCHIVE_PATH="${ARCHIVE_PATH:-build/OpenAlarm.xcarchive}"
 POLL_SECONDS="${POLL_SECONDS:-20}"
 POLL_TIMEOUT_SECONDS="${POLL_TIMEOUT_SECONDS:-1800}"
+TESTFLIGHT_DISTRIBUTION="${TESTFLIGHT_DISTRIBUTION:-internal}"
 
 ASC_KEY_PATH_DEFAULT="$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
 ASC_KEY_PATH="${ASC_KEY_PATH:-$ASC_KEY_PATH_DEFAULT}"
@@ -109,6 +110,7 @@ export ASC_KEY_PATH
 
 [[ "$POLL_SECONDS" =~ ^[0-9]+$ ]] || die "POLL_SECONDS must be a positive integer"
 [[ "$POLL_TIMEOUT_SECONDS" =~ ^[0-9]+$ ]] || die "POLL_TIMEOUT_SECONDS must be a positive integer"
+[[ "$TESTFLIGHT_DISTRIBUTION" =~ ^(internal|external)$ ]] || die "TESTFLIGHT_DISTRIBUTION must be either 'internal' or 'external'"
 (( POLL_SECONDS > 0 )) || die "POLL_SECONDS must be > 0"
 (( POLL_TIMEOUT_SECONDS > 0 )) || die "POLL_TIMEOUT_SECONDS must be > 0"
 
@@ -134,7 +136,7 @@ ABS_ARCHIVE_PATH="$(to_abs_path "$ARCHIVE_PATH")"
 UPLOAD_OPTIONS_PATH="$ROOT_DIR/build/UploadOptions.plist"
 
 log "Deterministic TestFlight upload+attach starting"
-log "Scheme=$SCHEME TeamID=$(mask_value "$TEAM_ID") Bundle=$BUNDLE_ID AppID=$(mask_value "$APP_ID") GroupID=$(mask_value "$BETA_GROUP_ID")"
+log "Scheme=$SCHEME TeamID=$(mask_value "$TEAM_ID") Bundle=$BUNDLE_ID AppID=$(mask_value "$APP_ID") GroupID=$(mask_value "$BETA_GROUP_ID") Distribution=$TESTFLIGHT_DISTRIBUTION"
 
 LATEST_ASC_BUILD="$(python3 - <<'PY'
 import json
@@ -241,7 +243,8 @@ xcodebuild -quiet \
   clean archive
 ok "Archive created at ${ABS_ARCHIVE_PATH}"
 
-cat > "$UPLOAD_OPTIONS_PATH" <<'PLIST'
+{
+  cat <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -250,11 +253,18 @@ cat > "$UPLOAD_OPTIONS_PATH" <<'PLIST'
 	<string>upload</string>
 	<key>method</key>
 	<string>app-store-connect</string>
+PLIST
+  if [[ "$TESTFLIGHT_DISTRIBUTION" == "internal" ]]; then
+    cat <<'PLIST'
 	<key>testFlightInternalTestingOnly</key>
 	<true/>
+PLIST
+  fi
+  cat <<'PLIST'
 </dict>
 </plist>
 PLIST
+} > "$UPLOAD_OPTIONS_PATH"
 
 log "Uploading archive to App Store Connect"
 UPLOAD_LOG_PATH="$ROOT_DIR/build/upload-export.log"
@@ -280,7 +290,7 @@ else
   die "Upload failed (exit ${UPLOAD_STATUS}). Check log: ${UPLOAD_LOG_PATH}"
 fi
 
-python3 - "$APP_ID" "$BETA_GROUP_ID" "$MARKETING_VERSION" "$NEXT_BUILD" "$POLL_SECONDS" "$POLL_TIMEOUT_SECONDS" <<'PY'
+python3 - "$APP_ID" "$BETA_GROUP_ID" "$MARKETING_VERSION" "$NEXT_BUILD" "$POLL_SECONDS" "$POLL_TIMEOUT_SECONDS" "$TESTFLIGHT_DISTRIBUTION" <<'PY'
 import json
 import os
 import subprocess
@@ -290,7 +300,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-app_id, beta_group_id, target_version, target_build, poll_seconds, timeout_seconds = sys.argv[1:]
+app_id, beta_group_id, target_version, target_build, poll_seconds, timeout_seconds, distribution = sys.argv[1:]
 poll_seconds = int(poll_seconds)
 timeout_seconds = int(timeout_seconds)
 
@@ -315,6 +325,10 @@ def log(message):
 def fail(message, exit_code=1):
     print(f"❌ {redact(message)}", file=sys.stderr, flush=True)
     raise SystemExit(exit_code)
+
+
+if distribution not in {"internal", "external"}:
+    fail(f"Invalid TestFlight distribution: {distribution}")
 
 
 def make_jwt():
@@ -544,15 +558,47 @@ def attach_build(build_id):
     fail(f"Failed to attach build to beta group (HTTP {status}). {details}")
 
 
+def submit_beta_app_review(build_id):
+    payload = {
+        "data": {
+            "type": "betaAppReviewSubmissions",
+            "relationships": {
+                "build": {"data": {"type": "builds", "id": build_id}}
+            },
+        }
+    }
+    status, response_payload = asc_request(
+        "POST",
+        "/v1/betaAppReviewSubmissions",
+        payload,
+    )
+
+    if 200 <= status < 300:
+        return "submitted"
+
+    details = extract_errors(response_payload)
+    lowered = details.lower()
+    if status in {409, 422} and (
+        "already" in lowered or "exists" in lowered or "in review" in lowered
+    ):
+        log("Beta App Review submission already exists or build is already in review")
+        return "already-submitted"
+
+    fail(f"Failed to submit Beta App Review (HTTP {status}). {details}")
+
+
 deadline = time.time() + timeout_seconds
 build_id = find_build_id(deadline)
 log(f"Found build id={build_id}")
 state = wait_until_ready(build_id, deadline)
 attach_result = attach_build(build_id)
+review_result = "not-requested"
+if distribution == "external":
+    review_result = submit_beta_app_review(build_id)
 print(
-    f"✅ ASC ready state={state}; beta group relation={attach_result}; build id={build_id}",
+    f"✅ ASC ready state={state}; beta group relation={attach_result}; beta app review={review_result}; build id={build_id}",
     flush=True,
 )
 PY
 
-ok "Deterministic TestFlight upload+attach succeeded for version ${MARKETING_VERSION} (build ${NEXT_BUILD})"
+ok "Deterministic TestFlight upload+attach succeeded for version ${MARKETING_VERSION} (build ${NEXT_BUILD}, distribution ${TESTFLIGHT_DISTRIBUTION})"

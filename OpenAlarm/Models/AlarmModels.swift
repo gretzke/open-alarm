@@ -116,6 +116,40 @@ enum AlarmTask: Codable, Equatable, Sendable {
     }
 }
 
+// MARK: - AlarmVolumeSettings
+
+struct AlarmVolumeSettings: Codable, Equatable, Sendable {
+    var targetPercent: Int
+
+    static let `default` = AlarmVolumeSettings(targetPercent: 20)
+
+    init(targetPercent: Int = 20) {
+        self.targetPercent = Self.clamp(targetPercent)
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        targetPercent = Self.clamp(try container.decodeIfPresent(Int.self, forKey: .targetPercent) ?? Self.default.targetPercent)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(targetPercent, forKey: .targetPercent)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case targetPercent
+    }
+
+    static func clamp(_ percent: Int) -> Int {
+        min(100, max(0, percent))
+    }
+
+    var targetScalar: Float {
+        Float(targetPercent) / 100
+    }
+}
+
 // MARK: - SharedAlarmSettings
 
 struct SharedAlarmSettings: Codable, Equatable, Sendable {
@@ -126,6 +160,7 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
     var wakeUpCheckDelayMinutes: Int
     var wakeUpCheckResponseTimeoutMinutes: Int
     var tasks: [AlarmTask]
+    var volume: AlarmVolumeSettings
 
     static let featureDefaults = SharedAlarmSettings(
         snoozeEnabled: false,
@@ -134,7 +169,8 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         wakeUpCheckEnabled: false,
         wakeUpCheckDelayMinutes: WakeUpCheckTimingPolicy.defaultCheckDelayMinutes,
         wakeUpCheckResponseTimeoutMinutes: WakeUpCheckTimingPolicy.defaultResponseTimeoutMinutes,
-        tasks: []
+        tasks: [],
+        volume: .default
     )
 
     func canSnoozeAgain(currentCount: Int) -> Bool {
@@ -171,6 +207,7 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         case wakeUpCheckDelayMinutes
         case wakeUpCheckResponseTimeoutMinutes
         case tasks
+        case volume
     }
 
     init(
@@ -180,7 +217,8 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         wakeUpCheckEnabled: Bool,
         wakeUpCheckDelayMinutes: Int,
         wakeUpCheckResponseTimeoutMinutes: Int,
-        tasks: [AlarmTask] = []
+        tasks: [AlarmTask] = [],
+        volume: AlarmVolumeSettings = .default
     ) {
         self.snoozeEnabled = snoozeEnabled
         self.snoozeDurationMinutes = snoozeDurationMinutes
@@ -189,6 +227,7 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         self.wakeUpCheckDelayMinutes = WakeUpCheckTimingPolicy.clampCheckDelayMinutes(wakeUpCheckDelayMinutes)
         self.wakeUpCheckResponseTimeoutMinutes = WakeUpCheckTimingPolicy.normalizeResponseTimeoutMinutes(wakeUpCheckResponseTimeoutMinutes)
         self.tasks = tasks
+        self.volume = volume
     }
 
     init(from decoder: Decoder) throws {
@@ -204,6 +243,7 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
             try container.decodeIfPresent(Int.self, forKey: .wakeUpCheckResponseTimeoutMinutes) ?? SharedAlarmSettings.featureDefaults.wakeUpCheckResponseTimeoutMinutes
         )
         tasks = try container.decodeIfPresent([AlarmTask].self, forKey: .tasks) ?? []
+        volume = try container.decodeIfPresent(AlarmVolumeSettings.self, forKey: .volume) ?? .default
     }
 }
 

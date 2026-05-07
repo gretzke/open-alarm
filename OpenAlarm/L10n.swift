@@ -46,6 +46,8 @@ enum L10n {
     static let alarmEditorDeleteAfterUseToggle: LocalizedStringKey = "alarm_editor_delete_after_use_toggle"
     static let alarmEditorRepeatDaysTitle: LocalizedStringKey = "alarm_editor_repeat_days_title"
     static let alarmEditorSnoozeTitle: LocalizedStringKey = "alarm_editor_snooze_title"
+    static let alarmEditorTaskVolumeTitle: LocalizedStringKey = "alarm_editor_task_volume_title"
+    static let alarmEditorTaskVolumeExplainer: LocalizedStringKey = "alarm_editor_task_volume_explainer"
     static let alarmEditorSnoozeDurationLabel: LocalizedStringKey = "alarm_editor_snooze_duration_label"
     static let alarmEditorSnoozeMaxLabel: LocalizedStringKey = "alarm_editor_snooze_max_label"
     static let alarmEditorUseDefaultSettingsToggle: LocalizedStringKey = "alarm_editor_use_default_settings_toggle"

@@ -51,6 +51,8 @@
 "alarm_editor_delete_after_use_toggle" = "Delete alarm after use";
 "alarm_editor_repeat_days_title" = "Repeat on days";
 "alarm_editor_snooze_title" = "Snooze";
+"alarm_editor_task_volume_title" = "Task Alarm Volume";
+"alarm_editor_task_volume_explainer" = "This controls the alarm sound volume while you solve tasks. The initial alarm volume can be set in Settings → Sounds & Haptics.";
 "alarm_editor_snooze_duration_label" = "Duration";
 "alarm_editor_snooze_max_label" = "Max snoozes";
 "alarm_editor_use_default_settings_toggle" = "Use default settings";

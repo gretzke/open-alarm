@@ -51,6 +51,8 @@
 "alarm_editor_delete_after_use_toggle" = "Alarm nach Nutzung löschen";
 "alarm_editor_repeat_days_title" = "An Tagen wiederholen";
 "alarm_editor_snooze_title" = "Snooze";
+"alarm_editor_task_volume_title" = "Aufgaben-Alarm-Lautstärke";
+"alarm_editor_task_volume_explainer" = "Dies steuert die Lautstärke des Alarmtons, während du Aufgaben löst. Die anfängliche Alarmlautstärke kannst du unter Einstellungen → Töne & Haptik festlegen.";
 "alarm_editor_snooze_duration_label" = "Dauer";
 "alarm_editor_snooze_max_label" = "Max. Snoozes";
 "alarm_editor_use_default_settings_toggle" = "Standard-Einstellungen verwenden";

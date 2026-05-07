@@ -39,7 +39,7 @@ struct NapDurationPicker: View {
                 Picker("", selection: $minutes) {
                     ForEach(minuteOptions, id: \.self) { value in
                         if value == 0, allowZeroMinutes, hours == 0 {
-                            Text("5 sec").tag(value)
+                            Text(String(localized: "alarm_editor_snooze_debug_5_seconds")).tag(value)
                         } else {
                             Text(String(format: "%02d", value)).tag(value)
                         }

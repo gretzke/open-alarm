@@ -29,7 +29,9 @@ struct MathTaskView: View {
                 .font(.system(size: 40, weight: .bold, design: .rounded))
                 .foregroundStyle(OAColor.textPrimary)
 
-            TextField("", text: $userAnswer)
+            TextField(text: $userAnswer) {
+                EmptyView()
+            }
                 .keyboardType(.numberPad)
                 .font(.system(size: 32, weight: .medium, design: .rounded))
                 .multilineTextAlignment(.center)

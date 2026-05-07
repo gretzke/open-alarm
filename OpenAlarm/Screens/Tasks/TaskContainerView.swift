@@ -4,12 +4,26 @@ import SwiftUI
 struct TaskContainerView: View {
     let alarm: AlarmDefinition
     let tasks: [AlarmTask]
+    let resolvedSettings: SharedAlarmSettings
     var onCompleted: () -> Void
 
-    @StateObject private var soundManager = TaskSoundManager()
+    @StateObject private var soundManager: TaskSoundManager
     @State private var forceCloseManager: ForceCloseAlarmManager?
     @State private var isDismissed = false
     @State private var currentTaskIndex = 0
+
+    init(
+        alarm: AlarmDefinition,
+        tasks: [AlarmTask],
+        resolvedSettings: SharedAlarmSettings,
+        onCompleted: @escaping () -> Void
+    ) {
+        self.alarm = alarm
+        self.tasks = tasks
+        self.resolvedSettings = resolvedSettings
+        self.onCompleted = onCompleted
+        _soundManager = StateObject(wrappedValue: TaskSoundManager(volumeSettings: resolvedSettings.volume))
+    }
 
     var body: some View {
         ZStack {
@@ -36,7 +50,7 @@ struct TaskContainerView: View {
             }
             soundManager.startPlaying()
             AlarmSoundLiveActivityManager.shared.start(alarm: alarm)
-            let manager = ForceCloseAlarmManager(alarm: alarm)
+            let manager = ForceCloseAlarmManager(alarm: alarm, resolvedSettings: resolvedSettings)
             manager.start()
             forceCloseManager = manager
         }

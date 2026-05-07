@@ -112,6 +112,40 @@ enum AlarmTask: Codable, Equatable, Sendable {
     case math(difficulty: MathDifficulty, count: Int)
 }
 
+// MARK: - AlarmVolumeSettings
+
+struct AlarmVolumeSettings: Codable, Equatable, Sendable {
+    var targetPercent: Int
+
+    static let `default` = AlarmVolumeSettings(targetPercent: 20)
+
+    init(targetPercent: Int = 20) {
+        self.targetPercent = Self.clamp(targetPercent)
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        targetPercent = Self.clamp(try container.decodeIfPresent(Int.self, forKey: .targetPercent) ?? Self.default.targetPercent)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(targetPercent, forKey: .targetPercent)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case targetPercent
+    }
+
+    static func clamp(_ percent: Int) -> Int {
+        min(100, max(0, percent))
+    }
+
+    var targetScalar: Float {
+        Float(targetPercent) / 100
+    }
+}
+
 // MARK: - Minimal SharedAlarmSettings (stub for Codable conformance)
 
 struct SharedAlarmSettings: Codable, Equatable, Sendable {
@@ -122,6 +156,7 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
     var wakeUpCheckDelayMinutes: Int
     var wakeUpCheckResponseTimeoutMinutes: Int
     var tasks: [AlarmTask]
+    var volume: AlarmVolumeSettings
 
     static let featureDefaults = SharedAlarmSettings(
         snoozeEnabled: false,
@@ -130,8 +165,20 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         wakeUpCheckEnabled: false,
         wakeUpCheckDelayMinutes: 5,
         wakeUpCheckResponseTimeoutMinutes: 3,
-        tasks: []
+        tasks: [],
+        volume: .default
     )
+
+    private enum CodingKeys: String, CodingKey {
+        case snoozeEnabled
+        case snoozeDurationMinutes
+        case maxSnoozes
+        case wakeUpCheckEnabled
+        case wakeUpCheckDelayMinutes
+        case wakeUpCheckResponseTimeoutMinutes
+        case tasks
+        case volume
+    }
 
     init(
         snoozeEnabled: Bool,
@@ -140,7 +187,8 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         wakeUpCheckEnabled: Bool,
         wakeUpCheckDelayMinutes: Int,
         wakeUpCheckResponseTimeoutMinutes: Int,
-        tasks: [AlarmTask] = []
+        tasks: [AlarmTask] = [],
+        volume: AlarmVolumeSettings = .default
     ) {
         self.snoozeEnabled = snoozeEnabled
         self.snoozeDurationMinutes = snoozeDurationMinutes
@@ -149,6 +197,19 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         self.wakeUpCheckDelayMinutes = wakeUpCheckDelayMinutes
         self.wakeUpCheckResponseTimeoutMinutes = wakeUpCheckResponseTimeoutMinutes
         self.tasks = tasks
+        self.volume = volume
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        snoozeEnabled = try container.decodeIfPresent(Bool.self, forKey: .snoozeEnabled) ?? SharedAlarmSettings.featureDefaults.snoozeEnabled
+        snoozeDurationMinutes = try container.decodeIfPresent(Int.self, forKey: .snoozeDurationMinutes) ?? SharedAlarmSettings.featureDefaults.snoozeDurationMinutes
+        maxSnoozes = try container.decodeIfPresent(Int.self, forKey: .maxSnoozes) ?? SharedAlarmSettings.featureDefaults.maxSnoozes
+        wakeUpCheckEnabled = try container.decodeIfPresent(Bool.self, forKey: .wakeUpCheckEnabled) ?? SharedAlarmSettings.featureDefaults.wakeUpCheckEnabled
+        wakeUpCheckDelayMinutes = try container.decodeIfPresent(Int.self, forKey: .wakeUpCheckDelayMinutes) ?? SharedAlarmSettings.featureDefaults.wakeUpCheckDelayMinutes
+        wakeUpCheckResponseTimeoutMinutes = try container.decodeIfPresent(Int.self, forKey: .wakeUpCheckResponseTimeoutMinutes) ?? SharedAlarmSettings.featureDefaults.wakeUpCheckResponseTimeoutMinutes
+        tasks = try container.decodeIfPresent([AlarmTask].self, forKey: .tasks) ?? []
+        volume = try container.decodeIfPresent(AlarmVolumeSettings.self, forKey: .volume) ?? .default
     }
 }
 

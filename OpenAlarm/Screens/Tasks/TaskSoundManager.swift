@@ -13,18 +13,21 @@ final class TaskSoundManager: ObservableObject {
     private var isResettingVolume = false
     private var isPlaybackRequested = false
     private var alarmSoundURL: URL?
+    private let volumeSettings: AlarmVolumeSettings
 
-    /// Target volume for alarm playback. Future: make this configurable per alarm.
-    private let alarmVolume: Float = 0.2
+    init(volumeSettings: AlarmVolumeSettings = .default) {
+        self.volumeSettings = volumeSettings
+    }
 
     func startPlaying() {
+        let targetVolume = volumeSettings.targetScalar
         isPlaybackRequested = true
         alarmSoundURL = resolveAlarmSoundURL()
         configureAudioSession()
         registerForAudioSessionNotifications()
         setupHiddenVolumeView()
-        setSystemVolume(alarmVolume)
-        capturedVolume = alarmVolume
+        setSystemVolume(targetVolume)
+        capturedVolume = targetVolume
         ensurePlaybackActive(forceRestart: true)
         observeVolumeChanges()
         startVolumePolling()

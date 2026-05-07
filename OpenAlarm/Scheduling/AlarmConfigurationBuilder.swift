@@ -1,3 +1,4 @@
+import ActivityKit
 import AlarmKit
 import Foundation
 
@@ -13,6 +14,7 @@ enum AlarmConfigurationBuilder {
     ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
         let title = resolvedTitle(for: alarm)
         let sharedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
+        let alarmSound = alarmKitSound(for: sharedSettings)
         let showSnooze = !forceDisableSnooze && sharedSettings.canSnoozeAgain(currentCount: alarm.snoozeCount)
 
         let alertPresentation = AlarmPresentation.Alert(
@@ -48,7 +50,7 @@ enum AlarmConfigurationBuilder {
             attributes: attributes,
             stopIntent: StopIntent(alarmID: alarm.id.uuidString),
             secondaryIntent: showSnooze ? SnoozeIntent(alarmID: alarm.id.uuidString) : nil,
-            sound: .default
+            sound: alarmSound
         )
     }
 
@@ -64,6 +66,7 @@ enum AlarmConfigurationBuilder {
     ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
         let title = resolvedTitle(for: parentAlarm)
         let sharedSettings = parentAlarm.resolvedSharedSettings(defaults: defaultSharedSettings)
+        let alarmSound = alarmKitSound(for: sharedSettings)
         let showSnooze = sharedSettings.canSnoozeAgain(currentCount: 0)
 
         let alertPresentation = AlarmPresentation.Alert(
@@ -96,7 +99,7 @@ enum AlarmConfigurationBuilder {
             attributes: attributes,
             stopIntent: StopIntent(alarmID: bridgeID.uuidString),
             secondaryIntent: showSnooze ? SnoozeIntent(alarmID: bridgeID.uuidString) : nil,
-            sound: .default
+            sound: alarmSound
         )
     }
 
@@ -104,10 +107,12 @@ enum AlarmConfigurationBuilder {
 
     static func makeWakeCheckBackupConfiguration(
         for alarm: AlarmDefinition,
-        deadlineAt: Date
+        deadlineAt: Date,
+        resolvedSettings: SharedAlarmSettings
     ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
         let title = resolvedTitle(for: alarm)
         let titleResource = localizedResource(from: title)
+        let alarmSound = alarmKitSound(for: resolvedSettings)
         let alertPresentation = AlarmPresentation.Alert(
             title: titleResource,
             stopButton: .stopButton,
@@ -127,7 +132,7 @@ enum AlarmConfigurationBuilder {
             attributes: attributes,
             stopIntent: StopIntent(alarmID: alarm.id.uuidString),
             secondaryIntent: nil,
-            sound: .default
+            sound: alarmSound
         )
     }
 
@@ -135,10 +140,12 @@ enum AlarmConfigurationBuilder {
 
     static func makeForceCloseAlarmConfiguration(
         for alarm: AlarmDefinition,
-        fireAt: Date
+        fireAt: Date,
+        resolvedSettings: SharedAlarmSettings
     ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
         let title = resolvedTitle(for: alarm)
         let titleResource = localizedResource(from: title)
+        let alarmSound = alarmKitSound(for: resolvedSettings)
         let alertPresentation = AlarmPresentation.Alert(
             title: titleResource,
             stopButton: .stopButton,
@@ -158,11 +165,19 @@ enum AlarmConfigurationBuilder {
             attributes: attributes,
             stopIntent: StopIntent(alarmID: alarm.id.uuidString),
             secondaryIntent: nil,
-            sound: .default
+            sound: alarmSound
         )
     }
 
     // MARK: - Helpers
+
+    private static func alarmKitSound(for settings: SharedAlarmSettings) -> AlertConfiguration.AlertSound {
+        // AlarmKit exposes sound selection but not numeric volume control.
+        // The configured task alarm volume is applied by TaskSoundManager once the app opens.
+        // Keep this settings-aware seam so future .named(...) sound assets can honor custom overrides.
+        _ = settings
+        return .default
+    }
 
     static func resolvedTitle(for alarm: AlarmDefinition) -> String {
         if alarm.isNap {
