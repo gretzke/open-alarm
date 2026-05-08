@@ -412,6 +412,57 @@ final class AlarmStateMachineTests: XCTestCase {
         XCTAssertTrue(result.effects.contains(.deleteAlarm(alarm.id)))
     }
 
+    func testChallengeCompletedOneShotDeleteAfterUseDeletesEvenIfRuntimePhaseWasLost() {
+        let alarm = makeAlarm(deleteAfterUse: true)
+        let result = AlarmStateMachine.transition(
+            current: .idle,
+            event: .challengeCompleted(alarmKitID: alarm.id),
+            alarm: alarm,
+            resolvedSettings: defaultSettings
+        )
+
+        XCTAssertEqual(result.phase, .completed)
+        XCTAssertTrue(result.effects.contains(.cancelAlarmKit(ids: [alarm.id])))
+        XCTAssertTrue(result.effects.contains(.deleteAlarm(alarm.id)))
+    }
+
+    func testChallengeCompletedWithWakeCheckDoesNotDeleteWhenRuntimePhaseWasLost() {
+        let alarm = makeAlarm(deleteAfterUse: true)
+        let result = AlarmStateMachine.transition(
+            current: .idle,
+            event: .challengeCompleted(alarmKitID: alarm.id),
+            alarm: alarm,
+            resolvedSettings: wakeCheckSettings
+        )
+
+        XCTAssertEqual(result.phase, .awaitingWakeCheck)
+        XCTAssertEqual(result.effects, [.cancelAlarmKit(ids: [alarm.id])])
+        XCTAssertFalse(result.effects.contains(.deleteAlarm(alarm.id)))
+    }
+
+    func testChallengeCompletedNoTaskFlowUsesSameDeleteAfterUsePolicy() {
+        let settingsWithoutTasks = SharedAlarmSettings(
+            snoozeEnabled: false,
+            snoozeDurationMinutes: 5,
+            maxSnoozes: 3,
+            wakeUpCheckEnabled: false,
+            wakeUpCheckDelayMinutes: 5,
+            wakeUpCheckResponseTimeoutMinutes: 3,
+            tasks: []
+        )
+        let alarm = makeAlarm(deleteAfterUse: true)
+        let result = AlarmStateMachine.transition(
+            current: .awaitingDisarmChallenge(alarmKitID: alarm.id),
+            event: .challengeCompleted(alarmKitID: alarm.id),
+            alarm: alarm,
+            resolvedSettings: settingsWithoutTasks
+        )
+
+        XCTAssertEqual(result.phase, .completed)
+        XCTAssertTrue(result.effects.contains(.cancelAlarmKit(ids: [alarm.id])))
+        XCTAssertTrue(result.effects.contains(.deleteAlarm(alarm.id)))
+    }
+
     func testChallengeCompletedOneShotKeepCompletes() {
         let alarm = makeAlarm(deleteAfterUse: false)
         let result = AlarmStateMachine.transition(

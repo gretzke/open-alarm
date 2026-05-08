@@ -138,38 +138,20 @@ enum AlarmStateMachine {
         // MARK: - Challenge completed → post-stop logic
 
         case (.awaitingDisarmChallenge(let akID), .challengeCompleted(let completedID)) where akID == completedID:
-            if resolvedSettings.wakeUpCheckEnabled {
-                return TransitionResult(
-                    phase: .awaitingWakeCheck,
-                    effects: [.cancelAlarmKit(ids: [akID])]
-                )
-            }
+            return completeDisarmChallenge(
+                alarmKitID: akID,
+                alarm: alarm,
+                resolvedSettings: resolvedSettings
+            )
 
-            if let override = alarm.activeOverride, override.bridgeAlarmIDs.contains(akID) {
-                let remainingBridgeIDs = Set(override.bridgeAlarmIDs).subtracting([akID])
-                return TransitionResult(
-                    phase: .overrideActive(bridgeAlarmIDs: remainingBridgeIDs),
-                    effects: [.cancelAlarmKit(ids: [akID])]
-                )
-            }
-
-            if alarm.isRepeating {
-                return TransitionResult(
-                    phase: .scheduled(alarmKitIDs: [alarm.id]),
-                    effects: [.scheduleAlarmKit(alarmID: alarm.id, trigger: alarm.trigger, recurrence: alarm.recurrence)]
-                )
-            }
-
-            if alarm.deleteAfterUse {
-                return TransitionResult(
-                    phase: .completed,
-                    effects: [.cancelAlarmKit(ids: [akID]), .deleteAlarm(alarm.id)]
-                )
-            }
-
-            return TransitionResult(
-                phase: .completed,
-                effects: [.cancelAlarmKit(ids: [akID])]
+        // The app only emits challengeCompleted after the dismiss/task UI succeeds.
+        // If the transient runtime phase was lost before completion, treat the UI
+        // completion as the durable proof that disarm was in progress.
+        case (.idle, .challengeCompleted(let completedID)):
+            return completeDisarmChallenge(
+                alarmKitID: completedID,
+                alarm: alarm,
+                resolvedSettings: resolvedSettings
             )
 
         // MARK: - Awaiting disarm challenge: force-close alarm re-fired
@@ -238,6 +220,46 @@ enum AlarmStateMachine {
     }
 
     // MARK: - Helpers
+
+    private static func completeDisarmChallenge(
+        alarmKitID akID: UUID,
+        alarm: AlarmDefinition,
+        resolvedSettings: SharedAlarmSettings
+    ) -> TransitionResult {
+        if resolvedSettings.wakeUpCheckEnabled {
+            return TransitionResult(
+                phase: .awaitingWakeCheck,
+                effects: [.cancelAlarmKit(ids: [akID])]
+            )
+        }
+
+        if let override = alarm.activeOverride, override.bridgeAlarmIDs.contains(akID) {
+            let remainingBridgeIDs = Set(override.bridgeAlarmIDs).subtracting([akID])
+            return TransitionResult(
+                phase: .overrideActive(bridgeAlarmIDs: remainingBridgeIDs),
+                effects: [.cancelAlarmKit(ids: [akID])]
+            )
+        }
+
+        if alarm.isRepeating {
+            return TransitionResult(
+                phase: .scheduled(alarmKitIDs: [alarm.id]),
+                effects: [.scheduleAlarmKit(alarmID: alarm.id, trigger: alarm.trigger, recurrence: alarm.recurrence)]
+            )
+        }
+
+        if alarm.deleteAfterUse {
+            return TransitionResult(
+                phase: .completed,
+                effects: [.cancelAlarmKit(ids: [akID]), .deleteAlarm(alarm.id)]
+            )
+        }
+
+        return TransitionResult(
+            phase: .completed,
+            effects: [.cancelAlarmKit(ids: [akID])]
+        )
+    }
 
     private static func alarmKitIDs(in phase: AlarmSchedulingPhase) -> Set<UUID> {
         switch phase {
