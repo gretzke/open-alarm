@@ -140,7 +140,9 @@ struct AlarmHomeView: View {
 
     @ViewBuilder
     private var alarmListSection: some View {
-        if alarmStore.regularAlarms.isEmpty {
+        let alarmPresentations = alarmStore.regularAlarmPresentations
+
+        if alarmPresentations.isEmpty {
             Section {
                 ContentUnavailableView(
                     L10n.alarmListEmptyTitle,
@@ -154,39 +156,47 @@ struct AlarmHomeView: View {
             }
         } else {
             Section {
-                ForEach(alarmStore.regularAlarms) { alarm in
+                ForEach(alarmPresentations) { presentation in
+                    let alarm = presentation.alarm
                     AlarmRowView(
                         alarm: alarm,
                         now: now,
-                        disableChoicePopoverPresented: pendingDisableConfirmationAlarm?.id == alarm.id,
+                        isInteractive: presentation.isInteractive,
+                        disableChoicePopoverPresented: presentation.isInteractive && pendingDisableConfirmationAlarm?.id == alarm.id,
                         onDisableChoicePopoverPresentedChange: { isPresented in
                             if !isPresented, pendingDisableConfirmationAlarm?.id == alarm.id {
                                 pendingDisableConfirmationAlarm = nil
                             }
                         },
                         onSkipNextSelected: {
+                            guard presentation.isInteractive else { return }
                             setAlarmEnabled(alarm, isOn: false, skipNext: true)
                             pendingDisableConfirmationAlarm = nil
                         },
                         onDisableCompletelySelected: {
+                            guard presentation.isInteractive else { return }
                             setAlarmEnabled(alarm, isOn: false, skipNext: false)
                             pendingDisableConfirmationAlarm = nil
                         },
                         onToggle: { isOn in
+                            guard presentation.isInteractive else { return }
                             handleAlarmToggle(alarm, isOn: isOn)
                         }
                     )
                     .contentShape(Rectangle())
                     .onTapGesture {
+                        guard presentation.isInteractive else { return }
                         presentEditor(.edit(alarm))
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                            alarmStore.deleteAlarm(alarm)
-                        } label: {
-                            Label(L10n.actionDelete, systemImage: "trash")
+                        if presentation.isInteractive {
+                            Button(role: .destructive) {
+                                alarmStore.deleteAlarm(alarm)
+                            } label: {
+                                Label(L10n.actionDelete, systemImage: "trash")
+                            }
+                            .tint(OAColor.danger)
                         }
-                        .tint(OAColor.danger)
                     }
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)

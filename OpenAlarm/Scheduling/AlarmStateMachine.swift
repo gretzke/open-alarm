@@ -272,3 +272,31 @@ enum AlarmStateMachine {
         }
     }
 }
+
+// MARK: - Alarm List Display Policy
+
+enum AlarmListDisplayPolicy {
+    enum Presentation: Equatable, Sendable {
+        case show(alarm: AlarmDefinition, isInteractive: Bool)
+        case hide
+    }
+
+    static func presentation(
+        for alarm: AlarmDefinition,
+        hasActiveWakeCheckSession: Bool
+    ) -> Presentation {
+        guard hasActiveWakeCheckSession, !alarm.isRepeating else {
+            return .show(alarm: alarm, isInteractive: true)
+        }
+
+        if alarm.deleteAfterUse || alarm.isNap || alarm.isTryOut {
+            return .hide
+        }
+
+        var projectedAlarm = alarm
+        projectedAlarm.isEnabled = false
+        projectedAlarm.snoozeCount = 0
+        projectedAlarm.lifecycleState = .completed
+        return .show(alarm: projectedAlarm, isInteractive: false)
+    }
+}

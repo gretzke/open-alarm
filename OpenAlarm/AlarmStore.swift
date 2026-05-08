@@ -16,6 +16,13 @@ struct DisarmPresentation: Identifiable {
     let resolvedSettings: SharedAlarmSettings
 }
 
+struct AlarmListPresentation: Identifiable {
+    let alarm: UserAlarm
+    let isInteractive: Bool
+
+    var id: UUID { alarm.id }
+}
+
 // MARK: - AlarmStore
 
 @MainActor
@@ -49,7 +56,25 @@ final class AlarmStore: ObservableObject {
     }
 
     var regularAlarms: [UserAlarm] {
-        alarms.filter { if case .regular = $0.type { return true } else { return false } }
+        regularAlarmPresentations.map(\.alarm)
+    }
+
+    var regularAlarmPresentations: [AlarmListPresentation] {
+        alarms.compactMap { alarm in
+            guard case .regular = alarm.type else {
+                return nil
+            }
+
+            switch AlarmListDisplayPolicy.presentation(
+                for: alarm,
+                hasActiveWakeCheckSession: wakeCheckSessions[alarm.id] != nil
+            ) {
+            case .hide:
+                return nil
+            case .show(let displayAlarm, let isInteractive):
+                return AlarmListPresentation(alarm: displayAlarm, isInteractive: isInteractive)
+            }
+        }
     }
 
     var useGlobalDefaultsForNap: Bool {

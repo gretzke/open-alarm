@@ -3,6 +3,7 @@ import SwiftUI
 struct AlarmRowView: View {
     let alarm: UserAlarm
     let now: Date
+    let isInteractive: Bool
     let disableChoicePopoverPresented: Bool
     let onDisableChoicePopoverPresentedChange: (Bool) -> Void
     let onSkipNextSelected: () -> Void
@@ -249,6 +250,7 @@ struct AlarmRowView: View {
             EmptyView()
         }
         .labelsHidden()
+        .disabled(!isInteractive)
         .tint(OAColor.actionCyan)
         .popover(
             isPresented: Binding(

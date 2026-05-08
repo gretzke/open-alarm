@@ -591,6 +591,46 @@ final class AlarmStateMachineTests: XCTestCase {
         XCTAssertEqual(result.effects, [])
     }
 
+    // MARK: - Alarm list display during wake-check
+
+    func testListDisplayHidesNonRepeatingDeleteAfterUseAlarmDuringWakeCheck() {
+        let alarm = makeAlarm(deleteAfterUse: true)
+
+        let presentation = AlarmListDisplayPolicy.presentation(
+            for: alarm,
+            hasActiveWakeCheckSession: true
+        )
+
+        XCTAssertEqual(presentation, .hide)
+    }
+
+    func testListDisplayShowsNonRepeatingKeptAlarmAsDisabledDuringWakeCheck() {
+        let alarm = makeAlarm(deleteAfterUse: false)
+
+        let presentation = AlarmListDisplayPolicy.presentation(
+            for: alarm,
+            hasActiveWakeCheckSession: true
+        )
+
+        guard case .show(let projectedAlarm, let isInteractive) = presentation else {
+            return XCTFail("Expected projected disabled alarm")
+        }
+        XCTAssertFalse(projectedAlarm.isEnabled)
+        XCTAssertEqual(projectedAlarm.lifecycleState, .completed)
+        XCTAssertFalse(isInteractive)
+    }
+
+    func testListDisplayLeavesAlarmUnchangedWithoutWakeCheckSession() {
+        let alarm = makeAlarm(deleteAfterUse: true)
+
+        let presentation = AlarmListDisplayPolicy.presentation(
+            for: alarm,
+            hasActiveWakeCheckSession: false
+        )
+
+        XCTAssertEqual(presentation, .show(alarm: alarm, isInteractive: true))
+    }
+
     func testDisableFromOverrideActiveCancelsBridges() {
         let alarm = makeAlarm(repeatDays: [.monday, .wednesday, .friday])
         let bridgeIDs: Set<UUID> = [UUID(), UUID(), UUID()]
