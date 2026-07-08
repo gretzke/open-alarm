@@ -33,7 +33,7 @@ enum AlarmConfigurationBuilder {
         )
 
         let snoozeInterval: TimeInterval = sharedSettings.snoozeDurationMinutes == 0
-            ? 5
+            ? SchedulingConstants.debugSentinelSeconds
             : TimeInterval(sharedSettings.snoozeDurationMinutes * 60)
 
         // Always provide a countdown duration when snooze is configured,
@@ -85,7 +85,7 @@ enum AlarmConfigurationBuilder {
         )
 
         let snoozeInterval: TimeInterval = sharedSettings.snoozeDurationMinutes == 0
-            ? 5
+            ? SchedulingConstants.debugSentinelSeconds
             : TimeInterval(sharedSettings.snoozeDurationMinutes * 60)
 
         let hasSnoozeConfig = sharedSettings.snoozeEnabled

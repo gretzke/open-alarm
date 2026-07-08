@@ -12,7 +12,7 @@ final class ForceCloseAlarmManager {
     private let mainAlarm: AlarmDefinition
     private let resolvedSettings: SharedAlarmSettings
 
-    private static let forceCloseAlarmIDKey = "OPENALARM_FORCE_CLOSE_ALARM_ID"
+    private static let forceCloseAlarmIDKey = OpenAlarmSharedDefaults.Key.forceCloseAlarmID
 
     init(
         alarm: AlarmDefinition,

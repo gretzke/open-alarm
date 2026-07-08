@@ -35,7 +35,7 @@ struct StopIntent: LiveActivityIntent {
         try? AlarmManager.shared.stop(id: id)
 
         // Also stop any active force-close alarm (has a different UUID)
-        if let forceCloseIDStr = OpenAlarmSharedDefaults.userDefaults.string(forKey: "OPENALARM_FORCE_CLOSE_ALARM_ID"),
+        if let forceCloseIDStr = OpenAlarmSharedDefaults.userDefaults.string(forKey: OpenAlarmSharedDefaults.Key.forceCloseAlarmID),
            let forceCloseID = UUID(uuidString: forceCloseIDStr) {
             try? AlarmManager.shared.stop(id: forceCloseID)
             try? AlarmManager.shared.cancel(id: forceCloseID)
@@ -49,7 +49,7 @@ struct StopIntent: LiveActivityIntent {
 
     // MARK: - Grace period helpers (shared key with AlarmStore)
 
-    private static let graceAppliedKey = "OPENALARM_WAKE_CHECK_GRACE_APPLIED_IDS"
+    private static let graceAppliedKey = OpenAlarmSharedDefaults.Key.wakeCheckGraceAppliedIDs
 
     static func loadGraceAppliedIDs() -> Set<UUID> {
         guard let raw = OpenAlarmSharedDefaults.userDefaults.array(forKey: graceAppliedKey) as? [String] else {

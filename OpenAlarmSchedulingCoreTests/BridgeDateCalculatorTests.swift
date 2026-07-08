@@ -298,6 +298,7 @@ final class BridgeDateCalculatorTests: XCTestCase {
                 referenceDate: referenceSunday10pm,
                 calendar: calendar
             )
+            XCTAssertEqual(result.bridgeDates.count, SchedulingConstants.bridgeWindowSize, "\(kind)")
             XCTAssertEqual(result.bridgeDates.count, 5, "\(kind)")
             for i in 1..<result.bridgeDates.count {
                 XCTAssertLessThan(result.bridgeDates[i - 1], result.bridgeDates[i], "\(kind) dates must ascend")

@@ -100,6 +100,9 @@ final class AlarmStore: ObservableObject {
     private var alarmUpdatesTask: Task<Void, Never>?
     private var wakeCheckConfirmationObserver: Any?
     private var disarmChallengeObserver: Any?
+    /// Pending delayed wake-check-UI presentation; replaced (not stacked) when
+    /// processPendingWakeCheckConfirmations reschedules itself.
+    private var pendingWakeCheckUITask: Task<Void, Never>?
 
     // MARK: - Init
 
@@ -163,6 +166,7 @@ final class AlarmStore: ObservableObject {
 
     deinit {
         alarmUpdatesTask?.cancel()
+        pendingWakeCheckUITask?.cancel()
         if let observer = disarmChallengeObserver {
             NotificationCenter.default.removeObserver(observer)
         }
@@ -324,7 +328,7 @@ final class AlarmStore: ObservableObject {
             }
         }
 
-        let bridgeIDs = (0..<5).map { _ in UUID() }
+        let bridgeIDs = (0..<SchedulingConstants.bridgeWindowSize).map { _ in UUID() }
 
         alarms[index].activeOverride = OverrideState(
             kind: .modifyNext,
@@ -471,7 +475,9 @@ final class AlarmStore: ObservableObject {
         }
 
         // 0 minutes = 5 seconds (testing mode)
-        let napDuration: TimeInterval = draft.totalMinutes == 0 ? 5 : TimeInterval(draft.totalMinutes * 60)
+        let napDuration: TimeInterval = draft.totalMinutes == 0
+            ? SchedulingConstants.debugSentinelSeconds
+            : TimeInterval(draft.totalMinutes * 60)
         let targetDate = Date.now.addingTimeInterval(napDuration)
         let alarm = UserAlarm.makeNap(
             from: draft,
@@ -809,7 +815,7 @@ final class AlarmStore: ObservableObject {
         guard var session = wakeCheckSessions[alarmID] else { return nil }
 
         let remaining = session.deadlineAt.timeIntervalSinceNow
-        let minimumGrace: TimeInterval = 60
+        let minimumGrace = SchedulingConstants.wakeCheckGraceMinimumSeconds
 
         // Only extend if opened via notification tap (pending confirm UI ID present)
         // AND less than 1 minute remaining AND not already extended
@@ -1024,7 +1030,10 @@ final class AlarmStore: ObservableObject {
             try? await notifCenter.add(request)
         }
 
-        // Schedule backup alarm at deadline
+        // Schedule backup alarm at deadline. Deliberately reuses the alarm's
+        // own UUID as the AlarmKit ID: the canonical schedule is never active
+        // during a wake check, and StopIntent must resolve the backup firing
+        // back to this alarm.
         let config = AlarmConfigurationBuilder.makeWakeCheckBackupConfiguration(
             for: alarm,
             deadlineAt: deadlineAt,
@@ -1105,7 +1114,7 @@ final class AlarmStore: ObservableObject {
                 calendar: calendar
             )
 
-            let newBridgeIDs = (0..<5).map { _ in UUID() }
+            let newBridgeIDs = (0..<SchedulingConstants.bridgeWindowSize).map { _ in UUID() }
             var updatedAlarm = alarm
             updatedAlarm.activeOverride = OverrideState(
                 kind: override.kind,
@@ -1178,7 +1187,7 @@ final class AlarmStore: ObservableObject {
             calendar: calendar
         )
 
-        let bridgeIDs = (0..<5).map { _ in UUID() }
+        let bridgeIDs = (0..<SchedulingConstants.bridgeWindowSize).map { _ in UUID() }
 
         if let existingOverride = alarms[index].activeOverride {
             for bridgeID in existingOverride.bridgeAlarmIDs {
@@ -1528,10 +1537,13 @@ final class AlarmStore: ObservableObject {
 
         // Only show confirmation UI after the check delay has passed
         if session.checkAt > .now {
-            // Schedule showing the UI when checkAt arrives
+            // Schedule showing the UI when checkAt arrives. Cancel any earlier
+            // pending presentation so repeated triggers don't stack sleeps.
             let delay = session.checkAt.timeIntervalSinceNow
-            Task { @MainActor [weak self] in
+            pendingWakeCheckUITask?.cancel()
+            pendingWakeCheckUITask = Task { @MainActor [weak self] in
                 try? await Task.sleep(for: .seconds(max(0.1, delay)))
+                guard !Task.isCancelled else { return }
                 self?.processPendingWakeCheckConfirmations()
             }
             return

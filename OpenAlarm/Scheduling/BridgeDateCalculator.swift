@@ -28,7 +28,8 @@ enum BridgeDateCalculator {
     ) -> Result {
         precondition(!repeatDays.isEmpty, "Override requires a repeating alarm")
 
-        let neededOccurrences = overrideKind == .skipNext ? 6 : 5
+        let windowSize = SchedulingConstants.bridgeWindowSize
+        let neededOccurrences = overrideKind == .skipNext ? windowSize + 1 : windowSize
         let occurrences = nextOccurrences(
             count: neededOccurrences,
             hour: hour, minute: minute,
@@ -43,7 +44,7 @@ enum BridgeDateCalculator {
 
         switch overrideKind {
         case .skipNext:
-            bridgeDates = Array(occurrences[1...5])
+            bridgeDates = Array(occurrences[1...windowSize])
             restoreAnchorDate = firstOccurrence
 
         case .modifyNext:
@@ -74,7 +75,7 @@ enum BridgeDateCalculator {
                 ) ?? firstOccurrence
             }
 
-            bridgeDates = [modifiedDate] + Array(occurrences[1...4])
+            bridgeDates = [modifiedDate] + Array(occurrences[1..<windowSize])
             restoreAnchorDate = max(firstOccurrence, modifiedDate)
         }
 

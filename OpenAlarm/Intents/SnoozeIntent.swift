@@ -51,7 +51,9 @@ struct SnoozeIntent: LiveActivityIntent {
         alarm.snoozeCount += 1
         alarm.updatedAt = .now
 
-        let snoozeSeconds = settings.snoozeDurationMinutes == 0 ? 5.0 : TimeInterval(settings.snoozeDurationMinutes * 60)
+        let snoozeSeconds = settings.snoozeDurationMinutes == 0
+            ? SchedulingConstants.debugSentinelSeconds
+            : TimeInterval(settings.snoozeDurationMinutes * 60)
         let snoozeDate = Date.now.addingTimeInterval(snoozeSeconds)
 
         if alarm.isNap {

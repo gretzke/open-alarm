@@ -154,6 +154,8 @@ struct AlarmDefinition: Identifiable, Codable, Equatable, Sendable {
 
     var isPaused: Bool { pausedRemainingSeconds != nil }
 
+    /// Setting nil is intentionally a no-op — a fixed trigger cannot be
+    /// cleared, only replaced (the trigger enum has no "empty" case).
     var fixedTriggerDate: Date? {
         get {
             if case .fixed(let date) = trigger { return date }
