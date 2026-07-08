@@ -62,6 +62,8 @@ final class AlarmPersistence: Sendable {
 
     // MARK: - User Alarms
 
+    static let corruptUserAlarmsKey = "OPENALARM_USER_ALARMS_CORRUPT_V1"
+
     func loadUserAlarms() -> [UserAlarm] {
         guard let data = defaults.data(forKey: userAlarmsKey) else {
             return []
@@ -70,6 +72,14 @@ final class AlarmPersistence: Sendable {
         do {
             return try JSONDecoder().decode([UserAlarm].self, from: data)
         } catch {
+            // Never silently destroy the user's alarms: quarantine the corrupt
+            // blob for recovery (a follow-up save would otherwise persist [] and
+            // make the loss permanent). Keep the first quarantined blob — it is
+            // the closest to the last known-good state.
+            Self.logger.error("Alarm store decode failed, quarantining blob: \(error.localizedDescription)")
+            if defaults.data(forKey: Self.corruptUserAlarmsKey) == nil {
+                defaults.set(data, forKey: Self.corruptUserAlarmsKey)
+            }
             return []
         }
     }
@@ -79,7 +89,8 @@ final class AlarmPersistence: Sendable {
             let data = try JSONEncoder().encode(alarms)
             defaults.set(data, forKey: userAlarmsKey)
         } catch {
-            defaults.removeObject(forKey: userAlarmsKey)
+            // Never delete the existing (good) data because a new encode failed.
+            Self.logger.error("Alarm store encode failed, keeping previous data: \(error.localizedDescription)")
         }
     }
 
