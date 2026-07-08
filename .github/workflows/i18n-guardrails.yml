@@ -1,4 +1,4 @@
-name: i18n guardrails
+name: CI
 
 on:
   pull_request:
@@ -7,9 +7,8 @@ on:
       - main
 
 jobs:
-  checks:
+  guardrails:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -18,3 +17,32 @@ jobs:
 
       - name: Check localization key parity
         run: ./scripts/check_i18n.sh
+
+      - name: Check glass button migration
+        run: ./scripts/check_glass_button_migration.sh
+
+  core-tests:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select latest Xcode
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)/Contents/Developer"
+
+      - name: Run scheduling core tests
+        run: swift test
+
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select latest Xcode
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)/Contents/Developer"
+
+      - name: Build app for iOS device SDK
+        # Device-SDK compile: verifies all targets build without needing a
+        # simulator runtime on the runner. Signing is disabled.
+        run: |
+          xcodebuild -project OpenAlarm.xcodeproj -target OpenAlarm \
+            -sdk iphoneos CODE_SIGNING_ALLOWED=NO build

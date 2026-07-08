@@ -1,7 +1,10 @@
-.PHONY: generate check check-i18n check-no-literals check-glass-buttons
+.PHONY: generate check check-i18n check-no-literals check-glass-buttons test
 
 generate:
 	xcodegen generate
+
+test:
+	swift test
 
 check: check-no-literals check-i18n check-glass-buttons
 
