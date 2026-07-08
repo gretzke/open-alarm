@@ -157,18 +157,18 @@ Requirement IDs (`R-x.y`) are for referencing from the refactor plan.
 
 ---
 
-## Known defects & dead paths (decisions needed in the plan — not requirements)
+## Known defects & dead paths (status as of 2026-07-09)
 
-- **D-1** `BridgeDateCalculator` force-unwraps `calendar.date(from:)` for the modified time — crashes if the modify-next time falls in the DST spring-forward gap.
-- **D-2** Persistence recovery is destructive: decode failure → `[]`, encode failure → key deleted; next save persists the empty list (total silent alarm loss).
-- **D-3** Cross-process read-modify-write races on the single alarms blob (app-side mutators vs. intents). "Intents write truth" mitigates the app→intent direction only.
-- **D-4** Dead state-machine events: `.stopped`, `.snoozed`, `.alarmKitStateChanged`, `.overrideActivated`, `.overrideRestored`, `.wakeCheckStarted` are never dispatched; the alerting/snooze/override transitions they cover are re-implemented imperatively (`activateSkipNext`, `clearOverrideAndRestore`, `updateNextAlarmOccurrence`, `forceRescheduleAlarm`, `reconcileOverrides`, `rebuildRuntimePhases`). Decide: route through the machine or delete the dead transitions.
-- **D-5** `.persist` effect is declared but never emitted; `.scheduleAlarmKit` payload (trigger/recurrence) is ignored by the interpreter; post-transition bookkeeping (isEnabled/snoozeCount/lifecycleState writes) is duplicated across `completeDisarmChallenge` / `confirmWakeUpCheck` instead of being effects.
-- **D-6** Wake-check backup alarm reuses the alarm's own UUID as the AlarmKit ID — deliberate but fragile coupling with canonical scheduling.
-- **D-7** Magic numbers duplicated: 5 bridge alarms (three sites + calculator), 5-second sentinels (four sites), 60s grace period.
-- **D-8** Shared-defaults keys re-typed as literals across targets (`OPENALARM_FORCE_CLOSE_ALARM_ID`, `OPENALARM_WAKE_CHECK_GRACE_APPLIED_IDS`).
-- **D-9** EC-001 (fallback recovery notification when restore never runs) is documented but not implemented.
-- **D-10** SPM core (`AlarmSchedulingCoreTypes.swift` behind `OPENALARM_SCHEDULING_CORE_SPM`) hand-duplicates model types; nothing enforces sync with the app types.
-- **D-11** `fixedTriggerDate` setter silently ignores `nil` (cannot clear a fixed trigger).
-- **D-12** `processPendingWakeCheckConfirmations` can stack multiple self-rescheduling `Task.sleep` loops.
-- **D-13** Re-enabling a completed kept one-shot alarm in the same app session never reschedules it: the phase is `.completed` and the state machine has no `(.completed, .enabled)` transition, so `process(event: .enabled)` falls through to the no-op default — the alarm shows enabled but is not registered with AlarmKit. (Editing the alarm works because `(_, .updated)` matches; an app restart also masks it because the phase rebuilds to `.idle`.)
+- **D-1** — **Fixed (2026-07-09).** Force-unwrap replaced with a `.nextTime`-policy fallback; DST gap/fall-back tests added.
+- **D-2** — **Fixed (2026-07-09).** Corrupt alarm blobs are quarantined under `OPENALARM_USER_ALARMS_CORRUPT_V1`; encode failures no longer delete the previous good data.
+- **D-3** — **Deferred.** Cross-process read-modify-write races on the single alarms blob need a versioning/merge design (per-alarm keys or a write counter); a half-measure risks worse bugs. "Intents write truth, app reloads" mitigates the app→intent direction only.
+- **D-4** — **Fixed (2026-07-09).** Override activate/restore and disarm presentation now route through the machine (`.overrideActivated`, `.overrideRestored(bridgeAlarmIDs:)`, `.disarmRequested`); dead events (`.stopped`, `.snoozed`, `.alarmKitStateChanged`, `.wakeCheckStarted`) deleted. Alerting/snoozed remain reconstruction-only phases (stop/snooze fire in extension processes) — documented in the machine header.
+- **D-5** — **Fixed (2026-07-09).** Machine emits `.persist` effects for post-lifecycle bookkeeping (persist ordered before schedule so re-arm configs see the reset snooze count); `.scheduleAlarmKit` payload slimmed to `alarmID`.
+- **D-6** — **Accepted + documented (2026-07-09).** UUID reuse is deliberate; comment added at the schedule site.
+- **D-7** — **Fixed (2026-07-09).** `SchedulingConstants` centralizes bridge window size, testing sentinel, grace minimum.
+- **D-8** — **Fixed (2026-07-09).** `OpenAlarmSharedDefaults.Key` holds the cross-process keys.
+- **D-9** — **Deferred.** EC-001 fallback recovery notification is a new feature; design open questions remain (delay, copy, opt-out).
+- **D-10** — **Fixed (2026-07-09).** SPM target compiles the real model files; the stub is deleted.
+- **D-11** — **Accepted + documented (2026-07-09).** Setter no-op documented; characterization test pins it.
+- **D-12** — **Fixed (2026-07-09).** Pending wake-check-UI task is cancelled and replaced instead of stacking sleeps.
+- **D-13** — **Fixed (2026-07-09).** `(.completed, .enabled)` transition added; re-enabling a completed kept one-shot schedules again.
