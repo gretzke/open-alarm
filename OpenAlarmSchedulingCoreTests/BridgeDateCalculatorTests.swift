@@ -232,4 +232,102 @@ final class BridgeDateCalculatorTests: XCTestCase {
         let expectedAnchor = date(year: 2026, month: 3, day: 16, hour: 7, minute: 0) // Mon
         XCTAssertEqual(result.restoreAnchorDate, expectedAnchor)
     }
+
+    // MARK: - DST edge cases (D-1)
+
+    func testModifyNextIntoDSTGapDoesNotCrashAndRollsForward() {
+        // US spring-forward: Sunday 2026-03-08, 02:00 EST jumps to 03:00 EDT.
+        // Modifying a Sunday alarm to 02:30 targets a wall-clock time that does
+        // not exist on that day. Must not crash; must resolve at/after the gap.
+        let referenceSaturdayNoon = date(year: 2026, month: 3, day: 7, hour: 12, minute: 0)
+
+        let result = BridgeDateCalculator.bridgeDates(
+            hour: 9,
+            minute: 0,
+            repeatDays: [.sunday],
+            overrideKind: .modifyNext,
+            modifiedTime: (hour: 2, minute: 30),
+            referenceDate: referenceSaturdayNoon,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(result.bridgeDates.count, 5)
+
+        let resolved = calendar.dateComponents([.day, .hour], from: result.bridgeDates[0])
+        XCTAssertEqual(resolved.day, 8, "modified bridge stays on the DST-transition day")
+        XCTAssertGreaterThanOrEqual(resolved.hour ?? 0, 3, "nonexistent 02:30 resolves at/after the gap")
+
+        // Modified time is before the canonical 9am slot, so the anchor is canonical.
+        XCTAssertEqual(
+            result.restoreAnchorDate,
+            date(year: 2026, month: 3, day: 8, hour: 9, minute: 0)
+        )
+    }
+
+    func testModifyNextIntoDSTFallBackAmbiguousHourResolves() {
+        // US fall-back: Sunday 2026-11-01, 02:00 EDT falls back to 01:00 EST —
+        // 01:30 exists twice. Calendar resolves to the first occurrence.
+        let referenceSaturdayNoon = date(year: 2026, month: 10, day: 31, hour: 12, minute: 0)
+
+        let result = BridgeDateCalculator.bridgeDates(
+            hour: 9,
+            minute: 0,
+            repeatDays: [.sunday],
+            overrideKind: .modifyNext,
+            modifiedTime: (hour: 1, minute: 30),
+            referenceDate: referenceSaturdayNoon,
+            calendar: calendar
+        )
+
+        let resolved = calendar.dateComponents([.day, .hour, .minute], from: result.bridgeDates[0])
+        XCTAssertEqual(resolved.day, 1)
+        XCTAssertEqual(resolved.hour, 1)
+        XCTAssertEqual(resolved.minute, 30)
+    }
+
+    // MARK: - Window invariants
+
+    func testBridgeWindowIsAlwaysFiveAscending() {
+        for kind in [OverrideKind.skipNext, .modifyNext] {
+            let result = BridgeDateCalculator.bridgeDates(
+                hour: 7,
+                minute: 0,
+                repeatDays: [.monday],
+                overrideKind: kind,
+                modifiedTime: kind == .modifyNext ? (hour: 8, minute: 0) : nil,
+                referenceDate: referenceSunday10pm,
+                calendar: calendar
+            )
+            XCTAssertEqual(result.bridgeDates.count, 5, "\(kind)")
+            for i in 1..<result.bridgeDates.count {
+                XCTAssertLessThan(result.bridgeDates[i - 1], result.bridgeDates[i], "\(kind) dates must ascend")
+            }
+        }
+    }
+
+    func testReferenceExactlyAtOccurrenceSkipsIt() {
+        // The search starts strictly after referenceDate (+1s), so an alarm firing
+        // at this exact instant is not its own "next occurrence".
+        let mondaySevenAM = date(year: 2026, month: 3, day: 16, hour: 7, minute: 0)
+
+        let result = BridgeDateCalculator.bridgeDates(
+            hour: 7,
+            minute: 0,
+            repeatDays: [.monday],
+            overrideKind: .skipNext,
+            modifiedTime: nil,
+            referenceDate: mondaySevenAM,
+            calendar: calendar
+        )
+
+        // First occurrence (the skipped one / anchor) is NEXT Monday, not today.
+        XCTAssertEqual(
+            result.restoreAnchorDate,
+            date(year: 2026, month: 3, day: 23, hour: 7, minute: 0)
+        )
+        XCTAssertEqual(
+            result.bridgeDates[0],
+            date(year: 2026, month: 3, day: 30, hour: 7, minute: 0)
+        )
+    }
 }

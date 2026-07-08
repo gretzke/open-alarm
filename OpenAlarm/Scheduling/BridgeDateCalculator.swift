@@ -54,7 +54,25 @@ enum BridgeDateCalculator {
             modifiedComponents.hour = modifiedTime.hour
             modifiedComponents.minute = modifiedTime.minute
             modifiedComponents.second = 0
-            let modifiedDate = calendar.date(from: modifiedComponents)!
+            // `date(from:)` can fail for nonexistent wall-clock times (DST
+            // spring-forward gap). Fall back to the first valid moment at/after
+            // the requested time on that day instead of crashing.
+            let modifiedDate: Date
+            if let direct = calendar.date(from: modifiedComponents) {
+                modifiedDate = direct
+            } else {
+                var matching = DateComponents()
+                matching.hour = modifiedTime.hour
+                matching.minute = modifiedTime.minute
+                let dayStart = calendar.startOfDay(for: firstOccurrence)
+                modifiedDate = calendar.nextDate(
+                    after: dayStart,
+                    matching: matching,
+                    matchingPolicy: .nextTime,
+                    repeatedTimePolicy: .first,
+                    direction: .forward
+                ) ?? firstOccurrence
+            }
 
             bridgeDates = [modifiedDate] + Array(occurrences[1...4])
             restoreAnchorDate = max(firstOccurrence, modifiedDate)
