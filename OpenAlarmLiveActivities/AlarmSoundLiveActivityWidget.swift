@@ -3,7 +3,9 @@ import SwiftUI
 import WidgetKit
 
 private let openAlarmLiveActivityURL = URL(string: "openalarm://alarm")!
-private let liveActivityAccent = Color.cyan
+/// Mirror of OAColor.actionCyan (OpenAlarm/Theme/OpenAlarmTheme.swift) — the
+/// widget target doesn't compile the theme file; keep in sync.
+private let liveActivityAccent = Color(red: 100 / 255, green: 210 / 255, blue: 255 / 255)
 
 @main
 struct OpenAlarmLiveActivitiesBundle: WidgetBundle {

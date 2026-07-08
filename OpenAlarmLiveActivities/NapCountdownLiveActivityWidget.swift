@@ -6,7 +6,11 @@ import UIKit
 import WidgetKit
 
 private let openAlarmNapURL = URL(string: "openalarm://nap")!
-private let napLiveActivityAccent = Color.cyan
+/// Mirror of OAColor.actionCyan (OpenAlarm/Theme/OpenAlarmTheme.swift) — the
+/// widget target doesn't compile the theme file; keep in sync.
+private let napLiveActivityAccent = Color(red: 100 / 255, green: 210 / 255, blue: 255 / 255)
+/// Mirror of OAColor.danger — keep in sync.
+private let napLiveActivityDanger = Color(red: 255 / 255, green: 69 / 255, blue: 58 / 255)
 
 struct NapCountdownLiveActivityWidget: Widget {
     var body: some WidgetConfiguration {
@@ -78,7 +82,7 @@ private struct NapCountdownExpandedContent: View {
                         NapIconActionButton(
                             accessibilityLabel: "action_delete",
                             systemImage: "xmark",
-                            tint: .red,
+                            tint: napLiveActivityDanger,
                             intent: NapDeleteIntent(napID: context.attributes.napID)
                         )
                     }

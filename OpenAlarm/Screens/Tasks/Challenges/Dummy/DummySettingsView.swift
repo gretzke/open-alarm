@@ -14,7 +14,7 @@ struct DummySettingsView: View {
             Button {
                 onAdd(.dummy)
             } label: {
-                Text(String(localized: "task_add_button"))
+                Text(String(localized: existingTask == nil ? "task_add_button" : "task_save_button"))
                     .font(.headline.weight(.semibold))
                     .frame(maxWidth: .infinity, minHeight: 52)
             }

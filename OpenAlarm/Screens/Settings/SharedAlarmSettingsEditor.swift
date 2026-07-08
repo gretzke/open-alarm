@@ -105,7 +105,8 @@ struct SharedAlarmSettingsEditor: View {
                 Spacer(minLength: 0)
 
                 Toggle(isOn: $settings.snoozeEnabled) {
-                    EmptyView()
+                    // Hidden visually, but gives VoiceOver a meaningful switch label.
+                    Text(L10n.alarmEditorSnoozeTitle)
                 }
                 .labelsHidden()
                 .tint(OAColor.actionCyan)

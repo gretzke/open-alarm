@@ -247,7 +247,8 @@ struct AlarmRowView: View {
             get: { effectiveToggleIsOn },
             set: { onToggle($0) }
         )) {
-            EmptyView()
+            // Hidden visually, but gives VoiceOver a meaningful switch label.
+            Text(alarm.triggerDateForDisplay, style: .time)
         }
         .labelsHidden()
         .disabled(!isInteractive)
