@@ -155,7 +155,7 @@ final class AlarmStore: ObservableObject {
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.load()
-                self?.processPendingDisarmChallenges()
+                await self?.processPendingDisarmChallenges()
             }
         }
 
@@ -197,7 +197,7 @@ final class AlarmStore: ObservableObject {
         rebuildRuntimePhases()
         processPendingWakeCheckConfirmations()
         showWakeCheckConfirmationIfNeeded()
-        processPendingDisarmChallenges()
+        await processPendingDisarmChallenges()
         syncNapLiveActivity()
     }
 
@@ -337,9 +337,8 @@ final class AlarmStore: ObservableObject {
         alarms = sortAlarms(alarms)
         saveAlarms()
 
-        // Cancel canonical schedule
-        try? alarmManager.stop(id: alarm.id)
-        try? alarmManager.cancel(id: alarm.id)
+        // Cancel canonical schedule and enter override phase via the state machine
+        await process(event: .overrideActivated(bridgeAlarmIDs: Set(bridgeIDs)), for: alarm.id)
 
         // Schedule bridge alarms
         let parentAlarm = alarms.first(where: { $0.id == alarm.id }) ?? alarm
@@ -350,8 +349,6 @@ final class AlarmStore: ObservableObject {
                 parentAlarm: parentAlarm
             )
         }
-
-        runtimePhases[alarm.id] = .overrideActive(bridgeAlarmIDs: Set(bridgeIDs))
     }
 
     // MARK: - Delete Alarm
@@ -793,37 +790,13 @@ final class AlarmStore: ObservableObject {
         )
         runtimePhases[alarmID] = result.phase
 
+        // Post-confirmation bookkeeping (snooze reset, lifecycleState, disable)
+        // is persisted by the state machine's `.persist` effect.
+        var effectAlarm = alarm
         for effect in result.effects {
-            await executeSideEffect(effect, for: alarm)
-        }
-
-        // Handle non-repeating kept alarms: disable (state machine returns .completed with no effects)
-        if result.phase == .completed, result.effects.isEmpty {
-            if let index = alarms.firstIndex(where: { $0.id == alarmID }) {
-                alarms[index].isEnabled = false
-                alarms[index].snoozeCount = 0
-                alarms[index].lifecycleState = .completed
-                alarms[index].updatedAt = .now
-                saveAlarms()
-            }
-        }
-
-        // Handle repeating alarms: reset snooze count
-        if case .scheduled = result.phase {
-            if let index = alarms.firstIndex(where: { $0.id == alarmID }) {
-                alarms[index].snoozeCount = 0
-                alarms[index].lifecycleState = .scheduled
-                alarms[index].updatedAt = .now
-                saveAlarms()
-            }
-        }
-
-        if case .overrideActive = result.phase {
-            if let index = alarms.firstIndex(where: { $0.id == alarmID }) {
-                alarms[index].snoozeCount = 0
-                alarms[index].lifecycleState = .scheduled
-                alarms[index].updatedAt = .now
-                saveAlarms()
+            await executeSideEffect(effect, for: effectAlarm)
+            if case .persist(let updated) = effect {
+                effectAlarm = updated
             }
         }
     }
@@ -905,7 +878,7 @@ final class AlarmStore: ObservableObject {
 
     // MARK: - Disarm Challenge
 
-    private func processPendingDisarmChallenges() {
+    private func processPendingDisarmChallenges() async {
         // If challenge screen is already showing, don't replace it.
         // Re-creating the presentation causes a sound race between old/new TaskSoundManager.
         guard disarmPresentation == nil else { return }
@@ -927,7 +900,7 @@ final class AlarmStore: ObservableObject {
             alarms[index].snoozeCount = 0
             alarms[index].updatedAt = .now
             saveAlarms()
-            runtimePhases[alarms[index].id] = .awaitingDisarmChallenge(alarmKitID: alarmKitID)
+            await process(event: .disarmRequested(alarmKitID: alarmKitID), for: alarms[index].id)
         }
 
         let alarm = alarms[index]
@@ -973,38 +946,12 @@ final class AlarmStore: ObservableObject {
 
         let phase = runtimePhases[alarmID]
 
+        // Post-lifecycle bookkeeping (snooze reset, lifecycleState, disable) is
+        // persisted by the state machine's `.persist` effect.
+
         // Handle wake-check (previously in StopIntent) — trust the state machine
         if phase == .awaitingWakeCheck {
             await startWakeCheckSession(for: alarmID, alarm: alarm, settings: settings)
-        }
-
-        // Handle completion for non-repeating kept alarms
-        if phase == .completed {
-            if let index = alarms.firstIndex(where: { $0.id == alarmID }) {
-                if !alarms[index].isRepeating && !alarms[index].deleteAfterUse {
-                    alarms[index].isEnabled = false
-                    alarms[index].lifecycleState = .completed
-                    alarms[index].updatedAt = .now
-                    saveAlarms()
-                }
-            }
-        }
-
-        // Handle repeating re-arm
-        if case .scheduled = phase {
-            if let index = alarms.firstIndex(where: { $0.id == alarmID }) {
-                alarms[index].snoozeCount = 0
-                alarms[index].lifecycleState = .scheduled
-                alarms[index].updatedAt = .now
-                saveAlarms()
-            }
-        }
-
-        if case .overrideActive = phase, let index = alarms.firstIndex(where: { $0.id == alarmID }) {
-            alarms[index].snoozeCount = 0
-            alarms[index].lifecycleState = .scheduled
-            alarms[index].updatedAt = .now
-            saveAlarms()
         }
 
         // Refresh bridge runtime IDs after returning to override-active.
@@ -1016,7 +963,7 @@ final class AlarmStore: ObservableObject {
         }
 
         // Process next pending disarm if any
-        processPendingDisarmChallenges()
+        await processPendingDisarmChallenges()
     }
 
     private func startWakeCheckSession(for alarmID: UUID, alarm: AlarmDefinition, settings: SharedAlarmSettings) async {
@@ -1055,12 +1002,8 @@ final class AlarmStore: ObservableObject {
         wakeCheckSessions[alarmID] = session
         persistence.saveWakeCheckSessions(wakeCheckSessions)
 
-        // Update lifecycle state
-        if let index = alarms.firstIndex(where: { $0.id == alarmID }) {
-            alarms[index].lifecycleState = .awaitingWakeCheck
-            alarms[index].updatedAt = .now
-            saveAlarms()
-        }
+        // Lifecycle state (.awaitingWakeCheck) was already persisted by the
+        // state machine's `.persist` effect before this session starts.
 
         // Schedule notification
         let notifCenter = UNUserNotificationCenter.current()
@@ -1256,9 +1199,8 @@ final class AlarmStore: ObservableObject {
         alarms = sortAlarms(alarms)
         saveAlarms()
 
-        // Cancel canonical schedule
-        try? alarmManager.stop(id: alarm.id)
-        try? alarmManager.cancel(id: alarm.id)
+        // Cancel canonical schedule and enter override phase via the state machine
+        await process(event: .overrideActivated(bridgeAlarmIDs: Set(bridgeIDs)), for: alarm.id)
 
         // Schedule bridge alarms
         let parentAlarm = alarms.first(where: { $0.id == alarm.id }) ?? alarm
@@ -1269,21 +1211,14 @@ final class AlarmStore: ObservableObject {
                 parentAlarm: parentAlarm
             )
         }
-
-        runtimePhases[alarm.id] = .overrideActive(bridgeAlarmIDs: Set(bridgeIDs))
     }
 
     private func clearOverrideAndRestore(alarmIndex index: Int) async {
         let alarm = alarms[index]
+        let bridgeIDs = Set(alarm.activeOverride?.bridgeAlarmIDs ?? [])
 
-        // Cancel bridge alarms
-        if let override = alarm.activeOverride {
-            for bridgeID in override.bridgeAlarmIDs {
-                try? alarmManager.stop(id: bridgeID)
-                try? alarmManager.cancel(id: bridgeID)
-            }
-        }
-
+        // The override must be cleared from the model BEFORE processing —
+        // scheduleAlarm refuses to register an alarm with an active override.
         alarms[index].activeOverride = nil
         alarms[index].nextTriggerOverrideDate = nil
         alarms[index].isEnabled = true
@@ -1293,7 +1228,8 @@ final class AlarmStore: ObservableObject {
         alarms = sortAlarms(alarms)
         saveAlarms()
 
-        await process(event: .enabled, for: alarm.id)
+        // Cancels bridges and re-registers the canonical schedule.
+        await process(event: .overrideRestored(bridgeAlarmIDs: bridgeIDs), for: alarm.id)
     }
 
     private func scheduleBridgeAlarm(bridgeID: UUID, trigger: AlarmTrigger, parentAlarm: AlarmDefinition) async {
@@ -1375,8 +1311,14 @@ final class AlarmStore: ObservableObject {
 
         runtimePhases[alarmID] = result.phase
 
+        // Effects that follow a `.persist` must see the updated alarm (e.g. a
+        // reset snooze count when the re-arm configuration is built).
+        var effectAlarm = alarm
         for effect in result.effects {
-            await executeSideEffect(effect, for: alarm)
+            await executeSideEffect(effect, for: effectAlarm)
+            if case .persist(let updated) = effect {
+                effectAlarm = updated
+            }
         }
     }
 
@@ -1504,7 +1446,7 @@ final class AlarmStore: ObservableObject {
         processPendingWakeCheckConfirmations()
 
         // Process any pending disarm challenges
-        processPendingDisarmChallenges()
+        await processPendingDisarmChallenges()
     }
 
     private func reconcileOverrides() async {
@@ -1523,13 +1465,9 @@ final class AlarmStore: ObservableObject {
                 break
             }
 
-            // Cancel remaining bridge alarms
-            for bridgeID in override.bridgeAlarmIDs {
-                try? alarmManager.stop(id: bridgeID)
-                try? alarmManager.cancel(id: bridgeID)
-            }
-
-            // Restore alarm state
+            // Restore alarm state. The override must be cleared from the model
+            // BEFORE processing — scheduleAlarm refuses to register an alarm
+            // with an active override.
             alarms[index].activeOverride = nil
             alarms[index].nextTriggerOverrideDate = nil
             if alarm.isSkippingNext {
@@ -1539,16 +1477,11 @@ final class AlarmStore: ObservableObject {
             alarms[index].snoozeCount = 0
             alarms[index].updatedAt = .now
 
-            // Schedule canonical repeating alarm
-            let restoredAlarm = alarms[index]
-            let runtimeSchedule = AlarmScheduleResolver.runtimeSchedule(for: restoredAlarm)
-            let config = makeConfiguration(for: restoredAlarm, schedule: runtimeSchedule)
-            do {
-                _ = try await alarmManager.schedule(id: restoredAlarm.id, configuration: config)
-                runtimePhases[restoredAlarm.id] = .scheduled(alarmKitIDs: [restoredAlarm.id])
-            } catch {
-                Self.logger.error("Override restore schedule failed for \(restoredAlarm.id): \(error.localizedDescription)")
-            }
+            // Cancels remaining bridges and re-registers the canonical schedule.
+            await process(
+                event: .overrideRestored(bridgeAlarmIDs: Set(override.bridgeAlarmIDs)),
+                for: alarm.id
+            )
         }
 
         alarms = sortAlarms(alarms)

@@ -30,13 +30,6 @@ let package = Package(
                 .define("OPENALARM_SCHEDULING_CORE_SPM")
             ]
         ),
-        .executableTarget(
-            name: "OpenAlarmSchedulingCoreChecks",
-            dependencies: [
-                "OpenAlarmSchedulingCore"
-            ],
-            path: "OpenAlarmSchedulingCoreChecks"
-        ),
         .testTarget(
             name: "OpenAlarmSchedulingCoreTests",
             dependencies: [

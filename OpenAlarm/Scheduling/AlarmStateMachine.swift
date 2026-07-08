@@ -2,6 +2,12 @@ import Foundation
 
 // MARK: - Scheduling Phase
 
+/// In-memory scheduling phase of one alarm.
+///
+/// `.alerting` and `.snoozed` are entered ONLY via `AlarmStore.rebuildRuntimePhases`
+/// (reconstruction from AlarmKit runtime state): stop and snooze happen in
+/// extension processes (`StopIntent`/`SnoozeIntent`) that cannot dispatch events
+/// into this machine. Every app-side transition goes through `transition`.
 enum AlarmSchedulingPhase: Equatable, Sendable {
     case idle
     case scheduled(alarmKitIDs: Set<UUID>)
@@ -19,30 +25,30 @@ enum AlarmEvent: Equatable, Sendable {
     case enabled
     case disabled
     case deleted
-    case alarmKitStateChanged(alarmKitID: UUID, newState: AlarmKitRuntimeState)
-    case stopped(alarmKitID: UUID)
-    case snoozed(alarmKitID: UUID)
-    case challengeCompleted(alarmKitID: UUID)
-    case wakeCheckStarted
-    case wakeCheckConfirmed
     case updated
+    /// A stop reached the app (via StopIntent's pending-disarm queue); the
+    /// disarm challenge is being presented. `alarmKitID` may be a bridge UUID.
+    case disarmRequested(alarmKitID: UUID)
+    case challengeCompleted(alarmKitID: UUID)
+    case wakeCheckConfirmed
+    /// Bridge alarms were computed and are about to be scheduled by the store.
     case overrideActivated(bridgeAlarmIDs: Set<UUID>)
-    case overrideRestored
-}
-
-enum AlarmKitRuntimeState: Equatable, Sendable {
-    case scheduled
-    case countdown
-    case alerting
-    case paused
-    case missing
+    /// The override lifecycle finished (anchor passed or user un-skipped);
+    /// carries the bridge IDs from the alarm model so a stale phase cannot
+    /// leak bridge alarms.
+    case overrideRestored(bridgeAlarmIDs: Set<UUID>)
 }
 
 // MARK: - Side Effects
 
 enum SchedulingSideEffect: Equatable, Sendable {
-    case scheduleAlarmKit(alarmID: UUID, trigger: AlarmTrigger, recurrence: AlarmRecurrence)
+    /// Schedule the alarm's canonical AlarmKit registration (the store derives
+    /// trigger/recurrence from the persisted alarm).
+    case scheduleAlarmKit(alarmID: UUID)
     case cancelAlarmKit(ids: Set<UUID>)
+    /// Replace the alarm in the store and save. Ordered BEFORE any
+    /// `.scheduleAlarmKit` that depends on the updated fields (e.g. a reset
+    /// snooze count must be visible when the configuration is built).
     case persist(AlarmDefinition)
     case deleteAlarm(UUID)
 }
@@ -59,7 +65,8 @@ enum AlarmStateMachine {
         current: AlarmSchedulingPhase,
         event: AlarmEvent,
         alarm: AlarmDefinition,
-        resolvedSettings: SharedAlarmSettings = .featureDefaults
+        resolvedSettings: SharedAlarmSettings = .featureDefaults,
+        now: Date = .now
     ) -> TransitionResult {
         switch (current, event) {
 
@@ -85,11 +92,13 @@ enum AlarmStateMachine {
             return TransitionResult(phase: .idle, effects: effects)
 
         // MARK: - Enable
+        // `.completed` arm: re-enabling a finished kept one-shot must schedule
+        // it again (D-13 — previously fell through to the no-op default).
 
-        case (.idle, .enabled):
+        case (.idle, .enabled), (.completed, .enabled):
             return TransitionResult(
                 phase: .scheduled(alarmKitIDs: [alarm.id]),
-                effects: [.scheduleAlarmKit(alarmID: alarm.id, trigger: alarm.trigger, recurrence: alarm.recurrence)]
+                effects: [.scheduleAlarmKit(alarmID: alarm.id)]
             )
 
         // MARK: - Updated (alarm was edited)
@@ -108,28 +117,17 @@ enum AlarmStateMachine {
             if !idsToCancel.isEmpty {
                 effects.append(.cancelAlarmKit(ids: idsToCancel))
             }
-            effects.append(.scheduleAlarmKit(alarmID: alarm.id, trigger: alarm.trigger, recurrence: alarm.recurrence))
+            effects.append(.scheduleAlarmKit(alarmID: alarm.id))
             return TransitionResult(phase: .scheduled(alarmKitIDs: [alarm.id]), effects: effects)
 
-        // MARK: - AlarmKit state changes
+        // MARK: - Disarm requested (from any state)
+        // The alarm fired and was stopped in the intent process; the app is
+        // presenting the challenge. Any phase is possible here: the fire may
+        // have happened while the app was dead (phase rebuilt as .scheduled or
+        // .overrideActive), mid-wake-check (backup alarm), or during a stale
+        // .idle after an AlarmKit read failure.
 
-        case (.scheduled(let ids), .alarmKitStateChanged(let akID, .alerting)) where ids.contains(akID):
-            return TransitionResult(phase: .alerting(alarmKitID: akID), effects: [])
-
-        case (.snoozed(let akID), .alarmKitStateChanged(let changedID, .alerting)) where akID == changedID:
-            return TransitionResult(phase: .alerting(alarmKitID: akID), effects: [])
-
-        // MARK: - Snooze
-
-        case (.alerting(let akID), .snoozed(let snoozedID)) where akID == snoozedID:
-            return TransitionResult(
-                phase: .snoozed(alarmKitID: akID),
-                effects: [.scheduleAlarmKit(alarmID: alarm.id, trigger: alarm.trigger, recurrence: alarm.recurrence)]
-            )
-
-        // MARK: - Stop
-
-        case (.alerting(let akID), .stopped(let stoppedID)) where akID == stoppedID:
+        case (_, .disarmRequested(let akID)):
             return TransitionResult(
                 phase: .awaitingDisarmChallenge(alarmKitID: akID),
                 effects: []
@@ -141,7 +139,8 @@ enum AlarmStateMachine {
             return completeDisarmChallenge(
                 alarmKitID: akID,
                 alarm: alarm,
-                resolvedSettings: resolvedSettings
+                resolvedSettings: resolvedSettings,
+                now: now
             )
 
         // The app only emits challengeCompleted after the dismiss/task UI succeeds.
@@ -151,32 +150,28 @@ enum AlarmStateMachine {
             return completeDisarmChallenge(
                 alarmKitID: completedID,
                 alarm: alarm,
-                resolvedSettings: resolvedSettings
+                resolvedSettings: resolvedSettings,
+                now: now
             )
 
-        // MARK: - Awaiting disarm challenge: force-close alarm re-fired
-        case (.awaitingDisarmChallenge(let akID), .stopped):
-            return TransitionResult(phase: .awaitingDisarmChallenge(alarmKitID: akID), effects: [])
-
-        // MARK: - Awaiting wake check: backup alarm fired (stop → stays in wake-check)
-
-        case (.awaitingWakeCheck, .stopped):
-            return TransitionResult(phase: .awaitingWakeCheck, effects: [])
-
         // MARK: - Wake-check confirmed
+        // Branch priority (R-7.7): override > repeating > delete-on-use > kept.
 
         case (.awaitingWakeCheck, .wakeCheckConfirmed):
             if let override = alarm.activeOverride {
                 return TransitionResult(
                     phase: .overrideActive(bridgeAlarmIDs: Set(override.bridgeAlarmIDs)),
-                    effects: []
+                    effects: [.persist(bookkept(alarm, now: now, lifecycleState: .scheduled))]
                 )
             }
 
             if alarm.isRepeating {
                 return TransitionResult(
                     phase: .scheduled(alarmKitIDs: [alarm.id]),
-                    effects: [.scheduleAlarmKit(alarmID: alarm.id, trigger: alarm.trigger, recurrence: alarm.recurrence)]
+                    effects: [
+                        .persist(bookkept(alarm, now: now, lifecycleState: .scheduled)),
+                        .scheduleAlarmKit(alarmID: alarm.id),
+                    ]
                 )
             }
 
@@ -187,30 +182,35 @@ enum AlarmStateMachine {
                 )
             }
 
-            return TransitionResult(phase: .completed, effects: [])
-
-        // MARK: - Override activated
-
-        case (.scheduled, .overrideActivated(let bridgeIDs)):
             return TransitionResult(
-                phase: .overrideActive(bridgeAlarmIDs: bridgeIDs),
-                effects: [.cancelAlarmKit(ids: [alarm.id])]
+                phase: .completed,
+                effects: [.persist(bookkept(alarm, now: now, isEnabled: false, lifecycleState: .completed))]
             )
 
-        // MARK: - Override restored
+        // MARK: - Override activated (from any state)
+        // The canonical registration AND whatever the current phase holds must
+        // be cancelled: activating skip-next on a snoozed alarm has to kill the
+        // pending snoozed instance, and a stale .idle (after an AlarmKit read
+        // failure) must still cancel the canonical registration.
 
-        case (.overrideActive(let bridgeIDs), .overrideRestored):
+        case (_, .overrideActivated(let bridgeIDs)):
+            let idsToCancel = alarmKitIDs(in: current).union([alarm.id])
+            return TransitionResult(
+                phase: .overrideActive(bridgeAlarmIDs: bridgeIDs),
+                effects: [.cancelAlarmKit(ids: idsToCancel)]
+            )
+
+        // MARK: - Override restored (from any state)
+        // Carries the bridge IDs from the alarm model, so bridge alarms are
+        // cancelled even when the in-memory phase is stale.
+
+        case (_, .overrideRestored(let bridgeIDs)):
             var effects: [SchedulingSideEffect] = []
             if !bridgeIDs.isEmpty {
                 effects.append(.cancelAlarmKit(ids: bridgeIDs))
             }
-            effects.append(.scheduleAlarmKit(alarmID: alarm.id, trigger: alarm.trigger, recurrence: alarm.recurrence))
+            effects.append(.scheduleAlarmKit(alarmID: alarm.id))
             return TransitionResult(phase: .scheduled(alarmKitIDs: [alarm.id]), effects: effects)
-
-        // MARK: - Bridge alarm fires
-
-        case (.overrideActive(let bridgeIDs), .alarmKitStateChanged(let akID, .alerting)) where bridgeIDs.contains(akID):
-            return TransitionResult(phase: .alerting(alarmKitID: akID), effects: [])
 
         // MARK: - Default: no transition
 
@@ -221,15 +221,21 @@ enum AlarmStateMachine {
 
     // MARK: - Helpers
 
+    /// Post-disarm branch logic. Priority is behavior-critical (R-4.3):
+    /// wake-check > override-bridge > repeating > deleteAfterUse > kept.
     private static func completeDisarmChallenge(
         alarmKitID akID: UUID,
         alarm: AlarmDefinition,
-        resolvedSettings: SharedAlarmSettings
+        resolvedSettings: SharedAlarmSettings,
+        now: Date
     ) -> TransitionResult {
         if resolvedSettings.wakeUpCheckEnabled {
             return TransitionResult(
                 phase: .awaitingWakeCheck,
-                effects: [.cancelAlarmKit(ids: [akID])]
+                effects: [
+                    .cancelAlarmKit(ids: [akID]),
+                    .persist(bookkept(alarm, now: now, lifecycleState: .awaitingWakeCheck)),
+                ]
             )
         }
 
@@ -237,14 +243,20 @@ enum AlarmStateMachine {
             let remainingBridgeIDs = Set(override.bridgeAlarmIDs).subtracting([akID])
             return TransitionResult(
                 phase: .overrideActive(bridgeAlarmIDs: remainingBridgeIDs),
-                effects: [.cancelAlarmKit(ids: [akID])]
+                effects: [
+                    .cancelAlarmKit(ids: [akID]),
+                    .persist(bookkept(alarm, now: now, lifecycleState: .scheduled)),
+                ]
             )
         }
 
         if alarm.isRepeating {
             return TransitionResult(
                 phase: .scheduled(alarmKitIDs: [alarm.id]),
-                effects: [.scheduleAlarmKit(alarmID: alarm.id, trigger: alarm.trigger, recurrence: alarm.recurrence)]
+                effects: [
+                    .persist(bookkept(alarm, now: now, lifecycleState: .scheduled)),
+                    .scheduleAlarmKit(alarmID: alarm.id),
+                ]
             )
         }
 
@@ -257,8 +269,29 @@ enum AlarmStateMachine {
 
         return TransitionResult(
             phase: .completed,
-            effects: [.cancelAlarmKit(ids: [akID])]
+            effects: [
+                .cancelAlarmKit(ids: [akID]),
+                .persist(bookkept(alarm, now: now, isEnabled: false, lifecycleState: .completed)),
+            ]
         )
+    }
+
+    /// Post-lifecycle bookkeeping applied to the persisted alarm. Snooze count
+    /// always resets when a lifecycle completes (R-5.5).
+    private static func bookkept(
+        _ alarm: AlarmDefinition,
+        now: Date,
+        isEnabled: Bool? = nil,
+        lifecycleState: AlarmLifecycleState
+    ) -> AlarmDefinition {
+        var updated = alarm
+        updated.snoozeCount = 0
+        if let isEnabled {
+            updated.isEnabled = isEnabled
+        }
+        updated.lifecycleState = lifecycleState
+        updated.updatedAt = now
+        return updated
     }
 
     private static func alarmKitIDs(in phase: AlarmSchedulingPhase) -> Set<UUID> {
