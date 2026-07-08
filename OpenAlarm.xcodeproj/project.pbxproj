@@ -18,6 +18,7 @@
 		2A5D2E4A4D01C891C5015C30 /* OpenAlarmNotificationDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30A4F32DD5585DAC4885AD99 /* OpenAlarmNotificationDelegate.swift */; };
 		3007A33EBBCE7630B4D98963 /* OnboardingEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B186AAD75B89CF765141943F /* OnboardingEngine.swift */; };
 		3033CE1DBADAA18ED7564BAA /* NapDurationPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A06DA178A073176D55E9CDD1 /* NapDurationPicker.swift */; };
+		379E00527D9520D396C4D782 /* AlarmPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B8814B4E50246101EA0E7E /* AlarmPersistenceTests.swift */; };
 		40FC7F4295F6FF44F3F72965 /* AlarmRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C31159CD06DFA85A7F28AB7E /* AlarmRowView.swift */; };
 		427A105D713E7FEEB1F24E0B /* AlarmPersistenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6A5DA3C14440E7AD45FD911 /* AlarmPersistenceStore.swift */; };
 		46736EE4086E768FF315F0C2 /* AlarmSoundLiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08A54FDEF2083496C9F923CD /* AlarmSoundLiveActivityManager.swift */; };
@@ -41,7 +42,9 @@
 		75F6F1776DF5731E152893A0 /* AlarmStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B70862277833BF001ABA7BBE /* AlarmStore.swift */; };
 		77EF586640E2BA39DCC5BEC2 /* AlarmEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 338D2925467C9DAB2942FEFC /* AlarmEditorView.swift */; };
 		7BD355A661613339AD8B0210 /* BridgeDateCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 032F55C4A3FD820034D8E178 /* BridgeDateCalculatorTests.swift */; };
+		7DDB8766183AD8D2F5C1E2A8 /* SharedAlarmSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9B71FEFD15A17489E09EA09 /* SharedAlarmSettingsTests.swift */; };
 		7FCBEB09DE152F5B6367A121 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 8E679FED54733251272BD0A9 /* Localizable.strings */; };
+		817653D55863EDFDD4A02A38 /* AlarmModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E9CE438CD9EF4D7868584C1 /* AlarmModelTests.swift */; };
 		8346F3565E43AE8420A474E1 /* OpenAlarmSharedDefaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8806D09A2BB84C05748859AD /* OpenAlarmSharedDefaults.swift */; };
 		8AAF86D176DBC56AB7618D2A /* StopIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAC4F90011CEA2952C0DEC7A /* StopIntent.swift */; };
 		8FA79F0AB5D2E8B852D32CB8 /* TaskModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08633EC56E1799D43A24AE9A /* TaskModels.swift */; };
@@ -126,6 +129,7 @@
 		341FC3BCCDBBEF7993E126AF /* AlarmSoundLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmSoundLiveActivityWidget.swift; sourceTree = "<group>"; };
 		37024F354236CD82B68AA50F /* OpenAlarm.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = OpenAlarm.entitlements; sourceTree = "<group>"; };
 		47FED3CC874E76CAE49F2083 /* TaskPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskPickerView.swift; sourceTree = "<group>"; };
+		4E9CE438CD9EF4D7868584C1 /* AlarmModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmModelTests.swift; sourceTree = "<group>"; };
 		4F973148B1D637236F6F06CC /* OpenAlarmLiveActivities.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = OpenAlarmLiveActivities.entitlements; sourceTree = "<group>"; };
 		525A2ECDDC1B2BCF59BAE164 /* BridgeDateCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeDateCalculator.swift; sourceTree = "<group>"; };
 		53FAF7884949542E49DD097E /* DummySettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DummySettingsView.swift; sourceTree = "<group>"; };
@@ -154,10 +158,12 @@
 		B5B9304B4982E495CBDABF6C /* OpenAlarmTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OpenAlarmTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B69D30D8FB6982C26A6AE32D /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		B70862277833BF001ABA7BBE /* AlarmStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmStore.swift; sourceTree = "<group>"; };
+		B9B71FEFD15A17489E09EA09 /* SharedAlarmSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedAlarmSettingsTests.swift; sourceTree = "<group>"; };
 		C31159CD06DFA85A7F28AB7E /* AlarmRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmRowView.swift; sourceTree = "<group>"; };
 		C9F24A86427E96596EA65FC0 /* NapLiveActivityIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NapLiveActivityIntents.swift; sourceTree = "<group>"; };
 		CFE2D4CDA835E9DD606528A0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D063C3267CB009AC3D00E6D2 /* AlarmStateMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmStateMachine.swift; sourceTree = "<group>"; };
+		D1B8814B4E50246101EA0E7E /* AlarmPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmPersistenceTests.swift; sourceTree = "<group>"; };
 		D34BA5EB8874EFC8335CB2CF /* AlarmSettingsCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmSettingsCore.swift; sourceTree = "<group>"; };
 		D4C65D29F82E70C88900C16A /* WakeUpCheckConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeUpCheckConfirmationView.swift; sourceTree = "<group>"; };
 		DA110F30C0C8E9D50303CDA8 /* OpenAlarmApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAlarmApp.swift; sourceTree = "<group>"; };
@@ -187,8 +193,11 @@
 		135C9DF212569F46B82E0C7A /* OpenAlarmSchedulingCoreTests */ = {
 			isa = PBXGroup;
 			children = (
+				4E9CE438CD9EF4D7868584C1 /* AlarmModelTests.swift */,
+				D1B8814B4E50246101EA0E7E /* AlarmPersistenceTests.swift */,
 				A15CFD8ECBB3F28400D0A09C /* AlarmStateMachineTests.swift */,
 				032F55C4A3FD820034D8E178 /* BridgeDateCalculatorTests.swift */,
+				B9B71FEFD15A17489E09EA09 /* SharedAlarmSettingsTests.swift */,
 			);
 			path = OpenAlarmSchedulingCoreTests;
 			sourceTree = "<group>";
@@ -573,8 +582,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				817653D55863EDFDD4A02A38 /* AlarmModelTests.swift in Sources */,
+				379E00527D9520D396C4D782 /* AlarmPersistenceTests.swift in Sources */,
 				5648D8B37FD38430976FB620 /* AlarmStateMachineTests.swift in Sources */,
 				7BD355A661613339AD8B0210 /* BridgeDateCalculatorTests.swift in Sources */,
+				7DDB8766183AD8D2F5C1E2A8 /* SharedAlarmSettingsTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -674,7 +686,7 @@
 				CODE_SIGN_ENTITLEMENTS = OpenAlarm/OpenAlarm.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 68;
+				CURRENT_PROJECT_VERSION = 41;
 				DEVELOPMENT_TEAM = 7P7CKKPH5L;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = OpenAlarm/Info.plist;
@@ -782,7 +794,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = OpenAlarmLiveActivities/OpenAlarmLiveActivities.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 68;
+				CURRENT_PROJECT_VERSION = 41;
 				DEVELOPMENT_TEAM = 7P7CKKPH5L;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = OpenAlarmLiveActivities/Info.plist;
@@ -808,7 +820,7 @@
 				CODE_SIGN_ENTITLEMENTS = OpenAlarm/OpenAlarm.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 68;
+				CURRENT_PROJECT_VERSION = 41;
 				DEVELOPMENT_TEAM = 7P7CKKPH5L;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = OpenAlarm/Info.plist;
@@ -833,7 +845,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = OpenAlarmLiveActivities/OpenAlarmLiveActivities.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 68;
+				CURRENT_PROJECT_VERSION = 41;
 				DEVELOPMENT_TEAM = 7P7CKKPH5L;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = OpenAlarmLiveActivities/Info.plist;
