@@ -59,6 +59,8 @@ targets:
       - path: OpenAlarm/Shared/OpenAlarmSharedDefaults.swift
       - path: OpenAlarm/Models/AlarmDefinition.swift
       - path: OpenAlarm/Models/AlarmModels.swift
+      - path: OpenAlarm/Models/AlarmSettingsCore.swift
+      - path: OpenAlarm/Models/AlarmPersistenceStore.swift
       - path: OpenAlarm/Scheduling/AlarmConfigurationBuilder.swift
       - path: OpenAlarm/Theme/OpenAlarmTheme.swift
       - path: OpenAlarm/Intents
