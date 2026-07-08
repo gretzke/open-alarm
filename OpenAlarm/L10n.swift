@@ -1,7 +1,6 @@
 import SwiftUI
 
 enum L10n {
-    static let appTitle: LocalizedStringKey = "app_title"
 
     static let tabAlarm: LocalizedStringKey = "tab_alarm"
     static let tabSettings: LocalizedStringKey = "tab_settings"
@@ -11,7 +10,6 @@ enum L10n {
     static let alarmListEmptySubtitle: LocalizedStringKey = "alarm_list_empty_subtitle"
 
     static let napBannerTitle: LocalizedStringKey = "nap_banner_title"
-    static let napBannerSubtitle: LocalizedStringKey = "nap_banner_subtitle"
     static let napActiveTitle: LocalizedStringKey = "nap_active_title"
     static let napActiveSnoozingTitle: LocalizedStringKey = "nap_active_snoozing_title"
     static let napActivePaused: LocalizedStringKey = "nap_active_paused"
@@ -20,11 +18,6 @@ enum L10n {
     static let napActiveAddTenMinutes: LocalizedStringKey = "nap_active_add_ten_minutes"
     static let napDefaultAlarmLabel: LocalizedStringKey = "nap_default_alarm_label"
 
-    static let alarmRowRepeatOneTime: LocalizedStringKey = "alarm_row_repeat_one_time"
-    static let alarmRowRepeatPrefix: LocalizedStringKey = "alarm_row_repeat_prefix"
-    static let alarmRowDeleteAfterUse: LocalizedStringKey = "alarm_row_delete_after_use"
-    static let alarmRowKeepAfterUse: LocalizedStringKey = "alarm_row_keep_after_use"
-    static let alarmRowSkipNextPrompt: LocalizedStringKey = "alarm_row_skip_next_prompt"
     static let alarmRowSkipNextYes: LocalizedStringKey = "alarm_row_skip_next_yes"
     static let alarmRowSkipNextNo: LocalizedStringKey = "alarm_row_skip_next_no"
     static let alarmRowUsualTimePrefix: LocalizedStringKey = "alarm_row_usual_time_prefix"
@@ -60,7 +53,6 @@ enum L10n {
     static let alarmEditorWakeCheckPermissionDeniedTitle: LocalizedStringKey = "alarm_editor_wake_check_permission_denied_title"
     static let alarmEditorWakeCheckPermissionDeniedBody: LocalizedStringKey = "alarm_editor_wake_check_permission_denied_body"
     static let alarmEditorWakeCheckDisableFeatureAction: LocalizedStringKey = "alarm_editor_wake_check_disable_feature_action"
-    static let alarmEditorApplyChangePrompt: LocalizedStringKey = "alarm_editor_apply_change_prompt"
     static let alarmEditorApplyNextOnlyOption: LocalizedStringKey = "alarm_editor_apply_next_only_option"
     static let alarmEditorApplyScheduleOption: LocalizedStringKey = "alarm_editor_apply_schedule_option"
     static let alarmEditorTryOut: LocalizedStringKey = "alarm_editor_try_out"
@@ -79,14 +71,8 @@ enum L10n {
 
     static let settingsTitle: LocalizedStringKey = "settings_title"
     static let settingsDefaultConfigTitle: LocalizedStringKey = "settings_default_config_title"
-    static let settingsDefaultConfigBody: LocalizedStringKey = "settings_default_config_body"
     static let settingsDefaultConfigManageButton: LocalizedStringKey = "settings_default_config_manage_button"
-    static let settingsDefaultConfigPageBody: LocalizedStringKey = "settings_default_config_page_body"
     static let settingsNapDefaultsTitle: LocalizedStringKey = "settings_nap_defaults_title"
-    static let settingsNapDefaultsBody: LocalizedStringKey = "settings_nap_defaults_body"
-    static let settingsNapDefaultsManageButton: LocalizedStringKey = "settings_nap_defaults_manage_button"
-    static let settingsNapDefaultsPageBody: LocalizedStringKey = "settings_nap_defaults_page_body"
-    static let settingsNapDefaultsDurationTitle: LocalizedStringKey = "settings_nap_defaults_duration_title"
     static let settingsNapDefaultsDurationButton: LocalizedStringKey = "settings_nap_defaults_duration_button"
     static let settingsNapDefaultsConfigTitle: LocalizedStringKey = "settings_nap_defaults_config_title"
     static let settingsNapDefaultsConfigButton: LocalizedStringKey = "settings_nap_defaults_config_button"
@@ -99,15 +85,7 @@ enum L10n {
     static let settingsLiveActivitiesPromptTitle: LocalizedStringKey = "settings_live_activities_prompt_title"
     static let settingsLiveActivitiesPromptBody: LocalizedStringKey = "settings_live_activities_prompt_body"
     static let settingsTestingModeTitle: LocalizedStringKey = "settings_testing_mode_title"
-    static let settingsTestingModeBody: LocalizedStringKey = "settings_testing_mode_body"
     static let settingsTestingModeToggle: LocalizedStringKey = "settings_testing_mode_toggle"
-    static let settingsWakeCheckTitle: LocalizedStringKey = "settings_wake_check_title"
-    static let settingsWakeCheckBody: LocalizedStringKey = "settings_wake_check_body"
-    static let settingsWakeCheckDelayLabel: LocalizedStringKey = "settings_wake_check_delay_label"
-    static let settingsWakeCheckEnableByDefaultToggle: LocalizedStringKey = "settings_wake_check_enable_by_default_toggle"
-    static let settingsWakeCheckPermissionTitle: LocalizedStringKey = "settings_wake_check_permission_title"
-    static let settingsPermissionTitle: LocalizedStringKey = "settings_permission_title"
-    static let settingsPermissionStatusLabel: LocalizedStringKey = "settings_permission_status_label"
     static let settingsPermissionAuthorized: LocalizedStringKey = "settings_permission_authorized"
     static let settingsPermissionNotDetermined: LocalizedStringKey = "settings_permission_not_determined"
     static let settingsPermissionDenied: LocalizedStringKey = "settings_permission_denied"
