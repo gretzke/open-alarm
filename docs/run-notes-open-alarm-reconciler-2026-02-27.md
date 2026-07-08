@@ -1,3 +1,5 @@
+> **Superseded (2026-07-09):** These notes describe the pre-Phase-1 architecture (AlarmSchedulePlanner / AlarmScheduleReconcilerTests), replaced wholesale in commit 9e52e0e. Kept as a historical record; see docs/scheduler-functional-inventory.md for current behavior.
+
 # Run Notes — OpenAlarm reconciler/testing (2026-02-27)
 
 ## Completion checklist
