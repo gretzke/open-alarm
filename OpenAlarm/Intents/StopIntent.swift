@@ -4,8 +4,8 @@ import Foundation
 import UserNotifications
 
 struct StopIntent: LiveActivityIntent {
-    static var title: LocalizedStringResource = "Stop"
-    static var description = IntentDescription("Stop an alarm")
+    static var title: LocalizedStringResource = "intent_stop_title"
+    static var description = IntentDescription("intent_stop_description")
     static var openAppWhenRun: Bool = true
 
     @Parameter(title: "alarmID")

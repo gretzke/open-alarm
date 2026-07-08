@@ -32,6 +32,7 @@ struct MathTaskView: View {
             TextField(text: $userAnswer) {
                 EmptyView()
             }
+                .accessibilityLabel(String(localized: "a11y_math_answer_field"))
                 .keyboardType(.numberPad)
                 .font(.system(size: 32, weight: .medium, design: .rounded))
                 .multilineTextAlignment(.center)

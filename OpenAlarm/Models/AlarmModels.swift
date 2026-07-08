@@ -24,11 +24,19 @@ struct OpenAlarmMetadata: AlarmMetadata {
 
 extension AlarmButton {
     static var stopButton: Self {
-        AlarmButton(text: "Done", textColor: .white, systemImageName: "stop.circle")
+        AlarmButton(
+            text: LocalizedStringResource("alarm_button_done"),
+            textColor: .white,
+            systemImageName: "stop.circle"
+        )
     }
 
     static var snoozeButton: Self {
-        AlarmButton(text: "Snooze", textColor: .black, systemImageName: "zzz")
+        AlarmButton(
+            text: LocalizedStringResource("alarm_button_snooze"),
+            textColor: .black,
+            systemImageName: "zzz"
+        )
     }
 }
 

@@ -173,3 +173,18 @@
 "task_math_difficulty_simple" = "Einfach";
 "task_math_difficulty_hard" = "Schwer";
 "task_math_count %lld" = "%lld Aufgaben";
+
+/* Durations */
+"duration_hours_minutes_short" = "%dh %dm";
+"duration_minutes_short" = "%dm";
+
+/* App intents (alarm buttons) */
+"intent_stop_title" = "Stopp";
+"intent_stop_description" = "Stoppt einen Alarm";
+"intent_snooze_title" = "Schlummern";
+"intent_snooze_description" = "Alarm schlummern";
+"alarm_button_done" = "Fertig";
+"alarm_button_snooze" = "Schlummern";
+
+/* Accessibility */
+"a11y_math_answer_field" = "Antwort";

@@ -6,16 +6,16 @@ struct SettingsHomeView: View {
 
     private func napDurationSummary(minutes: Int) -> String {
         if minutes == 0 {
-            return "5 sec"
+            return String(localized: "alarm_editor_snooze_debug_5_seconds")
         }
         let hours = minutes / 60
         let mins = minutes % 60
 
         if hours > 0 {
-            return "\(hours)h \(mins)m"
+            return String(format: String(localized: "duration_hours_minutes_short"), hours, mins)
         }
 
-        return "\(mins)m"
+        return String(format: String(localized: "duration_minutes_short"), mins)
     }
 
     var body: some View {

@@ -3,8 +3,8 @@ import AppIntents
 import Foundation
 
 struct SnoozeIntent: LiveActivityIntent {
-    static var title: LocalizedStringResource = "Snooze"
-    static var description = IntentDescription("Snooze an alarm")
+    static var title: LocalizedStringResource = "intent_snooze_title"
+    static var description = IntentDescription("intent_snooze_description")
     static var openAppWhenRun: Bool = false
 
     @Parameter(title: "alarmID")
