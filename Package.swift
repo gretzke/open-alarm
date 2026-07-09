@@ -24,6 +24,8 @@ let package = Package(
                 "Models/AlarmDefinition.swift",
                 "Models/AlarmSettingsCore.swift",
                 "Models/AlarmPersistenceStore.swift",
+                "Shared/BackstopSlotStore.swift",
+                "Shared/IntentDiagnostics.swift",
                 "Shared/OpenAlarmSharedDefaults.swift"
             ],
             swiftSettings: [

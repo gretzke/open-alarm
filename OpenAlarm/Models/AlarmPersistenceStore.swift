@@ -47,10 +47,11 @@ final class AlarmPersistence: Sendable {
             "OPENALARM_PENDING_WAKE_CHECK_SHOW_CONFIRM_UI_IDS_V1",
             "OPENALARM_WAKE_CHECK_SESSIONS_V1",
             "OPENALARM_PENDING_DISARM_ALARM_IDS_V1",
-            "OPENALARM_FORCE_CLOSE_ALARM_ID",
-            "OPENALARM_FORCE_CLOSE_PARENT_ALARM_ID",
-            "OPENALARM_DIAGNOSTICS_LOG",
-            "OPENALARM_WAKE_CHECK_GRACE_APPLIED_IDS"
+            OpenAlarmSharedDefaults.Key.legacyBackstopAlarmID,
+            OpenAlarmSharedDefaults.Key.legacyBackstopParentAlarmID,
+            OpenAlarmSharedDefaults.Key.backstopSlots,
+            OpenAlarmSharedDefaults.Key.diagnosticsLog,
+            OpenAlarmSharedDefaults.Key.wakeCheckGraceAppliedIDs
         ]
 
         for key in keysToMigrate where sharedDefaults.object(forKey: key) == nil {

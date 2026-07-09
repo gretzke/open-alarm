@@ -141,8 +141,7 @@ enum AlarmConfigurationBuilder {
     static func makeForceCloseAlarmConfiguration(
         for alarm: AlarmDefinition,
         fireAt: Date,
-        resolvedSettings: SharedAlarmSettings,
-        alarmKitID: UUID
+        resolvedSettings: SharedAlarmSettings
     ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
         let title = resolvedTitle(for: alarm)
         let titleResource = localizedResource(from: title)
@@ -164,7 +163,7 @@ enum AlarmConfigurationBuilder {
             countdownDuration: nil,
             schedule: .fixed(fireAt),
             attributes: attributes,
-            stopIntent: StopIntent(alarmID: alarmKitID.uuidString),
+            stopIntent: StopIntent(alarmID: alarm.id.uuidString),
             secondaryIntent: nil,
             sound: alarmSound
         )

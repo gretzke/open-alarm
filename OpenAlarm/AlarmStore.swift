@@ -91,6 +91,13 @@ final class AlarmStore: ObservableObject {
         liveActivitiesSystemEnabled && liveActivitiesEnabled
     }
 
+    private var isInteractivelyVisible: Bool {
+        UIApplication.shared.isProtectedDataAvailable
+            && UIApplication.shared.connectedScenes.contains { scene in
+                scene.activationState == .foregroundActive
+            }
+    }
+
     // MARK: - Dependencies
 
     private let alarmManager: AlarmManager
@@ -120,6 +127,7 @@ final class AlarmStore: ObservableObject {
         if userDefaults == nil {
             AlarmPersistence.migrateStandardStoreIfNeeded()
         }
+        BackstopSlotStore.migrateLegacySlotIfNeeded(defaults: resolvedDefaults)
         self.alarmManager = alarmManager
         self.permissionService = permissionService ?? AlarmPermissionService(manager: alarmManager)
         self.notificationPermissionService = notificationPermissionService ?? NotificationPermissionService()
@@ -215,6 +223,7 @@ final class AlarmStore: ObservableObject {
         await refreshRemoteState()
         loadWakeCheckSessionsFromPersistence()
         rebuildRuntimePhases()
+        sweepStaleBackstops()
         processPendingWakeCheckConfirmations()
         showWakeCheckConfirmationIfNeeded()
         await processPendingDisarmChallenges()
@@ -397,14 +406,9 @@ final class AlarmStore: ObservableObject {
             disarmPresentation = nil
         }
 
-        if OpenAlarmSharedDefaults.userDefaults.string(forKey: OpenAlarmSharedDefaults.Key.forceCloseParentAlarmID) == alarm.id.uuidString {
-            if let forceCloseIDString = OpenAlarmSharedDefaults.userDefaults.string(forKey: OpenAlarmSharedDefaults.Key.forceCloseAlarmID),
-               let forceCloseID = UUID(uuidString: forceCloseIDString) {
-                try? alarmManager.stop(id: forceCloseID)
-                try? alarmManager.cancel(id: forceCloseID)
-            }
-            OpenAlarmSharedDefaults.userDefaults.removeObject(forKey: OpenAlarmSharedDefaults.Key.forceCloseAlarmID)
-            OpenAlarmSharedDefaults.userDefaults.removeObject(forKey: OpenAlarmSharedDefaults.Key.forceCloseParentAlarmID)
+        if let backstopID = BackstopSlotStore.clear(forParent: alarm.id) {
+            try? alarmManager.stop(id: backstopID)
+            try? alarmManager.cancel(id: backstopID)
         }
 
         // Clean up wake-check session if active
@@ -929,10 +933,9 @@ final class AlarmStore: ObservableObject {
     private func processPendingDisarmChallenges() async {
         guard !isProcessingPendingDisarms else { return }
 
-        // A locked device means LiveActivityIntent launched us invisibly behind the passcode.
-        // Presenting now silently kills the StopIntent backstop loop (field-verified on build 78).
-        guard UIApplication.shared.isProtectedDataAvailable else {
-            IntentDiagnostics.log("AlarmStore disarm presentation blocked protectedData=false")
+        // Never present challenge covers from a process the user cannot see.
+        guard isInteractivelyVisible else {
+            IntentDiagnostics.log("AlarmStore disarm presentation blocked interactiveVisible=false")
             return
         }
 
@@ -1515,6 +1518,7 @@ final class AlarmStore: ObservableObject {
         alarms = sortAlarms(persistedAlarms)
 
         rebuildRuntimePhases()
+        sweepStaleBackstops()
 
         // Restore canonical schedule for any overrides whose restore anchor has passed
         await reconcileOverrides()
@@ -1573,6 +1577,29 @@ final class AlarmStore: ObservableObject {
     // StopIntent → pendingDisarm → completeDisarmChallenge → state machine,
     // which handles deletion/re-arm. No cleanup needed on the hot path.
 
+    private func sweepStaleBackstops() {
+        let pendingDisarmIDs = persistence.loadPendingDisarmAlarmIDs()
+
+        for (parentID, backstopID) in BackstopSlotStore.allSlots() {
+            let parentExists = alarms.contains { $0.id == parentID }
+            let hasPendingDisarm = pendingDisarmIDs.contains { pendingID in
+                resolveParentAlarm(for: pendingID)?.alarm.id == parentID
+            }
+            let hasDisarmPresentation = disarmPresentation?.id == parentID
+            let hasWakeCheckSession = wakeCheckSessions[parentID] != nil
+            let shouldKeep = parentExists && (hasPendingDisarm || hasDisarmPresentation || hasWakeCheckSession)
+
+            guard !shouldKeep else { continue }
+
+            try? alarmManager.stop(id: backstopID)
+            try? alarmManager.cancel(id: backstopID)
+            if BackstopSlotStore.backstopID(forParent: parentID) == backstopID {
+                BackstopSlotStore.clear(forParent: parentID)
+            }
+            IntentDiagnostics.log("AlarmStore backstop swept parent=\(parentID.uuidString) id=\(backstopID.uuidString)")
+        }
+    }
+
     // MARK: - Wake-Up Check Helpers
 
     private func loadWakeCheckSessionsFromPersistence() {
@@ -1594,6 +1621,11 @@ final class AlarmStore: ObservableObject {
     }
 
     private func processPendingWakeCheckConfirmations() {
+        guard isInteractivelyVisible else {
+            IntentDiagnostics.log("AlarmStore wake-check presentation blocked interactiveVisible=false")
+            return
+        }
+
         let pendingIDs = persistence.loadPendingWakeUpCheckShowConfirmUIIDs()
         guard let firstID = pendingIDs.first else { return }
 
@@ -1627,6 +1659,11 @@ final class AlarmStore: ObservableObject {
     /// Shows the wake-check confirmation UI if there's an active session
     /// past its checkAt time, even if the user didn't tap the notification.
     private func showWakeCheckConfirmationIfNeeded() {
+        guard isInteractivelyVisible else {
+            IntentDiagnostics.log("AlarmStore wake-check due presentation blocked interactiveVisible=false")
+            return
+        }
+
         guard wakeUpCheckConfirmationPresentation == nil else { return }
 
         // Find any active session where checkAt has passed and deadline hasn't

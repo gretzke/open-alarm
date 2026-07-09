@@ -39,11 +39,10 @@ struct TaskContainerView: View {
         }
         .interactiveDismissDisabled()
         .onAppear {
-            // Cancel any orphaned force-close alarm from a previous app session
-            if let orphanedID = ForceCloseAlarmManager.loadPersistedForceCloseAlarmID() {
+            // Cancel any orphaned force-close alarm for this challenge from a previous app session.
+            if let orphanedID = BackstopSlotStore.clear(forParent: alarm.id) {
                 try? AlarmManager.shared.stop(id: orphanedID)
                 try? AlarmManager.shared.cancel(id: orphanedID)
-                ForceCloseAlarmManager.clearPersistedForceCloseSlot()
             }
 
             if alarm.isNap {

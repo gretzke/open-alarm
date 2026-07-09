@@ -3,13 +3,18 @@ import Foundation
 enum IntentDiagnostics {
     private static let maxEntries = 100
     private static let key = OpenAlarmSharedDefaults.Key.diagnosticsLog
-
-    static func log(_ message: String) {
+    private static let lock = NSLock()
+    private static let formatter: DateFormatter = {
         let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "HH:mm:ss.SSS"
+        return formatter
+    }()
 
+    static func log(_ message: String, defaults: UserDefaults = OpenAlarmSharedDefaults.userDefaults) {
+        lock.lock()
+        defer { lock.unlock() }
         let entry = "\(formatter.string(from: Date())) \(message)"
-        let defaults = OpenAlarmSharedDefaults.userDefaults
         var current = defaults.array(forKey: key) as? [String] ?? []
         current.append(entry)
         if current.count > maxEntries {
@@ -18,11 +23,15 @@ enum IntentDiagnostics {
         defaults.set(current, forKey: key)
     }
 
-    static func entries() -> [String] {
-        OpenAlarmSharedDefaults.userDefaults.array(forKey: key) as? [String] ?? []
+    static func entries(defaults: UserDefaults = OpenAlarmSharedDefaults.userDefaults) -> [String] {
+        lock.lock()
+        defer { lock.unlock() }
+        return defaults.array(forKey: key) as? [String] ?? []
     }
 
-    static func clear() {
-        OpenAlarmSharedDefaults.userDefaults.removeObject(forKey: key)
+    static func clear(defaults: UserDefaults = OpenAlarmSharedDefaults.userDefaults) {
+        lock.lock()
+        defer { lock.unlock() }
+        defaults.removeObject(forKey: key)
     }
 }

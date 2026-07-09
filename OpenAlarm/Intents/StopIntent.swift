@@ -25,14 +25,7 @@ struct StopIntent: LiveActivityIntent {
             return .result()
         }
 
-        let persistedBackstopID = Self.loadPersistedForceCloseAlarmID()
-        if id == persistedBackstopID {
-            IntentDiagnostics.log("StopIntent entry id=\(id.uuidString) case=backstop-restop")
-            await handleStoppedBackstop(id)
-            await requestForegroundEscalation(caseName: "backstop-restop")
-            return .result()
-        }
-        IntentDiagnostics.log("StopIntent entry id=\(id.uuidString) case=normal")
+        IntentDiagnostics.log("StopIntent entry id=\(id.uuidString)")
 
         let persistence = AlarmPersistence(defaults: OpenAlarmSharedDefaults.userDefaults)
 
@@ -45,59 +38,37 @@ struct StopIntent: LiveActivityIntent {
         // Silence the alarm
         try? AlarmManager.shared.stop(id: id)
 
-        // Also stop any active force-close alarm (has a different UUID)
-        if let forceCloseID = persistedBackstopID {
-            try? AlarmManager.shared.stop(id: forceCloseID)
-            try? AlarmManager.shared.cancel(id: forceCloseID)
-            Self.clearPersistedForceCloseSlot()
-        }
-
-        // Notify AlarmStore if it's alive (in-process notification)
-        NotificationCenter.default.post(name: .disarmChallengeRequested, object: nil)
-
         if let resolved = Self.resolveParentAlarm(for: id, persistence: persistence) {
-            IntentDiagnostics.log("StopIntent normal parent=\(resolved.alarm.id.uuidString) tasks=\(resolved.settings.tasks.count)")
-            if !resolved.settings.tasks.isEmpty {
+            let parentID = resolved.alarm.id
+            let previous = BackstopSlotStore.backstopID(forParent: parentID)
+            let needsProtection = !resolved.settings.tasks.isEmpty || resolved.settings.wakeUpCheckEnabled
+            IntentDiagnostics.log("StopIntent resolved parent=\(parentID.uuidString) tasks=\(resolved.settings.tasks.count) wakeCheck=\(resolved.settings.wakeUpCheckEnabled) protect=\(needsProtection)")
+
+            if needsProtection {
                 await Self.scheduleDisarmBackstop(
                     for: resolved.alarm,
                     settings: resolved.settings,
-                    cancelAfterRegistering: nil
+                    replacing: previous
                 )
             } else {
-                Self.clearPersistedForceCloseParentAlarmID()
+                if let backstopID = BackstopSlotStore.clear(forParent: parentID) {
+                    try? AlarmManager.shared.stop(id: backstopID)
+                    try? AlarmManager.shared.cancel(id: backstopID)
+                    IntentDiagnostics.log("StopIntent backstop cleared parent=\(parentID.uuidString) id=\(backstopID.uuidString) reason=no-protection")
+                }
             }
         } else {
-            IntentDiagnostics.log("StopIntent normal parent=unresolved tasks=0")
-            Self.clearPersistedForceCloseParentAlarmID()
+            pendingDisarm.remove(id)
+            persistence.savePendingDisarmAlarmIDs(pendingDisarm)
+            IntentDiagnostics.log("StopIntent resolved parent=unresolved id=\(id.uuidString) pending=removed")
         }
 
-        await requestForegroundEscalation(caseName: "normal")
+        // Notify AlarmStore after backstop persistence/cancellation so any
+        // in-process UI work sees the newest per-parent slot state.
+        NotificationCenter.default.post(name: .disarmChallengeRequested, object: nil)
+
+        await requestForegroundEscalation(caseName: "unified")
         return .result()
-    }
-
-    private func handleStoppedBackstop(_ id: UUID) async {
-        try? AlarmManager.shared.stop(id: id)
-
-        let persistence = AlarmPersistence(defaults: OpenAlarmSharedDefaults.userDefaults)
-        guard let resolved = Self.resolvePersistedForceCloseParent(persistence: persistence) else {
-            IntentDiagnostics.log("StopIntent backstop parent=unresolved tasks=0")
-            try? AlarmManager.shared.cancel(id: id)
-            Self.clearPersistedForceCloseSlot()
-            return
-        }
-        IntentDiagnostics.log("StopIntent backstop parent=\(resolved.alarm.id.uuidString) tasks=\(resolved.settings.tasks.count)")
-
-        guard !resolved.settings.tasks.isEmpty else {
-            try? AlarmManager.shared.cancel(id: id)
-            Self.clearPersistedForceCloseSlot()
-            return
-        }
-
-        await Self.scheduleDisarmBackstop(
-            for: resolved.alarm,
-            settings: resolved.settings,
-            cancelAfterRegistering: id
-        )
     }
 
     private func requestForegroundEscalation(caseName: String) async {
@@ -114,9 +85,6 @@ struct StopIntent: LiveActivityIntent {
         var settings: SharedAlarmSettings
     }
 
-    private static let forceCloseAlarmIDKey = OpenAlarmSharedDefaults.Key.forceCloseAlarmID
-    private static let forceCloseParentAlarmIDKey = OpenAlarmSharedDefaults.Key.forceCloseParentAlarmID
-
     private static func resolveParentAlarm(
         for alarmKitID: UUID,
         persistence: AlarmPersistence
@@ -129,19 +97,6 @@ struct StopIntent: LiveActivityIntent {
         }
         guard let index else { return nil }
         return resolvedAlarm(for: alarms[index], persistence: persistence)
-    }
-
-    private static func resolvePersistedForceCloseParent(
-        persistence: AlarmPersistence
-    ) -> ResolvedAlarm? {
-        guard let parentIDString = OpenAlarmSharedDefaults.userDefaults.string(forKey: forceCloseParentAlarmIDKey),
-              let parentID = UUID(uuidString: parentIDString) else {
-            return nil
-        }
-        guard let alarm = persistence.loadUserAlarms().first(where: { $0.id == parentID }) else {
-            return nil
-        }
-        return resolvedAlarm(for: alarm, persistence: persistence)
     }
 
     private static func resolvedAlarm(
@@ -161,51 +116,39 @@ struct StopIntent: LiveActivityIntent {
     private static func scheduleDisarmBackstop(
         for alarm: AlarmDefinition,
         settings: SharedAlarmSettings,
-        cancelAfterRegistering previousBackstopID: UUID?
+        replacing previousBackstopID: UUID?
     ) async {
         let newID = UUID()
         let fireDate = Date.now.addingTimeInterval(SchedulingConstants.disarmBackstopSeconds)
         let config = AlarmConfigurationBuilder.makeForceCloseAlarmConfiguration(
             for: alarm,
             fireAt: fireDate,
-            resolvedSettings: settings,
-            alarmKitID: newID
+            resolvedSettings: settings
         )
 
+        IntentDiagnostics.log("StopIntent backstop schedule attempt id=\(newID.uuidString) parent=\(alarm.id.uuidString)")
         do {
             _ = try await AlarmManager.shared.schedule(id: newID, configuration: config)
         } catch {
-            IntentDiagnostics.log("StopIntent backstop schedule failed id=\(newID.uuidString) parent=\(alarm.id.uuidString) error=\(error.localizedDescription)")
-            return
+            IntentDiagnostics.log("StopIntent backstop schedule retry id=\(newID.uuidString) parent=\(alarm.id.uuidString) error=\(error.localizedDescription)")
+            try? AlarmManager.shared.stop(id: newID)
+            try? AlarmManager.shared.cancel(id: newID)
+            do {
+                _ = try await AlarmManager.shared.schedule(id: newID, configuration: config)
+            } catch {
+                IntentDiagnostics.log("StopIntent backstop schedule failed id=\(newID.uuidString) parent=\(alarm.id.uuidString) error=\(error.localizedDescription)")
+                return
+            }
         }
 
         IntentDiagnostics.log("StopIntent backstop schedule success id=\(newID.uuidString) parent=\(alarm.id.uuidString)")
-        persistForceCloseSlot(backstopID: newID, parentAlarmID: alarm.id)
+        BackstopSlotStore.set(backstopID: newID, forParent: alarm.id)
 
         if let previousBackstopID {
+            try? AlarmManager.shared.stop(id: previousBackstopID)
             try? AlarmManager.shared.cancel(id: previousBackstopID)
+            IntentDiagnostics.log("StopIntent backstop previous cancelled id=\(previousBackstopID.uuidString) parent=\(alarm.id.uuidString)")
         }
-    }
-
-    private static func loadPersistedForceCloseAlarmID() -> UUID? {
-        guard let str = OpenAlarmSharedDefaults.userDefaults.string(forKey: forceCloseAlarmIDKey) else {
-            return nil
-        }
-        return UUID(uuidString: str)
-    }
-
-    private static func persistForceCloseSlot(backstopID: UUID, parentAlarmID: UUID) {
-        OpenAlarmSharedDefaults.userDefaults.set(backstopID.uuidString, forKey: forceCloseAlarmIDKey)
-        OpenAlarmSharedDefaults.userDefaults.set(parentAlarmID.uuidString, forKey: forceCloseParentAlarmIDKey)
-    }
-
-    private static func clearPersistedForceCloseSlot() {
-        OpenAlarmSharedDefaults.userDefaults.removeObject(forKey: forceCloseAlarmIDKey)
-        clearPersistedForceCloseParentAlarmID()
-    }
-
-    private static func clearPersistedForceCloseParentAlarmID() {
-        OpenAlarmSharedDefaults.userDefaults.removeObject(forKey: forceCloseParentAlarmIDKey)
     }
 
     // MARK: - Grace period helpers (shared key with AlarmStore)

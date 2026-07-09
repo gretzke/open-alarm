@@ -13,9 +13,6 @@ final class ForceCloseAlarmManager {
     private let mainAlarm: AlarmDefinition
     private let resolvedSettings: SharedAlarmSettings
 
-    private static let forceCloseAlarmIDKey = OpenAlarmSharedDefaults.Key.forceCloseAlarmID
-    private static let forceCloseParentAlarmIDKey = OpenAlarmSharedDefaults.Key.forceCloseParentAlarmID
-
     init(
         alarm: AlarmDefinition,
         resolvedSettings: SharedAlarmSettings,
@@ -49,8 +46,7 @@ final class ForceCloseAlarmManager {
         let config = AlarmConfigurationBuilder.makeForceCloseAlarmConfiguration(
             for: mainAlarm,
             fireAt: fireDate,
-            resolvedSettings: resolvedSettings,
-            alarmKitID: newID
+            resolvedSettings: resolvedSettings
         )
 
         Task { @MainActor [weak self] in
@@ -69,8 +65,8 @@ final class ForceCloseAlarmManager {
             }
 
             // StopIntent may finish scheduling its locked-context backstop after this UI appeared.
-            // Cancel that foreign persisted slot before this manager takes ownership.
-            if let persistedID = Self.loadPersistedForceCloseAlarmID(),
+            // Cancel only this alarm's persisted slot before this manager takes ownership.
+            if let persistedID = BackstopSlotStore.backstopID(forParent: mainAlarm.id),
                persistedID != currentForceCloseAlarmID,
                persistedID != newID {
                 try? alarmManager.stop(id: persistedID)
@@ -84,7 +80,7 @@ final class ForceCloseAlarmManager {
             }
 
             currentForceCloseAlarmID = newID
-            Self.persistForceCloseSlot(backstopID: newID, parentAlarmID: mainAlarm.id)
+            BackstopSlotStore.set(backstopID: newID, forParent: mainAlarm.id)
         }
     }
 
@@ -94,29 +90,14 @@ final class ForceCloseAlarmManager {
             try? alarmManager.stop(id: id)
             try? alarmManager.cancel(id: id)
         }
-        // StopIntent may have persisted a foreign backstop after this manager started.
+        // StopIntent may have persisted another backstop for this parent after this manager started.
         // Cancel it too so challenge completion cannot leave a delayed ring behind.
-        if let persistedID = Self.loadPersistedForceCloseAlarmID(),
+        if let persistedID = BackstopSlotStore.backstopID(forParent: mainAlarm.id),
            persistedID != ownID {
             try? alarmManager.stop(id: persistedID)
             try? alarmManager.cancel(id: persistedID)
         }
         currentForceCloseAlarmID = nil
-        Self.clearPersistedForceCloseSlot()
-    }
-
-    static func loadPersistedForceCloseAlarmID() -> UUID? {
-        guard let str = OpenAlarmSharedDefaults.userDefaults.string(forKey: forceCloseAlarmIDKey) else { return nil }
-        return UUID(uuidString: str)
-    }
-
-    static func persistForceCloseSlot(backstopID: UUID, parentAlarmID: UUID) {
-        OpenAlarmSharedDefaults.userDefaults.set(backstopID.uuidString, forKey: forceCloseAlarmIDKey)
-        OpenAlarmSharedDefaults.userDefaults.set(parentAlarmID.uuidString, forKey: forceCloseParentAlarmIDKey)
-    }
-
-    static func clearPersistedForceCloseSlot() {
-        OpenAlarmSharedDefaults.userDefaults.removeObject(forKey: forceCloseAlarmIDKey)
-        OpenAlarmSharedDefaults.userDefaults.removeObject(forKey: forceCloseParentAlarmIDKey)
+        BackstopSlotStore.clear(forParent: mainAlarm.id)
     }
 }

@@ -14,6 +14,9 @@
 		146CCBAF1431CDDFB450335F /* OpenAlarmSharedDefaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8806D09A2BB84C05748859AD /* OpenAlarmSharedDefaults.swift */; };
 		14D1A6000000000000000002 /* IntentDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D1A6000000000000000001 /* IntentDiagnostics.swift */; };
 		14D1A6000000000000000003 /* IntentDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D1A6000000000000000001 /* IntentDiagnostics.swift */; };
+		14D1A6000000000000000004 /* BackstopSlotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D1A6000000000000000006 /* BackstopSlotStore.swift */; };
+		14D1A6000000000000000005 /* BackstopSlotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D1A6000000000000000006 /* BackstopSlotStore.swift */; };
+		14D1A6000000000000000007 /* BackstopSlotStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D1A6000000000000000008 /* BackstopSlotStoreTests.swift */; };
 		1B1488ECC64F591938DEA880 /* WakeUpCheckConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4C65D29F82E70C88900C16A /* WakeUpCheckConfirmationView.swift */; };
 		213B06C5B261E28D13D1FE1F /* NapCountdownLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAD33FEE543D66DEBCB7E592 /* NapCountdownLiveActivityWidget.swift */; };
 		22CC75FE635B87512828CA78 /* AlarmModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 184B0039FCD22DB7F1E75096 /* AlarmModels.swift */; };
@@ -123,6 +126,8 @@
 		1026E6B6735DA2D0141B5895 /* AlarmHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmHomeView.swift; sourceTree = "<group>"; };
 		115F20ED82B803187012D8A2 /* MathTaskView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathTaskView.swift; sourceTree = "<group>"; };
 		14D1A6000000000000000001 /* IntentDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentDiagnostics.swift; sourceTree = "<group>"; };
+		14D1A6000000000000000006 /* BackstopSlotStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstopSlotStore.swift; sourceTree = "<group>"; };
+		14D1A6000000000000000008 /* BackstopSlotStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstopSlotStoreTests.swift; sourceTree = "<group>"; };
 		184B0039FCD22DB7F1E75096 /* AlarmModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmModels.swift; sourceTree = "<group>"; };
 		1AAB5EE73D1350495BF00CA8 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		2A7335668C12A3AE0B905A68 /* NotificationPermissionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPermissionService.swift; sourceTree = "<group>"; };
@@ -196,6 +201,7 @@
 		135C9DF212569F46B82E0C7A /* OpenAlarmSchedulingCoreTests */ = {
 			isa = PBXGroup;
 			children = (
+				14D1A6000000000000000008 /* BackstopSlotStoreTests.swift */,
 				4E9CE438CD9EF4D7868584C1 /* AlarmModelTests.swift */,
 				D1B8814B4E50246101EA0E7E /* AlarmPersistenceTests.swift */,
 				A15CFD8ECBB3F28400D0A09C /* AlarmStateMachineTests.swift */,
@@ -347,6 +353,7 @@
 		B738EFAAC480706ABCAA971A /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				14D1A6000000000000000006 /* BackstopSlotStore.swift */,
 				14D1A6000000000000000001 /* IntentDiagnostics.swift */,
 				8806D09A2BB84C05748859AD /* OpenAlarmSharedDefaults.swift */,
 			);
@@ -575,6 +582,7 @@
 				D103B10F135185661E92DB3A /* NapCountdownLiveActivityManager.swift in Sources */,
 				213B06C5B261E28D13D1FE1F /* NapCountdownLiveActivityWidget.swift in Sources */,
 				6836111E5DBAA81266281BB4 /* NapLiveActivityIntents.swift in Sources */,
+				14D1A6000000000000000005 /* BackstopSlotStore.swift in Sources */,
 				14D1A6000000000000000003 /* IntentDiagnostics.swift in Sources */,
 				8346F3565E43AE8420A474E1 /* OpenAlarmSharedDefaults.swift in Sources */,
 				935D7EBE5898D11D72E6E2F7 /* OpenAlarmTheme.swift in Sources */,
@@ -588,6 +596,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				817653D55863EDFDD4A02A38 /* AlarmModelTests.swift in Sources */,
+				14D1A6000000000000000007 /* BackstopSlotStoreTests.swift in Sources */,
 				379E00527D9520D396C4D782 /* AlarmPersistenceTests.swift in Sources */,
 				5648D8B37FD38430976FB620 /* AlarmStateMachineTests.swift in Sources */,
 				7BD355A661613339AD8B0210 /* BridgeDateCalculatorTests.swift in Sources */,
@@ -612,6 +621,7 @@
 				46736EE4086E768FF315F0C2 /* AlarmSoundLiveActivityManager.swift in Sources */,
 				0307D6667335FD1E43043C32 /* AlarmStateMachine.swift in Sources */,
 				75F6F1776DF5731E152893A0 /* AlarmStore.swift in Sources */,
+				14D1A6000000000000000004 /* BackstopSlotStore.swift in Sources */,
 				CEEB02817569AB0C4EDD35C2 /* AppRootView.swift in Sources */,
 				47FCB6814D4511114CEB807A /* BridgeDateCalculator.swift in Sources */,
 				9BC852B481628BE27CA2BB34 /* DummySettingsView.swift in Sources */,
