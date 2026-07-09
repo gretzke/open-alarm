@@ -5,6 +5,7 @@ import Combine
 import Foundation
 import os
 import SwiftUI
+import UIKit
 import UserNotifications
 
 // MARK: - DisarmPresentation
@@ -101,6 +102,7 @@ final class AlarmStore: ObservableObject {
     private var settingsRescheduleTask: Task<Void, Never>?
     private var wakeCheckConfirmationObserver: Any?
     private var disarmChallengeObserver: Any?
+    private var protectedDataAvailableObserver: Any?
     private var isProcessingPendingDisarms = false
     /// Pending delayed wake-check-UI presentation; replaced (not stacked) when
     /// processPendingWakeCheckConfirmations reschedules itself.
@@ -164,11 +166,23 @@ final class AlarmStore: ObservableObject {
             }
         }
 
+        protectedDataAvailableObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.protectedDataDidBecomeAvailableNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                await self?.handleAppOpened()
+            }
+        }
     }
 
     deinit {
         alarmUpdatesTask?.cancel()
         pendingWakeCheckUITask?.cancel()
+        if let observer = protectedDataAvailableObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
         if let observer = disarmChallengeObserver {
             NotificationCenter.default.removeObserver(observer)
         }
@@ -914,6 +928,11 @@ final class AlarmStore: ObservableObject {
 
     private func processPendingDisarmChallenges() async {
         guard !isProcessingPendingDisarms else { return }
+
+        // A locked device means LiveActivityIntent launched us invisibly behind the passcode.
+        // Presenting now silently kills the StopIntent backstop loop (field-verified on build 78).
+        guard UIApplication.shared.isProtectedDataAvailable else { return }
+
         isProcessingPendingDisarms = true
         defer { isProcessingPendingDisarms = false }
 

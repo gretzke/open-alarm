@@ -45,8 +45,8 @@ Requirement IDs (`R-x.y`) are for referencing from the refactor plan.
 
 ## 4. Firing pipeline (stop → disarm → outcome)
 
-- **R-4.1** Alarm fires → user taps Stop → `StopIntent` (extension process): writes the fired ID into the shared pending-disarm set **first** (crash-safe minimal write), stops the AlarmKit alarm, stops any active force-close alarm, posts `disarmChallengeRequested`, opens the app.
-- **R-4.2** App (on notification or foreground) processes pending disarm IDs **one at a time**: resolves the parent alarm (the pending ID may be a bridge UUID), marks `lifecycleState = .awaitingDisarmChallenge`, resets `snoozeCount`, presents the disarm challenge UI with the alarm's resolved tasks. Unknown/stale pending IDs are dropped. An already-presented challenge is never replaced (avoids sound-manager races).
+- **R-4.1** Alarm fires → user taps Stop → `StopIntent` (a `LiveActivityIntent`: runs in the app process, launching the app in the background behind the lock screen if needed): writes the fired ID into the shared pending-disarm set **first** (crash-safe minimal write), stops the AlarmKit alarm, stops any active force-close alarm, posts `disarmChallengeRequested`, opens the app.
+- **R-4.2** App (on notification or foreground) processes pending disarm IDs **one at a time**: resolves the parent alarm (the pending ID may be a bridge UUID), marks `lifecycleState = .awaitingDisarmChallenge`, resets `snoozeCount`, presents the disarm challenge UI with the alarm's resolved tasks. Pending disarm challenges are only presented while the device is unlocked (protected data available); while locked the stop backstop loop keeps re-ringing. Unknown/stale pending IDs are dropped. An already-presented challenge is never replaced (avoids sound-manager races).
 - **R-4.3** Challenge completion (`.challengeCompleted` through the state machine) branches, in priority order:
   1. Wake-up check enabled → phase `.awaitingWakeCheck`, cancel the fired AlarmKit ID, start a wake-check session.
   2. Fired ID was a bridge of an active override → return to `.overrideActive` with the remaining bridge IDs (and refresh live bridge IDs from AlarmKit runtime).
@@ -59,7 +59,7 @@ Requirement IDs (`R-x.y`) are for referencing from the refactor plan.
 
 ## 5. Snooze
 
-- **R-5.1** Snooze runs entirely in `SnoozeIntent` (extension process): resolve parent by direct ID or bridge ID; unknown ID → just stop the AlarmKit alarm.
+- **R-5.1** Snooze runs entirely in `SnoozeIntent` (a `LiveActivityIntent`, app process): resolve parent by direct ID or bridge ID; unknown ID → just stop the AlarmKit alarm.
 - **R-5.2** Snooze allowance: `snoozeEnabled` and (`maxSnoozes == nil` → unlimited, else `snoozeCount < maxSnoozes`). Disallowed → stop the alarm (no snooze).
 - **R-5.3** A granted snooze increments `snoozeCount`, persists, and reschedules the **same AlarmKit ID** at `now + snoozeDuration` as a `.fixed` schedule (stop → cancel → schedule). For naps it also updates `fixedTriggerDate` and clears any pause state, then syncs the Live Activity.
 - **R-5.4** Snoozing a repeating alarm temporarily replaces its recurring schedule with a fixed one; the recurring schedule is restored by the post-disarm re-arm (R-4.3.3).
@@ -101,7 +101,7 @@ Requirement IDs (`R-x.y`) are for referencing from the refactor plan.
 ## 8. Disarm challenges & force-close protection
 
 - **R-8.1** Challenge tasks come from resolved shared settings (`tasks: [AlarmTask]` — dummy or math with difficulty/count). The scheduler contract: the disarm UI is presented after every stop, and lifecycle only advances via `completeDisarmChallenge`.
-- **R-8.2** While a challenge is active, `ForceCloseAlarmManager` maintains a rolling one-shot AlarmKit alarm ~20s out, rescheduled every 10s (new UUID each time, previous canceled only after the new one is registered — no gap). Force-closing the app therefore causes the alarm to re-fire. The current force-close ID is persisted in the shared defaults so `StopIntent` (extension process) can silence it; the slot also carries the parent alarm ID.
+- **R-8.2** While a challenge is active, `ForceCloseAlarmManager` maintains a rolling one-shot AlarmKit alarm ~20s out, rescheduled every 10s (new UUID each time, previous canceled only after the new one is registered — no gap). Force-closing the app therefore causes the alarm to re-fire. The current force-close ID is persisted in the shared defaults so `StopIntent` can silence it; the slot also carries the parent alarm ID.
 - **R-8.3** On challenge UI appear, an orphaned persisted force-close alarm from a previous crash/force-quit is canceled.
 - **R-8.4** During a challenge, `TaskSoundManager` plays a looping alarm sound (bundled `alarm_sound.caf`/`.mp3`, falling back to the system alarm sound) through an active `.playback` audio session, so the alarm keeps sounding **even when the app is minimized or the screen is locked**.
 - **R-8.5** System volume is forced to the alarm level for the duration of the challenge: a hidden off-screen `MPVolumeView` slider sets the volume, a KVO observer on `outputVolume` reverts user changes, and a 0.2s polling timer catches held-down hardware volume buttons that KVO misses. The user cannot silence the challenge by turning the volume down. The level is configurable per settings cascade via `AlarmVolumeSettings.targetPercent` (default 20%, clamped 0–100; added upstream 2026-05). (Intentional anti-circumvention behavior — accepted App Store review risk; uses `MPVolumeView`'s internal slider.)
@@ -114,7 +114,7 @@ Requirement IDs (`R-x.y`) are for referencing from the refactor plan.
 - **R-9.2** Pause: capture `remainingSeconds` into `pausedRemainingSeconds`, cancel the AlarmKit alarm (`.disabled` event). Resume: new target `now + remaining`, clear pause, reschedule (`.enabled` event).
 - **R-9.3** Extend (+minutes): adds to `durationMinutes`; if paused, extends `pausedRemainingSeconds` only (no reschedule); if running, pushes `fixedTriggerDate` and reschedules (`.updated`).
 - **R-9.4** All nap mutations sync the nap countdown Live Activity; delete stops it.
-- **R-9.5** Same operations are available from the Live Activity via intents (extension process): `NapExtendIntent`, `NapPauseIntent`, `NapResumeIntent`, `NapDeleteIntent` — each loads persistence, mutates, saves, stops/cancels/schedules AlarmKit directly, and syncs/stops the Live Activity. Missing nap → the Live Activity is stopped.
+- **R-9.5** Same operations are available from the Live Activity via `LiveActivityIntent`s (app process): `NapExtendIntent`, `NapPauseIntent`, `NapResumeIntent`, `NapDeleteIntent` — each loads persistence, mutates, saves, stops/cancels/schedules AlarmKit directly, and syncs/stops the Live Activity. Missing nap → the Live Activity is stopped.
 - **R-9.6** Deep link: `openalarm://nap/extend?minutes=N[&id=UUID]` extends the active nap (ID match optional but enforced when present).
 - **R-9.7** Nap snooze (via SnoozeIntent) moves `fixedTriggerDate` and clears pause state (R-5.3).
 
@@ -163,7 +163,7 @@ Requirement IDs (`R-x.y`) are for referencing from the refactor plan.
 - **D-1** — **Fixed (2026-07-09).** Force-unwrap replaced with a `.nextTime`-policy fallback; DST gap/fall-back tests added.
 - **D-2** — **Fixed (2026-07-09).** Corrupt alarm blobs are quarantined under `OPENALARM_USER_ALARMS_CORRUPT_V1`; encode failures no longer delete the previous good data.
 - **D-3** — **Deferred.** Cross-process read-modify-write races on the single alarms blob need a versioning/merge design (per-alarm keys or a write counter); a half-measure risks worse bugs. "Intents write truth, app reloads" mitigates the app→intent direction only.
-- **D-4** — **Fixed (2026-07-09).** Override activate/restore and disarm presentation now route through the machine (`.overrideActivated`, `.overrideRestored(bridgeAlarmIDs:)`, `.disarmRequested`); dead events (`.stopped`, `.snoozed`, `.alarmKitStateChanged`, `.wakeCheckStarted`) deleted. Alerting/snoozed remain reconstruction-only phases (stop/snooze fire in extension processes) — documented in the machine header.
+- **D-4** — **Fixed (2026-07-09).** Override activate/restore and disarm presentation now route through the machine (`.overrideActivated`, `.overrideRestored(bridgeAlarmIDs:)`, `.disarmRequested`); dead events (`.stopped`, `.snoozed`, `.alarmKitStateChanged`, `.wakeCheckStarted`) deleted. Alerting/snoozed remain reconstruction-only phases (stop/snooze fire via `LiveActivityIntent`s outside the UI flow) — documented in the machine header.
 - **D-5** — **Fixed (2026-07-09).** Machine emits `.persist` effects for post-lifecycle bookkeeping (persist ordered before schedule so re-arm configs see the reset snooze count); `.scheduleAlarmKit` payload slimmed to `alarmID`.
 - **D-6** — **Accepted + documented (2026-07-09).** UUID reuse is deliberate; comment added at the schedule site.
 - **D-7** — **Fixed (2026-07-09).** `SchedulingConstants` centralizes bridge window size, testing sentinel, grace minimum.

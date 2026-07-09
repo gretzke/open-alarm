@@ -35,7 +35,7 @@ force-closed.
 | `AlarmStateMachine` | `OpenAlarm/Scheduling/` | Pure `(phase, event) → (phase, effects)` transitions for every app-side lifecycle change |
 | `BridgeDateCalculator` | `OpenAlarm/Scheduling/` | DST-safe occurrence math for override bridge alarms |
 | Models & persistence | `OpenAlarm/Models/` | Foundation-only model layer, backward-compatible Codable, app-group `UserDefaults` store |
-| Intents | `OpenAlarm/Intents/` | `StopIntent`/`SnoozeIntent`/nap intents run in extension processes and write to the shared store; the app reloads and reconciles |
+| Intents | `OpenAlarm/Intents/` | `StopIntent`/`SnoozeIntent`/nap intents are `LiveActivityIntent`s — they run in the app process (launching it in the background if needed) and write to the shared store; the app reloads and reconciles |
 | Live Activities | `OpenAlarmLiveActivities/` | Widget extension for nap countdown + ringing alarm |
 
 The Foundation-only core (state machine, date math, models, persistence) is
