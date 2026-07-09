@@ -14,6 +14,9 @@ enum SchedulingConstants {
     static let debugSentinelSeconds: TimeInterval = 5
     /// Minimum wake-check grace extension when opening from a notification tap.
     static let wakeCheckGraceMinimumSeconds: TimeInterval = 60
+    /// Deep-link nap extension bounds.
+    static let minNapExtensionDeepLinkMinutes = 1
+    static let maxNapExtensionDeepLinkMinutes = 24 * 60
 }
 
 // MARK: - Alarm Type Policy

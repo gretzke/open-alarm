@@ -7,6 +7,7 @@ struct WakeUpCheckConfirmationView: View {
     @State private var remainingSeconds: Int = 0
     @State private var deadline: Date = .distantFuture
     @State private var timer: Timer?
+    @State private var hasDisappeared = false
 
     var body: some View {
         VStack(spacing: 24) {
@@ -53,18 +54,25 @@ struct WakeUpCheckConfirmationView: View {
         .background(OAColor.background.ignoresSafeArea())
         .interactiveDismissDisabled()
         .onAppear {
+            hasDisappeared = false
             Task { @MainActor in
                 if let resolvedDeadline = await alarmStore.applyWakeUpCheckGracePeriodIfNeeded(for: alarmID) {
+                    guard !hasDisappeared, isCurrentPresentation else { return }
                     deadline = resolvedDeadline
                 } else {
-                    alarmStore.wakeUpCheckConfirmationPresentation = nil
+                    if isCurrentPresentation {
+                        alarmStore.wakeUpCheckConfirmationPresentation = nil
+                    }
                     return
                 }
                 updateRemaining()
-                startTimer()
+                if !hasDisappeared, isCurrentPresentation {
+                    startTimer()
+                }
             }
         }
         .onDisappear {
+            hasDisappeared = true
             timer?.invalidate()
             timer = nil
         }
@@ -78,6 +86,7 @@ struct WakeUpCheckConfirmationView: View {
     }
 
     private func startTimer() {
+        timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
             Task { @MainActor in
                 updateRemaining()
@@ -92,7 +101,13 @@ struct WakeUpCheckConfirmationView: View {
         if seconds <= 0 {
             timer?.invalidate()
             timer = nil
-            alarmStore.wakeUpCheckConfirmationPresentation = nil
+            if isCurrentPresentation {
+                alarmStore.wakeUpCheckConfirmationPresentation = nil
+            }
         }
+    }
+
+    private var isCurrentPresentation: Bool {
+        alarmStore.wakeUpCheckConfirmationPresentation?.id == alarmID
     }
 }

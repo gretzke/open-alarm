@@ -55,6 +55,8 @@ struct TaskContainerView: View {
             forceCloseManager = manager
         }
         .onDisappear {
+            soundManager.stopPlaying()
+            forceCloseManager?.stop()
             AlarmSoundLiveActivityManager.shared.stop()
         }
     }

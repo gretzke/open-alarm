@@ -98,8 +98,10 @@ final class AlarmStore: ObservableObject {
     private let persistence: AlarmPersistence
     private let wakeCheckNotificationService: WakeUpCheckNotificationService
     private var alarmUpdatesTask: Task<Void, Never>?
+    private var settingsRescheduleTask: Task<Void, Never>?
     private var wakeCheckConfirmationObserver: Any?
     private var disarmChallengeObserver: Any?
+    private var isProcessingPendingDisarms = false
     /// Pending delayed wake-check-UI presentation; replaced (not stacked) when
     /// processPendingWakeCheckConfirmations reschedules itself.
     private var pendingWakeCheckUITask: Task<Void, Never>?
@@ -212,9 +214,21 @@ final class AlarmStore: ObservableObject {
 
         guard url.host == "nap", url.path == "/extend",
               let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-              let minutesValue = components.queryItems?.first(where: { $0.name == "minutes" })?.value,
-              let minutes = Int(minutesValue) else {
+              let minutesValue = components.queryItems?.first(where: { $0.name == "minutes" })?.value else {
             return
+        }
+
+        guard let minutes = Int(minutesValue) else {
+            Self.logger.warning("Ignoring nap extension URL with invalid minutes value: \(minutesValue, privacy: .public)")
+            return
+        }
+
+        let clampedMinutes = min(
+            SchedulingConstants.maxNapExtensionDeepLinkMinutes,
+            max(SchedulingConstants.minNapExtensionDeepLinkMinutes, minutes)
+        )
+        if clampedMinutes != minutes {
+            Self.logger.warning("Clamped nap extension URL minutes from \(minutes) to \(clampedMinutes)")
         }
 
         let napID = components.queryItems?
@@ -222,7 +236,7 @@ final class AlarmStore: ObservableObject {
             .value
             .flatMap(UUID.init(uuidString:))
 
-        await extendNap(byMinutes: minutes, matchingID: napID)
+        await extendNap(byMinutes: clampedMinutes, matchingID: napID)
     }
 
     private func refreshRemoteState() async {
@@ -345,7 +359,7 @@ final class AlarmStore: ObservableObject {
         await process(event: .overrideActivated(bridgeAlarmIDs: Set(bridgeIDs)), for: alarm.id)
 
         // Schedule bridge alarms
-        let parentAlarm = alarms.first(where: { $0.id == alarm.id }) ?? alarm
+        guard let parentAlarm = alarms.first(where: { $0.id == alarm.id }) else { return }
         for (i, bridgeID) in bridgeIDs.enumerated() {
             await scheduleBridgeAlarm(
                 bridgeID: bridgeID,
@@ -616,9 +630,11 @@ final class AlarmStore: ObservableObject {
 
         // Reschedule all enabled alarms using defaults so new config takes effect.
         // This includes naps — settings are pointers, changes propagate immediately.
-        Task { @MainActor [weak self] in
+        let previousTask = settingsRescheduleTask
+        settingsRescheduleTask = Task { @MainActor [weak self, previousTask] in
+            await previousTask?.value
             guard let self else { return }
-            for alarm in self.alarms where alarm.isEnabled {
+            for alarm in self.alarms where alarm.isEnabled && !alarm.isPaused {
                 if case .useDefault = alarm.settingsMode {
                     // Skip naps that have their own nap defaults
                     if alarm.isNap, self.napDefaultSharedSettings != nil { continue }
@@ -670,9 +686,11 @@ final class AlarmStore: ObservableObject {
         persistence.saveNapDefaultSharedSettings(settings)
 
         // Reschedule active nap alarms so new config takes effect immediately.
-        Task { @MainActor [weak self] in
+        let previousTask = settingsRescheduleTask
+        settingsRescheduleTask = Task { @MainActor [weak self, previousTask] in
+            await previousTask?.value
             guard let self else { return }
-            for alarm in self.alarms where alarm.isEnabled && alarm.isNap {
+            for alarm in self.alarms where alarm.isEnabled && alarm.isNap && !alarm.isPaused {
                 if case .useDefault = alarm.settingsMode {
                     await self.forceRescheduleAlarm(alarm)
                 }
@@ -885,6 +903,10 @@ final class AlarmStore: ObservableObject {
     // MARK: - Disarm Challenge
 
     private func processPendingDisarmChallenges() async {
+        guard !isProcessingPendingDisarms else { return }
+        isProcessingPendingDisarms = true
+        defer { isProcessingPendingDisarms = false }
+
         // If challenge screen is already showing, don't replace it.
         // Re-creating the presentation causes a sound race between old/new TaskSoundManager.
         guard disarmPresentation == nil else { return }
@@ -1212,7 +1234,7 @@ final class AlarmStore: ObservableObject {
         await process(event: .overrideActivated(bridgeAlarmIDs: Set(bridgeIDs)), for: alarm.id)
 
         // Schedule bridge alarms
-        let parentAlarm = alarms.first(where: { $0.id == alarm.id }) ?? alarm
+        guard let parentAlarm = alarms.first(where: { $0.id == alarm.id }) else { return }
         for (i, bridgeID) in bridgeIDs.enumerated() {
             await scheduleBridgeAlarm(
                 bridgeID: bridgeID,
@@ -1301,6 +1323,16 @@ final class AlarmStore: ObservableObject {
         return nil
     }
 
+    private func pendingDisarmAlarmKitID(for alarm: AlarmDefinition, pendingIDs: Set<UUID>) -> UUID {
+        if let bridgeID = alarm.activeOverride?.bridgeAlarmIDs.first(where: { pendingIDs.contains($0) }) {
+            return bridgeID
+        }
+        if pendingIDs.contains(alarm.id) {
+            return alarm.id
+        }
+        return alarm.id
+    }
+
     // MARK: - State Machine
 
     /// Routes a state-changing event through AlarmStateMachine and executes
@@ -1362,12 +1394,15 @@ final class AlarmStore: ObservableObject {
             return
         }
         let runtimeByID = Dictionary(uniqueKeysWithValues: runtimeAlarms.map { ($0.id, $0) })
+        let pendingDisarmIDs = persistence.loadPendingDisarmAlarmIDs()
 
         alarmLoop: for alarm in alarms {
             // Persisted lifecycle state takes priority for post-alerting phases.
             // AlarmKit may still report .alerting briefly after StopIntent runs.
             if alarm.lifecycleState == .awaitingDisarmChallenge {
-                runtimePhases[alarm.id] = .awaitingDisarmChallenge(alarmKitID: alarm.id)
+                runtimePhases[alarm.id] = .awaitingDisarmChallenge(
+                    alarmKitID: pendingDisarmAlarmKitID(for: alarm, pendingIDs: pendingDisarmIDs)
+                )
             } else if alarm.lifecycleState == .awaitingWakeCheck {
                 runtimePhases[alarm.id] = .awaitingWakeCheck
             } else if let override = alarm.activeOverride {
@@ -1460,8 +1495,11 @@ final class AlarmStore: ObservableObject {
 
     private func reconcileOverrides() async {
         let now = Date.now
+        let alarmIDs = alarms.map(\.id)
 
-        for (index, alarm) in alarms.enumerated() {
+        for alarmID in alarmIDs {
+            guard let index = alarms.firstIndex(where: { $0.id == alarmID }) else { continue }
+            let alarm = alarms[index]
             guard let override = alarm.activeOverride else { continue }
             guard now > override.restoreAnchorDate else { continue }
 
@@ -1485,6 +1523,7 @@ final class AlarmStore: ObservableObject {
             alarms[index].lifecycleState = .scheduled
             alarms[index].snoozeCount = 0
             alarms[index].updatedAt = .now
+            saveAlarms()
 
             // Cancels remaining bridges and re-registers the canonical schedule.
             await process(

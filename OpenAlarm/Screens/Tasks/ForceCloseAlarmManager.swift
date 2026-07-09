@@ -9,6 +9,7 @@ final class ForceCloseAlarmManager {
     private let alarmManager: AlarmManager
     private var timer: Timer?
     private var currentForceCloseAlarmID: UUID?
+    private var generation = 0
     private let mainAlarm: AlarmDefinition
     private let resolvedSettings: SharedAlarmSettings
 
@@ -34,12 +35,14 @@ final class ForceCloseAlarmManager {
     }
 
     func stop() {
+        generation += 1
         timer?.invalidate()
         timer = nil
         cancelCurrentForceCloseAlarm()
     }
 
     private func scheduleNextForceCloseAlarm() {
+        let capturedGeneration = generation
         let newID = UUID()
         let fireDate = Date.now.addingTimeInterval(20)
         let config = AlarmConfigurationBuilder.makeForceCloseAlarmConfiguration(
@@ -48,8 +51,20 @@ final class ForceCloseAlarmManager {
             resolvedSettings: resolvedSettings
         )
 
-        Task {
-            _ = try? await alarmManager.schedule(id: newID, configuration: config)
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                _ = try await alarmManager.schedule(id: newID, configuration: config)
+            } catch {
+                Self.logger.error("Force-close schedule failed for \(newID): \(error.localizedDescription)")
+                return
+            }
+
+            guard generation == capturedGeneration else {
+                try? alarmManager.stop(id: newID)
+                try? alarmManager.cancel(id: newID)
+                return
+            }
 
             // Cancel previous after new one is scheduled (no gap)
             if let previousID = currentForceCloseAlarmID {

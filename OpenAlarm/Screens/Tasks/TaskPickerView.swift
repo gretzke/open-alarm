@@ -104,14 +104,7 @@ struct TaskPickerView: View {
                     showingTypeList = false
                     // Short delay for sheet dismiss animation
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        switch typeInfo.id {
-                        case "dummy":
-                            settingsTask = .dummy
-                        case "math":
-                            settingsTask = .math(difficulty: .simple, count: 3)
-                        default:
-                            break
-                        }
+                        settingsTask = TaskRegistry.defaultTask(for: typeInfo)
                     }
                 } label: {
                     Label(typeInfo.displayName, systemImage: typeInfo.systemImage)
@@ -174,8 +167,8 @@ private struct TaskDropDelegate: DropDelegate {
 extension AlarmTask: Identifiable {
     var id: String {
         switch self {
-        case .dummy: "dummy"
-        case .math(let d, let c): "math_\(d.rawValue)_\(c)"
+        case .dummy: TaskRegistry.TaskTypeID.dummy
+        case .math(let d, let c): "\(TaskRegistry.TaskTypeID.math)_\(d.rawValue)_\(c)"
         }
     }
 }

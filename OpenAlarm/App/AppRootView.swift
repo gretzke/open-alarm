@@ -74,7 +74,9 @@ struct AppRootView: View {
         // Don't show permission prompts during a disarm challenge
         guard alarmStore.disarmPresentation == nil else { return }
         Task { @MainActor in
-            showWakeCheckPermissionDeniedPrompt = await alarmStore.shouldPresentWakeCheckPermissionDeniedPromptOnLaunch()
+            let shouldPresent = await alarmStore.shouldPresentWakeCheckPermissionDeniedPromptOnLaunch()
+            guard alarmStore.disarmPresentation == nil else { return }
+            showWakeCheckPermissionDeniedPrompt = shouldPresent
         }
     }
 }

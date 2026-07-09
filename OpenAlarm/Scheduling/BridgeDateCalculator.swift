@@ -51,35 +51,67 @@ enum BridgeDateCalculator {
             guard let modifiedTime else {
                 preconditionFailure("modifyNext requires modifiedTime")
             }
-            var modifiedComponents = calendar.dateComponents([.year, .month, .day], from: firstOccurrence)
-            modifiedComponents.hour = modifiedTime.hour
-            modifiedComponents.minute = modifiedTime.minute
-            modifiedComponents.second = 0
-            // `date(from:)` can fail for nonexistent wall-clock times (DST
-            // spring-forward gap). Fall back to the first valid moment at/after
-            // the requested time on that day instead of crashing.
-            let modifiedDate: Date
-            if let direct = calendar.date(from: modifiedComponents) {
-                modifiedDate = direct
-            } else {
-                var matching = DateComponents()
-                matching.hour = modifiedTime.hour
-                matching.minute = modifiedTime.minute
-                let dayStart = calendar.startOfDay(for: firstOccurrence)
-                modifiedDate = calendar.nextDate(
-                    after: dayStart,
-                    matching: matching,
-                    matchingPolicy: .nextTime,
-                    repeatedTimePolicy: .first,
-                    direction: .forward
-                ) ?? firstOccurrence
-            }
+            let modifiedDate = modifiedBridgeDate(
+                onOrAfter: firstOccurrence,
+                modifiedTime: modifiedTime,
+                referenceDate: referenceDate,
+                calendar: calendar
+            )
 
             bridgeDates = [modifiedDate] + Array(occurrences[1..<windowSize])
             restoreAnchorDate = max(firstOccurrence, modifiedDate)
         }
 
         return Result(bridgeDates: bridgeDates, restoreAnchorDate: restoreAnchorDate)
+    }
+
+    private static func modifiedBridgeDate(
+        onOrAfter firstOccurrence: Date,
+        modifiedTime: (hour: Int, minute: Int),
+        referenceDate: Date,
+        calendar: Calendar
+    ) -> Date {
+        var modifiedComponents = calendar.dateComponents([.year, .month, .day], from: firstOccurrence)
+        modifiedComponents.hour = modifiedTime.hour
+        modifiedComponents.minute = modifiedTime.minute
+        modifiedComponents.second = 0
+
+        // `date(from:)` can fail for nonexistent wall-clock times (DST
+        // spring-forward gap). Fall back to the first valid moment at/after
+        // the requested time on that day instead of crashing.
+        let sameDayDate: Date
+        if let direct = calendar.date(from: modifiedComponents) {
+            sameDayDate = direct
+        } else {
+            var matching = DateComponents()
+            matching.hour = modifiedTime.hour
+            matching.minute = modifiedTime.minute
+            matching.second = 0
+            let dayStart = calendar.startOfDay(for: firstOccurrence)
+            sameDayDate = calendar.nextDate(
+                after: dayStart,
+                matching: matching,
+                matchingPolicy: .nextTime,
+                repeatedTimePolicy: .first,
+                direction: .forward
+            ) ?? firstOccurrence
+        }
+
+        guard sameDayDate <= referenceDate else {
+            return sameDayDate
+        }
+
+        var matching = DateComponents()
+        matching.hour = modifiedTime.hour
+        matching.minute = modifiedTime.minute
+        matching.second = 0
+        return calendar.nextDate(
+            after: referenceDate,
+            matching: matching,
+            matchingPolicy: .nextTime,
+            repeatedTimePolicy: .first,
+            direction: .forward
+        ) ?? sameDayDate
     }
 
     private static func nextOccurrences(

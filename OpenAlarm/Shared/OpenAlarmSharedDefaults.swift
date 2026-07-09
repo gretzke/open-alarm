@@ -1,7 +1,9 @@
 import Foundation
+import os
 
 enum OpenAlarmSharedDefaults {
     static let appGroupSuiteName = "group.com.gretzke.openalarm"
+    private static let logger = Logger(subsystem: "com.openalarm", category: "persistence")
 
     /// Keys shared across processes (app + intents/extensions). Kept here so
     /// no target re-types them as string literals (drift risk).
@@ -12,6 +14,10 @@ enum OpenAlarmSharedDefaults {
 
     // UserDefaults is documented thread-safe; Swift 6 can't see that.
     nonisolated(unsafe) static let userDefaults: UserDefaults = {
-        UserDefaults(suiteName: appGroupSuiteName) ?? .standard
+        if let defaults = UserDefaults(suiteName: appGroupSuiteName) {
+            return defaults
+        }
+        logger.fault("App-group UserDefaults suite unavailable; falling back to standard defaults")
+        return .standard
     }()
 }

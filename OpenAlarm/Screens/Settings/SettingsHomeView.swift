@@ -277,42 +277,23 @@ private struct NapDefaultDurationView: View {
 private struct NapDefaultSharedSettingsView: View {
     @EnvironmentObject private var alarmStore: AlarmStore
 
-    @State private var useGlobalDefaults: Bool = true
-    @State private var napSettings: SharedAlarmSettings = .featureDefaults
-    @State private var loaded = false
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                Toggle(isOn: $useGlobalDefaults) {
+                Toggle(isOn: useGlobalDefaultsBinding) {
                     Text(L10n.settingsNapDefaultsUseGlobalToggle)
                         .font(.body.weight(.semibold))
                         .foregroundStyle(OAColor.textPrimary)
                 }
                 .tint(OAColor.actionCyan)
-                .onChange(of: useGlobalDefaults) { _, newValue in
-                    guard loaded else { return }
-                    if newValue {
-                        alarmStore.updateNapDefaultSharedSettings(nil)
-                    } else {
-                        napSettings = alarmStore.napDefaultSharedSettings ?? alarmStore.defaultSharedSettings
-                        alarmStore.updateNapDefaultSharedSettings(napSettings)
-                    }
-                }
 
                 Text(L10n.settingsNapDefaultsUseGlobalHint)
                     .font(.footnote)
                     .foregroundStyle(OAColor.textSecondary)
 
-                if !useGlobalDefaults {
+                if !alarmStore.useGlobalDefaultsForNap {
                     SharedAlarmSettingsEditor(
-                        settings: Binding(
-                            get: { napSettings },
-                            set: { newValue in
-                                napSettings = newValue
-                                alarmStore.updateNapDefaultSharedSettings(newValue)
-                            }
-                        ),
+                        settings: napSettingsBinding,
                         allowFiveSecondSnoozeOption: alarmStore.testingModeEnabled
                     )
                 }
@@ -324,11 +305,27 @@ private struct NapDefaultSharedSettingsView: View {
         .background(OAColor.background.ignoresSafeArea())
         .navigationTitle(L10n.settingsNapDefaultsConfigTitle)
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            guard !loaded else { return }
-            loaded = true
-            useGlobalDefaults = alarmStore.useGlobalDefaultsForNap
-            napSettings = alarmStore.napDefaultSharedSettings ?? alarmStore.defaultSharedSettings
-        }
+    }
+
+    private var useGlobalDefaultsBinding: Binding<Bool> {
+        Binding(
+            get: { alarmStore.useGlobalDefaultsForNap },
+            set: { useGlobal in
+                if useGlobal {
+                    alarmStore.updateNapDefaultSharedSettings(nil)
+                } else {
+                    alarmStore.updateNapDefaultSharedSettings(
+                        alarmStore.napDefaultSharedSettings ?? alarmStore.defaultSharedSettings
+                    )
+                }
+            }
+        )
+    }
+
+    private var napSettingsBinding: Binding<SharedAlarmSettings> {
+        Binding(
+            get: { alarmStore.napDefaultSharedSettings ?? alarmStore.defaultSharedSettings },
+            set: { alarmStore.updateNapDefaultSharedSettings($0) }
+        )
     }
 }
