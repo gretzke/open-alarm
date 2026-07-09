@@ -8,7 +8,6 @@
 "alarm_list_empty_subtitle" = "Tippe auf +, um deinen ersten Alarm zu erstellen.";
 
 "nap_banner_title" = "Nickerchen machen";
-"nap_banner_subtitle" = "Schnell mit Zzz-Energie auftanken";
 "nap_active_title" = "Nickerchen";
 "nap_active_paused" = "Pausiert";
 "nap_active_snoozing_title" = "Schlummern";

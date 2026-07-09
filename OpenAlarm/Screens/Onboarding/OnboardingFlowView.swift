@@ -84,19 +84,19 @@ private struct WelcomeStepView: View {
                     .padding(.top, 2)
                 }
             }
-            .padding(24)
+            .padding(OASpacing.onboardingMargin)
             .oaGlassCard()
 
             Button(action: onNext) {
                 Text(L10n.actionNext)
-        .font(.headline.weight(.semibold))
-        .frame(maxWidth: .infinity, minHeight: 52)
+                    .font(OAType.buttonLabel)
+                    .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
             }
-            .buttonStyle(GlassProminentButtonStyle())
+            .buttonStyle(.glassProminent)
             .tint(OAColor.actionCyan)
             .accessibilityIdentifier("onboarding_welcome_next")
         }
-        .padding(24)
+        .padding(OASpacing.onboardingMargin)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(OAColor.background.ignoresSafeArea())
     }
@@ -128,33 +128,40 @@ private struct DefaultSharedSettingsStepView: View {
                     .foregroundStyle(OAColor.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                HStack(spacing: 12) {
-                    Button(action: onSkip) {
-                        Text(L10n.actionSkip)
-                            .font(.headline.weight(.semibold))
-                            .frame(maxWidth: .infinity, minHeight: 46)
-                    }
-                    .buttonStyle(GlassButtonStyle())
-
-                    Button {
-                        onSave(settings)
-                    } label: {
-                        Text(L10n.actionNext)
-                            .font(.headline.weight(.semibold))
-                            .frame(maxWidth: .infinity, minHeight: 52)
-                    }
-                    .buttonStyle(GlassProminentButtonStyle())
-                    .tint(OAColor.actionCyan)
-                }
-
                 SharedAlarmSettingsEditor(
                     settings: $settings,
                     allowFiveSecondSnoozeOption: alarmStore.testingModeEnabled
                 )
             }
-            .padding(24)
+            .padding(OASpacing.onboardingMargin)
         }
         .scrollIndicators(.hidden)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            HStack(spacing: OASpacing.m) {
+                Button(action: onSkip) {
+                    Text(L10n.actionSkip)
+                        .font(OAType.buttonLabel)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+                }
+                .buttonStyle(.glass)
+
+                Button {
+                    onSave(settings)
+                } label: {
+                    Text(L10n.actionNext)
+                        .font(OAType.buttonLabel)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+                }
+                .buttonStyle(.glassProminent)
+                .tint(OAColor.actionCyan)
+            }
+            .padding(.horizontal, OASpacing.onboardingMargin)
+            .padding(.vertical, OASpacing.m)
+        }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(OAColor.background.ignoresSafeArea())
         .onAppear {
@@ -184,7 +191,7 @@ private struct AlarmPermissionPrePromptStepView: View {
                     .foregroundStyle(OAColor.textSecondary)
                     .multilineTextAlignment(.center)
             }
-            .padding(24)
+            .padding(OASpacing.onboardingMargin)
             .oaGlassCard()
 
             Button {
@@ -205,16 +212,16 @@ private struct AlarmPermissionPrePromptStepView: View {
                     }
 
                     Text(isRequesting ? L10n.actionRequesting : L10n.actionNext)
-                        .font(.headline.weight(.semibold))
+                        .font(OAType.buttonLabel)
                 }
-                .frame(maxWidth: .infinity, minHeight: 52)
+                .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
             }
-            .buttonStyle(GlassProminentButtonStyle())
+            .buttonStyle(.glassProminent)
             .tint(OAColor.actionCyan)
             .disabled(isRequesting)
             .accessibilityIdentifier("onboarding_permission_request_next")
         }
-        .padding(24)
+        .padding(OASpacing.onboardingMargin)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(OAColor.background.ignoresSafeArea())
     }
@@ -240,19 +247,19 @@ private struct AlarmPermissionDeniedStepView: View {
                     .foregroundStyle(OAColor.textSecondary)
                     .multilineTextAlignment(.center)
             }
-            .padding(24)
+            .padding(OASpacing.onboardingMargin)
             .oaGlassCard()
 
             Button(action: onOpenSettings) {
                 Text(L10n.actionOpenSettings)
-                    .font(.headline.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 52)
+                    .font(OAType.buttonLabel)
+                    .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
             }
-            .buttonStyle(GlassProminentButtonStyle())
+            .buttonStyle(.glassProminent)
             .tint(OAColor.actionCyan)
             .accessibilityIdentifier("onboarding_permission_denied_open_settings")
         }
-        .padding(24)
+        .padding(OASpacing.onboardingMargin)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(OAColor.background.ignoresSafeArea())
     }

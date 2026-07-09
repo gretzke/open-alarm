@@ -22,6 +22,47 @@ enum OARadius {
     static let chip: CGFloat = 14
 }
 
+enum OASpacing {
+    /// Base scale — prefer these over raw literals for structural spacing.
+    static let xs: CGFloat = 4
+    static let s: CGFloat = 8
+    static let m: CGFloat = 12
+    static let l: CGFloat = 16
+    static let xl: CGFloat = 20
+    static let xxl: CGFloat = 24
+
+    /// Semantic values.
+    static let cardPadding: CGFloat = 20     // inner padding of glass cards
+    static let screenMargin: CGFloat = 20    // horizontal screen edge
+    static let onboardingMargin: CGFloat = 24
+}
+
+enum OASize {
+    static let controlHeight: CGFloat = 52   // primary action buttons
+    static let rowHeight: CGFloat = 48       // tappable list/settings rows
+    static let minTouchTarget: CGFloat = 44
+}
+
+enum OAType {
+    /// Screen header ("Alarms"). Scales with Dynamic Type.
+    static let screenTitle = Font.system(.largeTitle, design: .rounded, weight: .bold)
+    /// Card/section heading.
+    static let cardTitle = Font.headline.weight(.semibold)
+    /// Section label inside editors (currently `.headline` on textSecondary).
+    static let sectionLabel = Font.headline
+    /// Primary button label.
+    static let buttonLabel = Font.headline.weight(.semibold)
+    /// Row value / trailing detail.
+    static let rowValue = Font.body.weight(.medium)
+    /// Caption metadata.
+    static let meta = Font.caption
+    static let metaEmphasis = Font.caption.weight(.semibold)
+    /// Big numeric displays (time, countdown). Size comes from a @ScaledMetric in the view.
+    static func display(_ size: CGFloat) -> Font {
+        .system(size: size, weight: .bold, design: .rounded)
+    }
+}
+
 struct OAGlassCardModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
@@ -116,4 +157,3 @@ extension ButtonStyle where Self == GlassButtonWithAccentBorderStyle {
         GlassButtonWithAccentBorderStyle()
     }
 }
-

@@ -84,7 +84,7 @@ struct AlarmEditorView: View {
                             .padding(.horizontal, 4)
                     }
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, OASpacing.screenMargin)
                 .padding(.vertical, 16)
             }
             .background(Color.clear)
@@ -96,7 +96,7 @@ struct AlarmEditorView: View {
                         dismiss()
                     } label: {
                         Image(systemName: "xmark")
-                            .font(.headline.weight(.semibold))
+                            .font(OAType.buttonLabel)
                     }
                     .tint(OAColor.textPrimary)
                     .accessibilityLabel(L10n.actionCancel)
@@ -176,7 +176,7 @@ struct AlarmEditorView: View {
     private var timeSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(L10n.alarmEditorTimeTitle)
-                .font(.headline)
+                .font(OAType.sectionLabel)
                 .foregroundStyle(OAColor.textSecondary)
 
             DatePicker(
@@ -194,7 +194,7 @@ struct AlarmEditorView: View {
     private var labelSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(L10n.alarmEditorLabelTitle)
-                .font(.headline)
+                .font(OAType.sectionLabel)
                 .foregroundStyle(OAColor.textSecondary)
 
             TextField(
@@ -231,7 +231,7 @@ struct AlarmEditorView: View {
     private var repeatDaysSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(L10n.alarmEditorRepeatDaysTitle)
-                .font(.headline)
+                .font(OAType.sectionLabel)
                 .foregroundStyle(OAColor.textSecondary)
 
             HStack(spacing: 8) {
@@ -290,11 +290,11 @@ struct AlarmEditorView: View {
             Text(title)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(OAColor.textPrimary)
-                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                .frame(maxWidth: .infinity, minHeight: OASize.minTouchTarget, alignment: .leading)
                 .padding(.horizontal, 12)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(GlassButtonStyle())
+        .buttonStyle(.glass)
     }
 
     // Save actions are handled directly in the toolbar button/menu.

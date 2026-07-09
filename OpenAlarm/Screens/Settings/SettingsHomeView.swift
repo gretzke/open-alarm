@@ -42,13 +42,13 @@ struct SettingsHomeView: View {
                                     .foregroundStyle(OAColor.textSecondary)
                             }
                             .padding(.horizontal, 16)
-                            .frame(maxWidth: .infinity, minHeight: 48)
+                            .frame(maxWidth: .infinity, minHeight: OASize.rowHeight)
                             .contentShape(Rectangle())
                         }
-                        .buttonStyle(GlassButtonStyle())
+                        .buttonStyle(.glass)
                         .accessibilityIdentifier("settings_default_config_manage")
                     }
-                    .padding(20)
+                    .padding(OASpacing.cardPadding)
                     .oaGlassCard()
 
                     VStack(alignment: .leading, spacing: 12) {
@@ -67,7 +67,7 @@ struct SettingsHomeView: View {
                                 Spacer(minLength: 0)
 
                                 Text(napDurationSummary(minutes: alarmStore.defaultNapDurationMinutes))
-                                    .font(.body.weight(.medium))
+                                    .font(OAType.rowValue)
                                     .foregroundStyle(OAColor.textSecondary)
 
                                 Image(systemName: "chevron.right")
@@ -75,10 +75,10 @@ struct SettingsHomeView: View {
                                     .foregroundStyle(OAColor.textSecondary)
                             }
                             .padding(.horizontal, 16)
-                            .frame(maxWidth: .infinity, minHeight: 48)
+                            .frame(maxWidth: .infinity, minHeight: OASize.rowHeight)
                             .contentShape(Rectangle())
                         }
-                        .buttonStyle(GlassButtonStyle())
+                        .buttonStyle(.glass)
                         .accessibilityIdentifier("settings_nap_defaults_duration")
 
                         NavigationLink {
@@ -96,13 +96,13 @@ struct SettingsHomeView: View {
                                     .foregroundStyle(OAColor.textSecondary)
                             }
                             .padding(.horizontal, 16)
-                            .frame(maxWidth: .infinity, minHeight: 48)
+                            .frame(maxWidth: .infinity, minHeight: OASize.rowHeight)
                             .contentShape(Rectangle())
                         }
-                        .buttonStyle(GlassButtonStyle())
+                        .buttonStyle(.glass)
                         .accessibilityIdentifier("settings_nap_defaults_config")
                     }
-                    .padding(20)
+                    .padding(OASpacing.cardPadding)
                     .oaGlassCard()
 
                     VStack(alignment: .leading, spacing: 12) {
@@ -128,7 +128,7 @@ struct SettingsHomeView: View {
                             .font(.footnote)
                             .foregroundStyle(OAColor.textSecondary)
                     }
-                    .padding(20)
+                    .padding(OASpacing.cardPadding)
                     .oaGlassCard()
 
                     VStack(alignment: .leading, spacing: 12) {
@@ -164,7 +164,7 @@ struct SettingsHomeView: View {
                         }
 
                     }
-                    .padding(20)
+                    .padding(OASpacing.cardPadding)
                     .oaGlassCard()
 
                     VStack(alignment: .leading, spacing: 12) {
@@ -197,10 +197,10 @@ struct SettingsHomeView: View {
                                     .foregroundStyle(OAColor.textSecondary)
                             }
                             .padding(.horizontal, 16)
-                            .frame(maxWidth: .infinity, minHeight: 48)
+                            .frame(maxWidth: .infinity, minHeight: OASize.rowHeight)
                             .contentShape(Rectangle())
                         }
-                        .buttonStyle(GlassButtonStyle())
+                        .buttonStyle(.glass)
                         .accessibilityIdentifier("settings_open_system_settings")
 
                         if alarmStore.testingModeEnabled {
@@ -219,17 +219,17 @@ struct SettingsHomeView: View {
                                         .foregroundStyle(OAColor.textSecondary)
                                 }
                                 .padding(.horizontal, 16)
-                                .frame(maxWidth: .infinity, minHeight: 48)
+                                .frame(maxWidth: .infinity, minHeight: OASize.rowHeight)
                                 .contentShape(Rectangle())
                             }
-                            .buttonStyle(GlassButtonStyle())
+                            .buttonStyle(.glass)
                             .accessibilityIdentifier("settings_diagnostics")
                         }
                     }
-                    .padding(20)
+                    .padding(OASpacing.cardPadding)
                     .oaGlassCard()
                 }
-                .padding(20)
+                .padding(OASpacing.screenMargin)
             }
             .background(OAColor.background.ignoresSafeArea())
             .navigationTitle(L10n.settingsTitle)
@@ -264,7 +264,7 @@ private struct DiagnosticsView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            .padding(20)
+            .padding(OASpacing.screenMargin)
         }
         .background(OAColor.background.ignoresSafeArea())
         .navigationTitle(L10n.settingsDiagnosticsTitle)
@@ -297,9 +297,9 @@ private struct DefaultSharedSettingsView: View {
                     allowFiveSecondSnoozeOption: alarmStore.testingModeEnabled
                 )
             }
-            .padding(20)
+            .padding(OASpacing.cardPadding)
             .oaGlassCard()
-            .padding(20)
+            .padding(OASpacing.screenMargin)
         }
         .background(OAColor.background.ignoresSafeArea())
         .navigationTitle(L10n.settingsDefaultConfigTitle)
@@ -319,9 +319,9 @@ private struct NapDefaultDurationView: View {
             VStack(alignment: .leading, spacing: 12) {
                 NapDurationPicker(hours: $hours, minutes: $minutes, allowZeroMinutes: alarmStore.testingModeEnabled)
             }
-            .padding(20)
+            .padding(OASpacing.cardPadding)
             .oaGlassCard()
-            .padding(20)
+            .padding(OASpacing.screenMargin)
         }
         .background(OAColor.background.ignoresSafeArea())
         .navigationTitle(L10n.settingsNapDefaultsTitle)
@@ -379,9 +379,9 @@ private struct NapDefaultSharedSettingsView: View {
                     )
                 }
             }
-            .padding(20)
+            .padding(OASpacing.cardPadding)
             .oaGlassCard()
-            .padding(20)
+            .padding(OASpacing.screenMargin)
         }
         .background(OAColor.background.ignoresSafeArea())
         .navigationTitle(L10n.settingsNapDefaultsConfigTitle)

@@ -18,8 +18,8 @@ struct DummyTaskView: View {
                 onCompleted()
             } label: {
                 Text(String(localized: "task_dummy_button"))
-                    .font(.headline.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 52)
+                    .font(OAType.buttonLabel)
+                    .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
             }
             .buttonStyle(.glassProminent)
             .tint(OAColor.actionCyan)

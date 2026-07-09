@@ -84,8 +84,8 @@ struct TaskContainerView: View {
                 isDismissed = true
             } label: {
                 Text(String(localized: "task_dismiss_alarm_button"))
-                    .font(.headline.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 52)
+                    .font(OAType.buttonLabel)
+                    .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
             }
             .buttonStyle(.glassProminent)
             .tint(OAColor.actionCyan)
@@ -132,7 +132,7 @@ struct TaskContainerView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(OAColor.textPrimary)
                     .padding(.horizontal, 14)
-                    .frame(minHeight: 44)
+                    .frame(minHeight: OASize.minTouchTarget)
                 }
                 .buttonStyle(.glassAccentBorder)
                 .accessibilityLabel(temporaryMuteAccessibilityLabel)

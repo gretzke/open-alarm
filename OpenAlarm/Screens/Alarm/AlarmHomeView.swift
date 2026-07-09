@@ -110,7 +110,7 @@ struct AlarmHomeView: View {
         Section {
             HStack(alignment: .center) {
                 Text(L10n.alarmListTitle)
-                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .font(OAType.screenTitle)
                     .foregroundStyle(OAColor.textPrimary)
 
                 Spacer(minLength: 0)

@@ -67,8 +67,8 @@ struct MathSettingsView: View {
                 Text(isEditing
                      ? String(localized: "task_save_button")
                      : String(localized: "task_add_button"))
-                    .font(.headline.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 52)
+                    .font(OAType.buttonLabel)
+                    .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
             }
             .buttonStyle(.glassProminent)
             .tint(OAColor.actionCyan)

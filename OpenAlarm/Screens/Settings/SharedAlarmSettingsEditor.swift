@@ -186,8 +186,8 @@ struct SharedAlarmSettingsEditor: View {
                 runTryOut(after: 5)
             } label: {
                 Text(L10n.alarmEditorTryOut)
-                        .font(.headline.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 52)
+                    .font(OAType.buttonLabel)
+                    .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
             }
             .buttonStyle(.glassProminent)
                     .tint(OAColor.actionCyan)
@@ -358,7 +358,7 @@ struct SharedAlarmSettingsEditor: View {
                 Spacer(minLength: 0)
 
                 Text(value)
-                    .font(.body.weight(.medium))
+                    .font(OAType.rowValue)
                     .foregroundStyle(OAColor.textSecondary)
 
                 Image(systemName: "chevron.right")
@@ -455,19 +455,19 @@ private struct WakeCheckPermissionPrePromptView: View {
                     .foregroundStyle(OAColor.textSecondary)
                     .multilineTextAlignment(.center)
             }
-            .padding(24)
+            .padding(OASpacing.onboardingMargin)
             .oaGlassCard()
 
             Button(action: onRequestPermission) {
                 Text(L10n.actionNext)
-                    .font(.headline.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 52)
+                    .font(OAType.buttonLabel)
+                    .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
             }
             .buttonStyle(.glassProminent)
                 .tint(OAColor.actionCyan)
                 .accessibilityIdentifier("wake_check_permission_next")
         }
-        .padding(24)
+        .padding(OASpacing.onboardingMargin)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(OAColor.background.ignoresSafeArea())
     }
@@ -494,14 +494,14 @@ struct WakeCheckPermissionDeniedView: View {
                     .foregroundStyle(OAColor.textSecondary)
                     .multilineTextAlignment(.center)
             }
-            .padding(24)
+            .padding(OASpacing.onboardingMargin)
             .oaGlassCard()
 
             VStack(spacing: 12) {
                 Button(action: onOpenSettings) {
                     Text(L10n.actionOpenSettings)
-                    .font(.headline.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 52)
+                        .font(OAType.buttonLabel)
+                        .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
                 }
                 .buttonStyle(.glassProminent)
                 .tint(OAColor.actionCyan)
@@ -509,15 +509,15 @@ struct WakeCheckPermissionDeniedView: View {
 
                 Button(action: onDisableFeature) {
                     Text(L10n.alarmEditorWakeCheckDisableFeatureAction)
-                    .font(.headline.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 52)
+                        .font(OAType.buttonLabel)
+                        .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
                 }
-                .buttonStyle(GlassButtonStyle())
+                .buttonStyle(.glass)
                 .foregroundStyle(OAColor.textPrimary)
                 .accessibilityIdentifier("wake_check_permission_disable_feature")
             }
         }
-        .padding(24)
+        .padding(OASpacing.onboardingMargin)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(OAColor.background.ignoresSafeArea())
     }
@@ -552,7 +552,7 @@ private struct SharedSettingsSelectionSheetView: View {
                                         }
                                     }
                                     .padding(.horizontal, 16)
-                                    .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+                                    .frame(maxWidth: .infinity, minHeight: OASize.rowHeight, alignment: .leading)
                                     .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.glassAccentBorder)
@@ -561,7 +561,7 @@ private struct SharedSettingsSelectionSheetView: View {
                             }
                         }
                     }
-                    .padding(20)
+                    .padding(OASpacing.screenMargin)
                 }
                 .background(Color.clear)
                 .onAppear {

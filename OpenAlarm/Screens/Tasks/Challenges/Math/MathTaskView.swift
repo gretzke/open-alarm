@@ -10,6 +10,9 @@ struct MathTaskView: View {
     @State private var userAnswer = ""
     @State private var showWrongAnswer = false
 
+    @ScaledMetric(relativeTo: .largeTitle) private var problemFontSize: CGFloat = 40
+    @ScaledMetric(relativeTo: .largeTitle) private var answerFontSize: CGFloat = 32
+
     init(difficulty: MathDifficulty, totalCount: Int, onCompleted: @escaping () -> Void) {
         self.difficulty = difficulty
         self.totalCount = totalCount
@@ -26,15 +29,17 @@ struct MathTaskView: View {
                 .foregroundStyle(OAColor.textSecondary)
 
             Text(currentProblem.displayString)
-                .font(.system(size: 40, weight: .bold, design: .rounded))
+                .font(OAType.display(problemFontSize))
                 .foregroundStyle(OAColor.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
 
             TextField(text: $userAnswer) {
                 EmptyView()
             }
                 .accessibilityLabel(String(localized: "a11y_math_answer_field"))
                 .keyboardType(.numberPad)
-                .font(.system(size: 32, weight: .medium, design: .rounded))
+                .font(.system(size: answerFontSize, weight: .medium, design: .rounded))
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 200)
                 .padding()
@@ -50,8 +55,8 @@ struct MathTaskView: View {
                 submitAnswer()
             } label: {
                 Text(String(localized: "task_math_submit"))
-                    .font(.headline.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 52)
+                    .font(OAType.buttonLabel)
+                    .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
             }
             .buttonStyle(.glassProminent)
             .tint(OAColor.actionCyan)

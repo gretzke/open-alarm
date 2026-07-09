@@ -11,6 +11,8 @@ private let openAlarmNapURL = URL(string: "openalarm://nap")!
 private let napLiveActivityAccent = Color(red: 100 / 255, green: 210 / 255, blue: 255 / 255)
 /// Mirror of OAColor.danger — keep in sync.
 private let napLiveActivityDanger = Color(red: 255 / 255, green: 69 / 255, blue: 58 / 255)
+/// Mirror of OARadius.chip — keep in sync.
+private let napLiveActivityCornerRadius: CGFloat = 14
 
 struct NapCountdownLiveActivityWidget: Widget {
     var body: some WidgetConfiguration {
@@ -133,7 +135,7 @@ private struct NapExtendButton: View {
                 .padding(.horizontal, 12)
                 .frame(minWidth: 48, minHeight: 34)
                 .background {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: napLiveActivityCornerRadius, style: .continuous)
                         .fill(napLiveActivityAccent.opacity(0.14))
                 }
         }
@@ -155,7 +157,7 @@ private struct NapIconActionButton<Intent: AppIntent>: View {
                 .foregroundStyle(tint)
                 .frame(width: 34, height: 34)
                 .background {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: napLiveActivityCornerRadius, style: .continuous)
                         .fill(tint.opacity(0.14))
                 }
         }

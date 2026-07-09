@@ -22,7 +22,7 @@ struct NapBannerView: View {
                 }
 
                 Text(L10n.napBannerTitle)
-                    .font(.headline.weight(.semibold))
+                    .font(OAType.cardTitle)
                     .foregroundStyle(OAColor.textPrimary)
 
                 Spacer(minLength: 0)
@@ -32,7 +32,7 @@ struct NapBannerView: View {
                     .foregroundStyle(OAColor.textSecondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(18)
+            .padding(OASpacing.cardPadding)
             .oaGlassCard()
             .contentShape(RoundedRectangle(cornerRadius: OARadius.card, style: .continuous))
             .padding(.vertical, 6)
@@ -52,6 +52,8 @@ struct ActiveNapRowView: View {
     let onAddTenMinutes: () -> Void
     let onDelete: () -> Void
 
+    @ScaledMetric(relativeTo: .largeTitle) private var countdownFontSize: CGFloat = 38
+
     private var remainingTimeString: String {
         let remaining = Int(nap.remainingSeconds(referenceDate: now))
         let hours = remaining / 3600
@@ -67,27 +69,30 @@ struct ActiveNapRowView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top) {
+            HStack(alignment: .center, spacing: OASpacing.s) {
                 Text(nap.snoozeCount > 0 ? L10n.napActiveSnoozingTitle : L10n.napActiveTitle)
-                    .font(.headline.weight(.semibold))
+                    .font(OAType.cardTitle)
                     .foregroundStyle(OAColor.textPrimary)
-                    .padding(.trailing, !nap.isPaused ? 156 : 0)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
 
-                Spacer(minLength: 0)
-            }
-            .overlay(alignment: .topTrailing) {
+                Spacer(minLength: OASpacing.s)
+
                 if !nap.isPaused {
-                    HStack(spacing: 8) {
+                    HStack(spacing: OASpacing.s) {
                         extraTimeButton("+1", accessibilityLabel: L10n.napActiveAddOneMinute, action: onAddOneMinute)
                         extraTimeButton("+5", accessibilityLabel: L10n.napActiveAddFiveMinutes, action: onAddFiveMinutes)
                         extraTimeButton("+10", accessibilityLabel: L10n.napActiveAddTenMinutes, action: onAddTenMinutes)
                     }
+                    .layoutPriority(1)
                 }
             }
 
             Text(remainingTimeString)
-                .font(.system(size: 38, weight: .bold, design: .rounded).monospacedDigit())
+                .font(OAType.display(countdownFontSize).monospacedDigit())
                 .foregroundStyle(OAColor.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
 
             HStack(spacing: 10) {
                 Button {
@@ -100,22 +105,22 @@ struct ActiveNapRowView: View {
                     Label(nap.isPaused ? L10n.actionContinue : L10n.actionPause, systemImage: nap.isPaused ? "play.fill" : "pause.fill")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(OAColor.textPrimary)
-                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .frame(maxWidth: .infinity, minHeight: OASize.rowHeight)
                         .contentShape(Rectangle())
                 }
-                .buttonStyle(GlassButtonStyle())
+                .buttonStyle(.glass)
 
                 Button(action: onDelete) {
                     Label(L10n.actionDelete, systemImage: "xmark")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(OAColor.danger)
-                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .frame(maxWidth: .infinity, minHeight: OASize.rowHeight)
                         .contentShape(Rectangle())
                 }
-                .buttonStyle(GlassButtonStyle())
+                .buttonStyle(.glass)
             }
         }
-        .padding(18)
+        .padding(OASpacing.cardPadding)
         .oaGlassCard()
         .padding(.vertical, 6)
     }
@@ -130,7 +135,7 @@ struct ActiveNapRowView: View {
                 .font(.footnote.weight(.bold))
                 .foregroundStyle(OAColor.actionCyan)
                 .padding(.horizontal, 10)
-                .frame(minWidth: 44, minHeight: 34)
+                .frame(minWidth: 44, minHeight: OASize.minTouchTarget)
                 .contentShape(RoundedRectangle(cornerRadius: OARadius.chip, style: .continuous))
         }
         .buttonStyle(.plain)

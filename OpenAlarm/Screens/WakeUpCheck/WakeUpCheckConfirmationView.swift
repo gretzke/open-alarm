@@ -9,6 +9,8 @@ struct WakeUpCheckConfirmationView: View {
     @State private var timer: Timer?
     @State private var hasDisappeared = false
 
+    @ScaledMetric(relativeTo: .largeTitle) private var countdownFontSize: CGFloat = 64
+
     var body: some View {
         VStack(spacing: 24) {
             VStack(spacing: 16) {
@@ -27,13 +29,15 @@ struct WakeUpCheckConfirmationView: View {
                     .multilineTextAlignment(.center)
 
                 Text(formattedCountdown)
-                    .font(.system(size: 64, weight: .bold, design: .rounded))
+                    .font(OAType.display(countdownFontSize))
                     .monospacedDigit()
                     .foregroundStyle(remainingSeconds <= 10 ? OAColor.danger : OAColor.textPrimary)
                     .contentTransition(.numericText())
                     .animation(.default, value: remainingSeconds)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
             }
-            .padding(24)
+            .padding(OASpacing.onboardingMargin)
             .oaGlassCard()
 
             Button {
@@ -42,14 +46,14 @@ struct WakeUpCheckConfirmationView: View {
                 }
             } label: {
                 Text(L10n.wakeCheckConfirmAction)
-                    .font(.headline.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 52)
+                    .font(OAType.buttonLabel)
+                    .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
             }
             .buttonStyle(.glassProminent)
             .tint(OAColor.actionCyan)
             .accessibilityIdentifier("wake_check_confirm_awake")
         }
-        .padding(24)
+        .padding(OASpacing.onboardingMargin)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(OAColor.background.ignoresSafeArea())
         .interactiveDismissDisabled()

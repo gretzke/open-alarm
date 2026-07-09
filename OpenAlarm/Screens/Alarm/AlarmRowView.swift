@@ -10,6 +10,8 @@ struct AlarmRowView: View {
     let onDisableCompletelySelected: () -> Void
     let onToggle: (Bool) -> Void
 
+    @ScaledMetric(relativeTo: .largeTitle) private var timeFontSize: CGFloat = 40
+
     private var localeOrderedWeekdays: [AlarmWeekday] {
         AlarmWeekday.orderedForCurrentLocale()
     }
@@ -127,7 +129,7 @@ struct AlarmRowView: View {
             ForEach(localeOrderedWeekdays) { day in
                 Text(day.veryShortSymbol())
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(activeDays.contains(day) ? OAColor.textPrimary : OAColor.textSecondary.opacity(0.65))
+                    .foregroundStyle(activeDays.contains(day) ? OAColor.textPrimary : OAColor.textSecondary)
                     .frame(minWidth: 12)
             }
         }
@@ -150,11 +152,11 @@ struct AlarmRowView: View {
             Text(title)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(OAColor.textPrimary)
-                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                .frame(maxWidth: .infinity, minHeight: OASize.minTouchTarget, alignment: .leading)
                 .padding(.horizontal, 12)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(GlassButtonStyle())
+        .buttonStyle(.glass)
     }
 
     private func nextRepeatingDate(after referenceDate: Date) -> Date? {
@@ -203,7 +205,7 @@ struct AlarmRowView: View {
             alarmTimeSection
             statusStrip
         }
-        .padding(18)
+        .padding(OASpacing.cardPadding)
         .oaGlassCard()
         .padding(.vertical, 6)
     }
@@ -212,27 +214,31 @@ struct AlarmRowView: View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(resolvedName)
-                    .font(.headline.weight(.semibold))
+                    .font(OAType.cardTitle)
                     .foregroundStyle(OAColor.textPrimary)
 
                 if showsOverrideTime, let overrideDate = alarm.nextTriggerOverrideDate {
                     Text(overrideDate, style: .time)
-                        .font(.system(size: 40, weight: .bold, design: .rounded))
+                        .font(OAType.display(timeFontSize))
                         .foregroundStyle(OAColor.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
 
                     HStack(spacing: 4) {
                         Text(L10n.alarmRowUsualTimePrefix)
-                            .font(.caption)
+                            .font(OAType.meta)
                             .foregroundStyle(OAColor.textSecondary)
 
                         Text(baseScheduledDate, style: .time)
-                            .font(.caption.weight(.semibold))
+                            .font(OAType.metaEmphasis)
                             .foregroundStyle(OAColor.textSecondary)
                     }
                 } else {
                     Text(baseScheduledDate, style: .time)
-                        .font(.system(size: 40, weight: .bold, design: .rounded))
+                        .font(OAType.display(timeFontSize))
                         .foregroundStyle(OAColor.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
                 }
             }
 
@@ -286,17 +292,18 @@ struct AlarmRowView: View {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 if isSkippingNextDisplayActive {
                     Text(L10n.alarmRowSkippingNextStatus)
-                        .font(.caption)
+                        .font(OAType.meta)
                         .foregroundStyle(OAColor.textSecondary)
                 } else if let nextRunText {
                     HStack(spacing: 6) {
                         Text(L10n.alarmRowNextRunPrefix)
-                            .font(.caption.weight(.semibold))
+                            .font(OAType.metaEmphasis)
                             .foregroundStyle(OAColor.textSecondary)
 
                         Text(nextRunText)
-                            .font(.caption.weight(.semibold))
+                            .font(OAType.metaEmphasis)
                             .foregroundStyle(OAColor.textPrimary)
+                            .lineLimit(1)
                     }
                 }
 

@@ -34,7 +34,7 @@ struct NapEditorView: View {
                             .padding(.horizontal, 4)
                     }
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, OASpacing.screenMargin)
                 .padding(.vertical, 16)
             }
             .background(Color.clear)
@@ -46,7 +46,7 @@ struct NapEditorView: View {
                         dismiss()
                     } label: {
                         Image(systemName: "xmark")
-                            .font(.headline.weight(.semibold))
+                            .font(OAType.buttonLabel)
                     }
                     .tint(OAColor.textPrimary)
                     .accessibilityLabel(L10n.actionCancel)

@@ -15,8 +15,8 @@ struct DummySettingsView: View {
                 onAdd(.dummy)
             } label: {
                 Text(String(localized: existingTask == nil ? "task_add_button" : "task_save_button"))
-                    .font(.headline.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 52)
+                    .font(OAType.buttonLabel)
+                    .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
             }
             .buttonStyle(.glassProminent)
             .tint(OAColor.actionCyan)

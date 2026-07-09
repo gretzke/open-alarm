@@ -92,7 +92,7 @@ struct TaskPickerView: View {
     }
 
     private func emptyTile() -> some View {
-        RoundedRectangle(cornerRadius: 8)
+        RoundedRectangle(cornerRadius: OARadius.chip, style: .continuous)
             .fill(OAColor.glassStroke.opacity(0.2))
             .frame(width: 56, height: 56)
     }
