@@ -383,6 +383,16 @@ final class AlarmStore: ObservableObject {
             disarmPresentation = nil
         }
 
+        if OpenAlarmSharedDefaults.userDefaults.string(forKey: OpenAlarmSharedDefaults.Key.forceCloseParentAlarmID) == alarm.id.uuidString {
+            if let forceCloseIDString = OpenAlarmSharedDefaults.userDefaults.string(forKey: OpenAlarmSharedDefaults.Key.forceCloseAlarmID),
+               let forceCloseID = UUID(uuidString: forceCloseIDString) {
+                try? alarmManager.stop(id: forceCloseID)
+                try? alarmManager.cancel(id: forceCloseID)
+            }
+            OpenAlarmSharedDefaults.userDefaults.removeObject(forKey: OpenAlarmSharedDefaults.Key.forceCloseAlarmID)
+            OpenAlarmSharedDefaults.userDefaults.removeObject(forKey: OpenAlarmSharedDefaults.Key.forceCloseParentAlarmID)
+        }
+
         // Clean up wake-check session if active
         if let session = wakeCheckSessions[alarm.id] {
             wakeCheckNotificationService.cancelNotification(id: session.notificationID)

@@ -43,6 +43,7 @@ struct TaskContainerView: View {
             if let orphanedID = ForceCloseAlarmManager.loadPersistedForceCloseAlarmID() {
                 try? AlarmManager.shared.stop(id: orphanedID)
                 try? AlarmManager.shared.cancel(id: orphanedID)
+                ForceCloseAlarmManager.clearPersistedForceCloseSlot()
             }
 
             if alarm.isNap {

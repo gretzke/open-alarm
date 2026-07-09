@@ -12,6 +12,8 @@ enum SchedulingConstants {
     static let bridgeWindowSize = 5
     /// "0 minutes" testing sentinel resolves to this many seconds (naps, snooze, wake-check timings).
     static let debugSentinelSeconds: TimeInterval = 5
+    /// Interval for StopIntent's locked-context disarm backstop loop.
+    static let disarmBackstopSeconds: TimeInterval = 30
     /// Minimum wake-check grace extension when opening from a notification tap.
     static let wakeCheckGraceMinimumSeconds: TimeInterval = 60
     /// Deep-link nap extension bounds.

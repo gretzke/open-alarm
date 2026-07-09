@@ -55,6 +55,7 @@ Requirement IDs (`R-x.y`) are for referencing from the refactor plan.
   5. One-shot kept alarm → `.completed`; alarm disabled (`isEnabled = false`, `lifecycleState = .completed`).
 - **R-4.4** Completion also removes every plausible pending-disarm key: the alarm ID, the resolved AlarmKit ID, and all bridge IDs of the alarm's override. Then the next pending disarm (if any) is processed.
 - **R-4.5** Stop events while already awaiting a disarm challenge or wake check are absorbed without state change (force-close alarm re-fires, backup alarm fires).
+- **R-4.6** If `StopIntent` resolves non-empty disarm tasks after a stop, it schedules a 30s force-close/backstop alarm in the shared force-close slot. If that backstop is stopped before the app opens, it stops the ringing instance and registers the next 30s backstop without adding a new pending-disarm ID. The loop ends when the parent alarm is gone, the parent resolves to no tasks, or the app opens and the challenge UI's force-close manager takes over the shared slot.
 
 ## 5. Snooze
 
@@ -100,7 +101,7 @@ Requirement IDs (`R-x.y`) are for referencing from the refactor plan.
 ## 8. Disarm challenges & force-close protection
 
 - **R-8.1** Challenge tasks come from resolved shared settings (`tasks: [AlarmTask]` — dummy or math with difficulty/count). The scheduler contract: the disarm UI is presented after every stop, and lifecycle only advances via `completeDisarmChallenge`.
-- **R-8.2** While a challenge is active, `ForceCloseAlarmManager` maintains a rolling one-shot AlarmKit alarm ~20s out, rescheduled every 10s (new UUID each time, previous canceled only after the new one is registered — no gap). Force-closing the app therefore causes the alarm to re-fire. The current force-close ID is persisted in the shared defaults so `StopIntent` (extension process) can silence it.
+- **R-8.2** While a challenge is active, `ForceCloseAlarmManager` maintains a rolling one-shot AlarmKit alarm ~20s out, rescheduled every 10s (new UUID each time, previous canceled only after the new one is registered — no gap). Force-closing the app therefore causes the alarm to re-fire. The current force-close ID is persisted in the shared defaults so `StopIntent` (extension process) can silence it; the slot also carries the parent alarm ID.
 - **R-8.3** On challenge UI appear, an orphaned persisted force-close alarm from a previous crash/force-quit is canceled.
 - **R-8.4** During a challenge, `TaskSoundManager` plays a looping alarm sound (bundled `alarm_sound.caf`/`.mp3`, falling back to the system alarm sound) through an active `.playback` audio session, so the alarm keeps sounding **even when the app is minimized or the screen is locked**.
 - **R-8.5** System volume is forced to the alarm level for the duration of the challenge: a hidden off-screen `MPVolumeView` slider sets the volume, a KVO observer on `outputVolume` reverts user changes, and a 0.2s polling timer catches held-down hardware volume buttons that KVO misses. The user cannot silence the challenge by turning the volume down. The level is configurable per settings cascade via `AlarmVolumeSettings.targetPercent` (default 20%, clamped 0–100; added upstream 2026-05). (Intentional anti-circumvention behavior — accepted App Store review risk; uses `MPVolumeView`'s internal slider.)
@@ -132,7 +133,7 @@ Requirement IDs (`R-x.y`) are for referencing from the refactor plan.
 
 - **R-12.1** All state lives in the app-group `UserDefaults` suite (`group.com.gretzke.openalarm`, `.standard` fallback); one-time migration copies known keys from standard defaults (only where absent in the suite).
 - **R-12.2** Contract: **intents write the truth; the app reloads.** `applyRemoteAlarms` (fired by the `alarmUpdates` stream) does a pure reload of alarms + wake-check sessions from persistence — no cleanup or deletion — then rebuilds phases, reconciles overrides, and processes pending queues.
-- **R-12.3** Pending work queues in shared defaults bridge extension → app: pending-disarm IDs, pending wake-check-confirm-UI IDs, grace-applied IDs, force-close alarm ID. In-process `NotificationCenter` posts (`disarmChallengeRequested`, `wakeUpCheckConfirmationRequested`) wake the store when it's alive.
+- **R-12.3** Pending work queues in shared defaults bridge extension → app: pending-disarm IDs, pending wake-check-confirm-UI IDs, grace-applied IDs, force-close alarm ID + parent alarm ID. In-process `NotificationCenter` posts (`disarmChallengeRequested`, `wakeUpCheckConfirmationRequested`) wake the store when it's alive.
 - **R-12.4** `remoteStates` (AlarmKit `Alarm.State` per ID) is maintained for UI display from the update stream / on foreground.
 
 ## 13. Cold start & reconciliation
