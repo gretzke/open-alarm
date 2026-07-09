@@ -106,6 +106,32 @@ struct SettingsHomeView: View {
                     .oaGlassCard()
 
                     VStack(alignment: .leading, spacing: 12) {
+                        Text(L10n.settingsAlarmSoundTitle)
+                            .font(.headline)
+                            .foregroundStyle(OAColor.textPrimary)
+
+                        Toggle(isOn: Binding(
+                            get: { alarmStore.pinAlarmVolumeEnabled },
+                            set: { alarmStore.updatePinAlarmVolumeEnabled($0) }
+                        )) {
+                            Text(L10n.settingsPinAlarmVolumeToggle)
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(OAColor.textPrimary)
+                        }
+                        .tint(OAColor.actionCyan)
+
+                        Text(L10n.settingsPinAlarmVolumeFootnote)
+                            .font(.footnote)
+                            .foregroundStyle(OAColor.textSecondary)
+
+                        Text(L10n.settingsTemporaryMuteFootnote)
+                            .font(.footnote)
+                            .foregroundStyle(OAColor.textSecondary)
+                    }
+                    .padding(20)
+                    .oaGlassCard()
+
+                    VStack(alignment: .leading, spacing: 12) {
                         Text(L10n.settingsLiveActivitiesTitle)
                             .font(.headline)
                             .foregroundStyle(OAColor.textPrimary)

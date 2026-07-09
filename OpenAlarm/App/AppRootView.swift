@@ -45,7 +45,8 @@ struct AppRootView: View {
             TaskContainerView(
                 alarm: presentation.alarm,
                 tasks: presentation.tasks,
-                resolvedSettings: presentation.resolvedSettings
+                resolvedSettings: presentation.resolvedSettings,
+                pinSystemVolume: alarmStore.pinAlarmVolumeEnabled
             ) {
                 Task {
                     await alarmStore.completeDisarmChallenge(for: presentation.id)

@@ -4,9 +4,15 @@ import SwiftUI
 
 @MainActor
 final class TaskSoundManager: ObservableObject {
+    @Published private(set) var isAlarmSoundActive = false
+    @Published private(set) var temporaryMuteRemainingSeconds = 0
+    @Published private(set) var isTemporaryMuteRestoring = false
+
     private var audioPlayer: AVAudioPlayer?
     private var volumeObservation: NSKeyValueObservation?
     private var volumePollingTimer: Timer?
+    private var temporaryMuteTimer: Timer?
+    private var temporaryMuteFadeCompletionTask: Task<Void, Never>?
     private var notificationObservers: [NSObjectProtocol] = []
     private var capturedVolume: Float?
     private var hiddenVolumeView: MPVolumeView?
@@ -14,27 +20,43 @@ final class TaskSoundManager: ObservableObject {
     private var isPlaybackRequested = false
     private var alarmSoundURL: URL?
     private let volumeSettings: AlarmVolumeSettings
+    private let pinSystemVolume: Bool
+    private let normalPlayerVolume: Float = 1.0
+    private let temporaryMuteDurationSeconds = 30
+    private let temporaryMuteFadeDuration: TimeInterval = 2.5
 
-    init(volumeSettings: AlarmVolumeSettings = .default) {
+    var isTemporaryMuteEngaged: Bool {
+        temporaryMuteRemainingSeconds > 0 || isTemporaryMuteRestoring
+    }
+
+    init(volumeSettings: AlarmVolumeSettings = .default, pinSystemVolume: Bool = true) {
         self.volumeSettings = volumeSettings
+        self.pinSystemVolume = pinSystemVolume
     }
 
     func startPlaying() {
         let targetVolume = volumeSettings.targetScalar
         isPlaybackRequested = true
+        isAlarmSoundActive = true
         alarmSoundURL = resolveAlarmSoundURL()
         configureAudioSession()
         registerForAudioSessionNotifications()
-        setupHiddenVolumeView()
-        setSystemVolume(targetVolume)
-        capturedVolume = targetVolume
+        if pinSystemVolume {
+            setupHiddenVolumeView()
+            setSystemVolume(targetVolume)
+            capturedVolume = targetVolume
+        }
         ensurePlaybackActive(forceRestart: true)
-        observeVolumeChanges()
-        startVolumePolling()
+        if pinSystemVolume {
+            observeVolumeChanges()
+            startVolumePolling()
+        }
     }
 
     func stopPlaying() {
         isPlaybackRequested = false
+        isAlarmSoundActive = false
+        cancelTemporaryMute()
         volumePollingTimer?.invalidate()
         volumePollingTimer = nil
         audioPlayer?.stop()
@@ -49,6 +71,17 @@ final class TaskSoundManager: ObservableObject {
         alarmSoundURL = nil
         let session = AVAudioSession.sharedInstance()
         try? session.setActive(false, options: [.notifyOthersOnDeactivation])
+    }
+
+    func temporarilyMuteAlarmSound() {
+        guard isPlaybackRequested else { return }
+
+        temporaryMuteFadeCompletionTask?.cancel()
+        temporaryMuteFadeCompletionTask = nil
+        isTemporaryMuteRestoring = false
+        temporaryMuteRemainingSeconds = temporaryMuteDurationSeconds
+        audioPlayer?.setVolume(0, fadeDuration: 0)
+        startTemporaryMuteCountdown()
     }
 
     private func configureAudioSession() {
@@ -69,6 +102,7 @@ final class TaskSoundManager: ObservableObject {
         configureAudioSession()
 
         if let player = audioPlayer, !forceRestart {
+            applyCurrentMuteState(to: player)
             if !player.isPlaying {
                 player.play()
             }
@@ -84,7 +118,7 @@ final class TaskSoundManager: ObservableObject {
         audioPlayer?.stop()
         guard let player = try? AVAudioPlayer(contentsOf: url) else { return }
         player.numberOfLoops = -1
-        player.volume = 1.0
+        applyCurrentMuteState(to: player)
         player.prepareToPlay()
         guard player.play() else {
             if retriesLeft > 0 {
@@ -220,6 +254,70 @@ final class TaskSoundManager: ObservableObject {
         guard isPlaybackRequested else { return }
         audioPlayer = nil
         ensurePlaybackActive(forceRestart: true)
+    }
+
+    private func startTemporaryMuteCountdown() {
+        temporaryMuteTimer?.invalidate()
+        temporaryMuteTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.tickTemporaryMuteCountdown()
+            }
+        }
+    }
+
+    private func tickTemporaryMuteCountdown() {
+        guard temporaryMuteRemainingSeconds > 0 else { return }
+
+        temporaryMuteRemainingSeconds -= 1
+        if temporaryMuteRemainingSeconds == 0 {
+            temporaryMuteTimer?.invalidate()
+            temporaryMuteTimer = nil
+            fadeAlarmSoundBackIn()
+        }
+    }
+
+    private func fadeAlarmSoundBackIn() {
+        temporaryMuteFadeCompletionTask?.cancel()
+        isTemporaryMuteRestoring = true
+        audioPlayer?.setVolume(normalPlayerVolume, fadeDuration: temporaryMuteFadeDuration)
+
+        temporaryMuteFadeCompletionTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(2_500_000_000))
+            await MainActor.run { [weak self] in
+                self?.finishTemporaryMuteFade()
+            }
+        }
+    }
+
+    private func finishTemporaryMuteFade() {
+        temporaryMuteFadeCompletionTask = nil
+        guard isPlaybackRequested else {
+            isTemporaryMuteRestoring = false
+            return
+        }
+
+        audioPlayer?.volume = normalPlayerVolume
+        isTemporaryMuteRestoring = false
+    }
+
+    private func applyCurrentMuteState(to player: AVAudioPlayer) {
+        if temporaryMuteRemainingSeconds > 0 {
+            player.volume = 0
+        } else if isTemporaryMuteRestoring {
+            player.volume = 0
+            player.setVolume(normalPlayerVolume, fadeDuration: temporaryMuteFadeDuration)
+        } else {
+            player.volume = normalPlayerVolume
+        }
+    }
+
+    private func cancelTemporaryMute() {
+        temporaryMuteTimer?.invalidate()
+        temporaryMuteTimer = nil
+        temporaryMuteFadeCompletionTask?.cancel()
+        temporaryMuteFadeCompletionTask = nil
+        temporaryMuteRemainingSeconds = 0
+        isTemporaryMuteRestoring = false
     }
 
     private func setupHiddenVolumeView() {

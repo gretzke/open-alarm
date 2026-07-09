@@ -106,6 +106,10 @@
 "settings_live_activities_system_disabled_hint" = "Live-Aktivitäten sind aktuell in den iOS-Einstellungen für diese App deaktiviert.";
 "settings_live_activities_prompt_title" = "Live-Aktivitäten in den Einstellungen aktivieren";
 "settings_live_activities_prompt_body" = "Um Live-Aktivitäten hier zu verwenden, aktiviere Live-Aktivitäten in den Systemeinstellungen für OpenAlarm.";
+"settings_alarm_sound_title" = "Alarmton";
+"settings_pin_alarm_volume_toggle" = "Alarmlautstärke fixieren";
+"settings_pin_alarm_volume_footnote" = "Während eines Alarms hält OpenAlarm die Systemlautstärke auf der eingestellten Alarmlautstärke, damit der Alarm nicht über die Lautstärketasten stummgeschaltet werden kann. Deaktiviere das, wenn die Lautstärketasten während Alarmen normal funktionieren sollen.";
+"settings_temporary_mute_footnote" = "Während einer klingelnden Aufgabe kannst du den Alarmton mit der Stummschalten-Taste jeweils für 30 Sekunden stummschalten. Danach wird er automatisch wieder eingeblendet.";
 "settings_testing_mode_title" = "Testmodus";
 "settings_testing_mode_body" = "Aktiviert entwicklungsbezogene Alarmoptionen wie 5-Sekunden-Snooze und 5-Sekunden-Aufwach-Timeout.";
 "settings_testing_mode_toggle" = "Testmodus aktivieren";
@@ -168,6 +172,10 @@
 "task_picker_choose_type" = "Aufgabe wählen";
 "task_dismiss_title" = "Alarm";
 "task_dismiss_alarm_button" = "Alarm ausschalten";
+"task_mute_button" = "Stumm";
+"task_mute_countdown %lld" = "%lld s";
+"a11y_task_mute_button" = "Alarmton stummschalten";
+"a11y_task_mute_countdown %lld" = "Alarmton stummgeschaltet, noch %lld Sekunden";
 "task_progress %lld %lld" = "Aufgabe %lld von %lld";
 "task_math_progress %lld %lld" = "Aufgabe %lld von %lld";
 "task_math_submit" = "Bestätigen";

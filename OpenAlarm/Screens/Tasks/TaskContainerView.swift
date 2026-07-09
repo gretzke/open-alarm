@@ -16,13 +16,19 @@ struct TaskContainerView: View {
         alarm: AlarmDefinition,
         tasks: [AlarmTask],
         resolvedSettings: SharedAlarmSettings,
+        pinSystemVolume: Bool = true,
         onCompleted: @escaping () -> Void
     ) {
         self.alarm = alarm
         self.tasks = tasks
         self.resolvedSettings = resolvedSettings
         self.onCompleted = onCompleted
-        _soundManager = StateObject(wrappedValue: TaskSoundManager(volumeSettings: resolvedSettings.volume))
+        _soundManager = StateObject(
+            wrappedValue: TaskSoundManager(
+                volumeSettings: resolvedSettings.volume,
+                pinSystemVolume: pinSystemVolume
+            )
+        )
     }
 
     var body: some View {
@@ -63,6 +69,8 @@ struct TaskContainerView: View {
 
     private var dismissScreen: some View {
         VStack {
+            soundControlHeader
+
             Spacer()
 
             Text(alarm.name.isEmpty ? String(localized: "task_dismiss_title") : alarm.name)
@@ -91,6 +99,8 @@ struct TaskContainerView: View {
     private var challengeScreen: some View {
         if currentTaskIndex < tasks.count {
             VStack {
+                soundControlHeader
+
                 if tasks.count > 1 {
                     Text(String(localized: "task_progress \(currentTaskIndex + 1) \(tasks.count)"))
                         .font(.subheadline)
@@ -101,6 +111,52 @@ struct TaskContainerView: View {
                 taskView(for: tasks[currentTaskIndex])
             }
         }
+    }
+
+    @ViewBuilder
+    private var soundControlHeader: some View {
+        HStack {
+            Spacer(minLength: 0)
+
+            if soundManager.isAlarmSoundActive {
+                Button {
+                    soundManager.temporarilyMuteAlarmSound()
+                } label: {
+                    Label {
+                        Text(temporaryMuteButtonTitle)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    } icon: {
+                        Image(systemName: "speaker.slash.fill")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(OAColor.textPrimary)
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 44)
+                }
+                .buttonStyle(.glassAccentBorder)
+                .accessibilityLabel(temporaryMuteAccessibilityLabel)
+                .accessibilityIdentifier("task_sound_temporary_mute")
+            }
+        }
+        .padding(.top)
+        .padding(.horizontal)
+    }
+
+    private var temporaryMuteButtonTitle: String {
+        if soundManager.isTemporaryMuteEngaged {
+            return String(localized: "task_mute_countdown \(soundManager.temporaryMuteRemainingSeconds)")
+        }
+
+        return String(localized: "task_mute_button")
+    }
+
+    private var temporaryMuteAccessibilityLabel: String {
+        if soundManager.isTemporaryMuteEngaged {
+            return String(localized: "a11y_task_mute_countdown \(soundManager.temporaryMuteRemainingSeconds)")
+        }
+
+        return String(localized: "a11y_task_mute_button")
     }
 
     @ViewBuilder
