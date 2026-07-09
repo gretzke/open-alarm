@@ -931,7 +931,10 @@ final class AlarmStore: ObservableObject {
 
         // A locked device means LiveActivityIntent launched us invisibly behind the passcode.
         // Presenting now silently kills the StopIntent backstop loop (field-verified on build 78).
-        guard UIApplication.shared.isProtectedDataAvailable else { return }
+        guard UIApplication.shared.isProtectedDataAvailable else {
+            IntentDiagnostics.log("AlarmStore disarm presentation blocked protectedData=false")
+            return
+        }
 
         isProcessingPendingDisarms = true
         defer { isProcessingPendingDisarms = false }
@@ -968,6 +971,7 @@ final class AlarmStore: ObservableObject {
             tasks: settings.tasks,
             resolvedSettings: settings
         )
+        IntentDiagnostics.log("AlarmStore disarm presentation shown alarm=\(alarm.id.uuidString)")
     }
 
     func completeDisarmChallenge(for alarmID: UUID) async {

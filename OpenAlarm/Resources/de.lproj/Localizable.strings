@@ -109,6 +109,7 @@
 "settings_testing_mode_title" = "Testmodus";
 "settings_testing_mode_body" = "Aktiviert entwicklungsbezogene Alarmoptionen wie 5-Sekunden-Snooze und 5-Sekunden-Aufwach-Timeout.";
 "settings_testing_mode_toggle" = "Testmodus aktivieren";
+"settings_diagnostics_title" = "Diagnose";
 "settings_wake_check_title" = "Aufwach-Check-Standards";
 "settings_wake_check_body" = "Wenn aktiviert, muss nach dem Ausschalten bestätigt werden, dass du wach bist; sonst klingelt es erneut.";
 "settings_wake_check_delay_label" = "Standard-Verzögerung";
@@ -147,6 +148,7 @@
 "action_delete" = "Löschen";
 "action_pause" = "Pausieren";
 "action_continue" = "Fortsetzen";
+"action_clear" = "Leeren";
 
 "wake_check_confirm_title" = "Bist du wach?";
 "wake_check_confirm_subtitle" = "Backup-Alarm klingelt in";

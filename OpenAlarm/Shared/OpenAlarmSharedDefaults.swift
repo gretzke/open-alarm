@@ -10,6 +10,7 @@ enum OpenAlarmSharedDefaults {
     enum Key {
         static let forceCloseAlarmID = "OPENALARM_FORCE_CLOSE_ALARM_ID"
         static let forceCloseParentAlarmID = "OPENALARM_FORCE_CLOSE_PARENT_ALARM_ID"
+        static let diagnosticsLog = "OPENALARM_DIAGNOSTICS_LOG"
         static let wakeCheckGraceAppliedIDs = "OPENALARM_WAKE_CHECK_GRACE_APPLIED_IDS"
     }
 

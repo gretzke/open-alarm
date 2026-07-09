@@ -176,6 +176,29 @@ struct SettingsHomeView: View {
                         }
                         .buttonStyle(GlassButtonStyle())
                         .accessibilityIdentifier("settings_open_system_settings")
+
+                        if alarmStore.testingModeEnabled {
+                            NavigationLink {
+                                DiagnosticsView()
+                            } label: {
+                                HStack(spacing: 10) {
+                                    Text(L10n.settingsDiagnosticsTitle)
+                                        .font(.body.weight(.semibold))
+                                        .foregroundStyle(OAColor.textPrimary)
+
+                                    Spacer(minLength: 0)
+
+                                    Image(systemName: "chevron.right")
+                                        .font(.footnote.weight(.semibold))
+                                        .foregroundStyle(OAColor.textSecondary)
+                                }
+                                .padding(.horizontal, 16)
+                                .frame(maxWidth: .infinity, minHeight: 48)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(GlassButtonStyle())
+                            .accessibilityIdentifier("settings_diagnostics")
+                        }
                     }
                     .padding(20)
                     .oaGlassCard()
@@ -201,6 +224,38 @@ struct SettingsHomeView: View {
 }
 
 // MARK: - Supporting Views
+
+private struct DiagnosticsView: View {
+    @State private var entries: [String] = []
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 8) {
+                ForEach(Array(entries.enumerated().reversed()), id: \.offset) { _, entry in
+                    Text(entry)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(OAColor.textPrimary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .padding(20)
+        }
+        .background(OAColor.background.ignoresSafeArea())
+        .navigationTitle(L10n.settingsDiagnosticsTitle)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(L10n.actionClear) {
+                    IntentDiagnostics.clear()
+                    entries = IntentDiagnostics.entries()
+                }
+            }
+        }
+        .onAppear {
+            entries = IntentDiagnostics.entries()
+        }
+    }
+}
 
 private struct DefaultSharedSettingsView: View {
     @EnvironmentObject private var alarmStore: AlarmStore

@@ -49,6 +49,7 @@ final class AlarmPersistence: Sendable {
             "OPENALARM_PENDING_DISARM_ALARM_IDS_V1",
             "OPENALARM_FORCE_CLOSE_ALARM_ID",
             "OPENALARM_FORCE_CLOSE_PARENT_ALARM_ID",
+            "OPENALARM_DIAGNOSTICS_LOG",
             "OPENALARM_WAKE_CHECK_GRACE_APPLIED_IDS"
         ]
 

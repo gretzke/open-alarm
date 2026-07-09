@@ -86,6 +86,7 @@ enum L10n {
     static let settingsLiveActivitiesPromptBody: LocalizedStringKey = "settings_live_activities_prompt_body"
     static let settingsTestingModeTitle: LocalizedStringKey = "settings_testing_mode_title"
     static let settingsTestingModeToggle: LocalizedStringKey = "settings_testing_mode_toggle"
+    static let settingsDiagnosticsTitle: LocalizedStringKey = "settings_diagnostics_title"
     static let settingsPermissionAuthorized: LocalizedStringKey = "settings_permission_authorized"
     static let settingsPermissionNotDetermined: LocalizedStringKey = "settings_permission_not_determined"
     static let settingsPermissionDenied: LocalizedStringKey = "settings_permission_denied"
@@ -117,6 +118,7 @@ enum L10n {
     static let actionDelete: LocalizedStringKey = "action_delete"
     static let actionPause: LocalizedStringKey = "action_pause"
     static let actionContinue: LocalizedStringKey = "action_continue"
+    static let actionClear: LocalizedStringKey = "action_clear"
 
     static let wakeCheckConfirmTitle: LocalizedStringKey = "wake_check_confirm_title"
     static let wakeCheckConfirmSubtitle: LocalizedStringKey = "wake_check_confirm_subtitle"

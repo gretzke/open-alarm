@@ -6,7 +6,7 @@ import UserNotifications
 struct StopIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "intent_stop_title"
     static var description = IntentDescription("intent_stop_description")
-    static var openAppWhenRun: Bool = true
+    static let supportedModes: IntentModes = [.background, .foreground(.dynamic)]
 
     @Parameter(title: "alarmID")
     var alarmID: String
@@ -21,14 +21,18 @@ struct StopIntent: LiveActivityIntent {
 
     func perform() async throws -> some IntentResult {
         guard let id = UUID(uuidString: alarmID) else {
+            IntentDiagnostics.log("StopIntent entry id=\(alarmID) case=invalid")
             return .result()
         }
 
         let persistedBackstopID = Self.loadPersistedForceCloseAlarmID()
         if id == persistedBackstopID {
+            IntentDiagnostics.log("StopIntent entry id=\(id.uuidString) case=backstop-restop")
             await handleStoppedBackstop(id)
+            await requestForegroundEscalation(caseName: "backstop-restop")
             return .result()
         }
+        IntentDiagnostics.log("StopIntent entry id=\(id.uuidString) case=normal")
 
         let persistence = AlarmPersistence(defaults: OpenAlarmSharedDefaults.userDefaults)
 
@@ -51,17 +55,23 @@ struct StopIntent: LiveActivityIntent {
         // Notify AlarmStore if it's alive (in-process notification)
         NotificationCenter.default.post(name: .disarmChallengeRequested, object: nil)
 
-        if let resolved = Self.resolveParentAlarm(for: id, persistence: persistence),
-           !resolved.settings.tasks.isEmpty {
-            await Self.scheduleDisarmBackstop(
-                for: resolved.alarm,
-                settings: resolved.settings,
-                cancelAfterRegistering: nil
-            )
+        if let resolved = Self.resolveParentAlarm(for: id, persistence: persistence) {
+            IntentDiagnostics.log("StopIntent normal parent=\(resolved.alarm.id.uuidString) tasks=\(resolved.settings.tasks.count)")
+            if !resolved.settings.tasks.isEmpty {
+                await Self.scheduleDisarmBackstop(
+                    for: resolved.alarm,
+                    settings: resolved.settings,
+                    cancelAfterRegistering: nil
+                )
+            } else {
+                Self.clearPersistedForceCloseParentAlarmID()
+            }
         } else {
+            IntentDiagnostics.log("StopIntent normal parent=unresolved tasks=0")
             Self.clearPersistedForceCloseParentAlarmID()
         }
 
+        await requestForegroundEscalation(caseName: "normal")
         return .result()
     }
 
@@ -69,8 +79,15 @@ struct StopIntent: LiveActivityIntent {
         try? AlarmManager.shared.stop(id: id)
 
         let persistence = AlarmPersistence(defaults: OpenAlarmSharedDefaults.userDefaults)
-        guard let resolved = Self.resolvePersistedForceCloseParent(persistence: persistence),
-              !resolved.settings.tasks.isEmpty else {
+        guard let resolved = Self.resolvePersistedForceCloseParent(persistence: persistence) else {
+            IntentDiagnostics.log("StopIntent backstop parent=unresolved tasks=0")
+            try? AlarmManager.shared.cancel(id: id)
+            Self.clearPersistedForceCloseSlot()
+            return
+        }
+        IntentDiagnostics.log("StopIntent backstop parent=\(resolved.alarm.id.uuidString) tasks=\(resolved.settings.tasks.count)")
+
+        guard !resolved.settings.tasks.isEmpty else {
             try? AlarmManager.shared.cancel(id: id)
             Self.clearPersistedForceCloseSlot()
             return
@@ -81,6 +98,15 @@ struct StopIntent: LiveActivityIntent {
             settings: resolved.settings,
             cancelAfterRegistering: id
         )
+    }
+
+    private func requestForegroundEscalation(caseName: String) async {
+        do {
+            try await continueInForeground(alwaysConfirm: false)
+            IntentDiagnostics.log("StopIntent foreground success case=\(caseName)")
+        } catch {
+            IntentDiagnostics.log("StopIntent foreground failed case=\(caseName) error=\(error.localizedDescription)")
+        }
     }
 
     private struct ResolvedAlarm {
@@ -146,10 +172,14 @@ struct StopIntent: LiveActivityIntent {
             alarmKitID: newID
         )
 
-        guard (try? await AlarmManager.shared.schedule(id: newID, configuration: config)) != nil else {
+        do {
+            _ = try await AlarmManager.shared.schedule(id: newID, configuration: config)
+        } catch {
+            IntentDiagnostics.log("StopIntent backstop schedule failed id=\(newID.uuidString) parent=\(alarm.id.uuidString) error=\(error.localizedDescription)")
             return
         }
 
+        IntentDiagnostics.log("StopIntent backstop schedule success id=\(newID.uuidString) parent=\(alarm.id.uuidString)")
         persistForceCloseSlot(backstopID: newID, parentAlarmID: alarm.id)
 
         if let previousBackstopID {
