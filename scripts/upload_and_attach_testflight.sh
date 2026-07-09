@@ -92,6 +92,14 @@ require_var APP_ID
 require_var BETA_GROUP_ID
 require_var TEAM_ID
 
+# This machine's xcode-select points at CommandLineTools; force full Xcode.
+export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
+
+# xcodebuild -exportArchive packages the IPA via /usr/bin/rsync (openrsync), which
+# spawns its server side through PATH — Homebrew's rsync 3.4.1 rejects openrsync's
+# --extended-attributes and the export dies with "Copy failed". Keep /usr/bin first.
+export PATH="/usr/bin:$PATH"
+
 BUNDLE_ID="${BUNDLE_ID:-com.gretzke.openalarm}"
 SCHEME="${SCHEME:-OpenAlarm}"
 PROJECT="${PROJECT:-OpenAlarm.xcodeproj}"
