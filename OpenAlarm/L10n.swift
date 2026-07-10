@@ -162,9 +162,28 @@ enum L10n {
     static let taskStepsCountTitle: LocalizedStringKey = "task_steps_count_title"
     static let taskStepsUnavailableFallback: LocalizedStringKey = "task_steps_unavailable_fallback"
     static let taskStepsSimulate: LocalizedStringKey = "task_steps_simulate"
+    static let taskScanName = String(localized: "task_scan_name")
+    static let taskScanTitle: LocalizedStringKey = "task_scan_title"
+    static let taskScanObjectTitle: LocalizedStringKey = "task_scan_object_title"
+    static let taskScanUnavailableFallback: LocalizedStringKey = "task_scan_unavailable_fallback"
+    static let taskScanSimulate: LocalizedStringKey = "task_scan_simulate"
 
     static func taskStepsCounter(_ steps: Int, goal: Int) -> String {
         String(format: String(localized: "task_steps_counter_format"), steps, goal)
+    }
+
+    static func taskScanObjectName(_ identifier: String) -> String {
+        switch identifier {
+        case "mug": String(localized: "task_scan_object_mug")
+        case "backpack": String(localized: "task_scan_object_backpack")
+        case "laptop": String(localized: "task_scan_object_laptop")
+        case "computer_keyboard": String(localized: "task_scan_object_computer_keyboard")
+        case "refrigerator": String(localized: "task_scan_object_refrigerator")
+        case "kitchen_sink": String(localized: "task_scan_object_kitchen_sink")
+        case "toilet_seat": String(localized: "task_scan_object_toilet_seat")
+        case "shoes": String(localized: "task_scan_object_shoes")
+        default: identifier
+        }
     }
 
     static func taskMathLevelName(_ difficulty: MathDifficulty) -> String {

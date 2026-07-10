@@ -221,6 +221,19 @@
 "task_steps_unavailable_fallback" = "Schließen";
 "task_steps_simulate" = "Zum Simulieren halten";
 "task_steps_counter_format" = "%d / %d";
+"task_scan_name" = "Objekt scannen";
+"task_scan_title" = "Finde es";
+"task_scan_object_title" = "Zu scannendes Objekt";
+"task_scan_unavailable_fallback" = "Schließen";
+"task_scan_simulate" = "Zum Simulieren halten";
+"task_scan_object_mug" = "Tasse";
+"task_scan_object_backpack" = "Rucksack";
+"task_scan_object_laptop" = "Laptop";
+"task_scan_object_computer_keyboard" = "Computertastatur";
+"task_scan_object_refrigerator" = "Kühlschrank";
+"task_scan_object_kitchen_sink" = "Küchenspüle";
+"task_scan_object_toilet_seat" = "Toilettensitz";
+"task_scan_object_shoes" = "Schuhe";
 
 /* Durations */
 "duration_hours_minutes_short" = "%dh %dm";

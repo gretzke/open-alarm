@@ -26,6 +26,7 @@ let package = Package(
                 "Models/TaskLogic/MathProblemGenerator.swift",
                 "Models/TaskLogic/ShakeEnergyModel.swift",
                 "Models/TaskLogic/MemoryPatternGenerator.swift",
+                "Models/TaskLogic/ScanObjectCatalog.swift",
                 "Models/AlarmPersistenceStore.swift",
                 "Shared/BackstopSlotStore.swift",
                 "Shared/IntentDiagnostics.swift",

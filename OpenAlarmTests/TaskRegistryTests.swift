@@ -10,6 +10,7 @@ final class TaskRegistryTests: XCTestCase {
         .shake(intensity: 3),
         .memory(difficulty: 3, rounds: 3),
         .steps(count: 30),
+        .scanObject(objectClass: "mug"),
     ]
 
     func testDescriptorTypeIDsAreUnique() {

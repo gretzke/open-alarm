@@ -106,6 +106,7 @@ enum AlarmTask: Codable, Equatable, Hashable, Sendable {
     case shake(intensity: Int)
     case memory(difficulty: Int, rounds: Int)
     case steps(count: Int)
+    case scanObject(objectClass: String)
 
     var displayName: String {
         switch self {
@@ -114,6 +115,7 @@ enum AlarmTask: Codable, Equatable, Hashable, Sendable {
         case .shake: String(localized: "task_shake_name")
         case .memory: String(localized: "task_memory_name")
         case .steps: String(localized: "task_steps_name")
+        case .scanObject: String(localized: "task_scan_name")
         }
     }
 
@@ -153,6 +155,9 @@ enum AlarmTask: Codable, Equatable, Hashable, Sendable {
         } else if container.contains(.steps) {
             let steps = try container.nestedContainer(keyedBy: StepsCodingKeys.self, forKey: .steps)
             self = .steps(count: try steps.decode(Int.self, forKey: .count))
+        } else if container.contains(.scanObject) {
+            let scanObject = try container.nestedContainer(keyedBy: ScanObjectCodingKeys.self, forKey: .scanObject)
+            self = .scanObject(objectClass: try scanObject.decode(String.self, forKey: .objectClass))
         } else {
             throw DecodingError.dataCorrupted(
                 DecodingError.Context(
@@ -183,6 +188,9 @@ enum AlarmTask: Codable, Equatable, Hashable, Sendable {
         case let .steps(count):
             var steps = container.nestedContainer(keyedBy: StepsCodingKeys.self, forKey: .steps)
             try steps.encode(count, forKey: .count)
+        case let .scanObject(objectClass):
+            var scanObject = container.nestedContainer(keyedBy: ScanObjectCodingKeys.self, forKey: .scanObject)
+            try scanObject.encode(objectClass, forKey: .objectClass)
         }
     }
 
@@ -192,6 +200,7 @@ enum AlarmTask: Codable, Equatable, Hashable, Sendable {
         case shake
         case memory
         case steps
+        case scanObject
     }
 
     private enum MathCodingKeys: String, CodingKey {
@@ -210,6 +219,10 @@ enum AlarmTask: Codable, Equatable, Hashable, Sendable {
 
     private enum StepsCodingKeys: String, CodingKey {
         case count
+    }
+
+    private enum ScanObjectCodingKeys: String, CodingKey {
+        case objectClass
     }
 }
 
