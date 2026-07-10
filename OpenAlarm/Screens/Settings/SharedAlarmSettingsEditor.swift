@@ -187,7 +187,24 @@ struct SharedAlarmSettingsEditor: View {
                 }
             }
 
-            TaskPickerView(tasks: $settings.tasks)
+            VStack(alignment: .leading, spacing: 10) {
+                Toggle(isOn: Binding(
+                    get: { settings.tasksEnabled },
+                    set: { enabled in
+                        Haptics.impact()
+                        settings.tasksEnabled = enabled
+                    }
+                )) {
+                    Text(L10n.alarmEditorTasksToggle)
+                        .font(.headline)
+                        .foregroundStyle(OAColor.textPrimary)
+                }
+                .tint(OAColor.actionCyan)
+
+                if settings.tasksEnabled {
+                    TaskPickerView(tasks: $settings.tasks)
+                }
+            }
 
             Button {
                 runTryOut(after: 5)

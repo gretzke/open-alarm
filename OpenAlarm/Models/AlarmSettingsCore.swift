@@ -269,6 +269,7 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
     var wakeUpCheckEnabled: Bool
     var wakeUpCheckDelayMinutes: Int
     var wakeUpCheckResponseTimeoutMinutes: Int
+    var tasksEnabled: Bool
     var tasks: [AlarmTask]
     var volume: AlarmVolumeSettings
 
@@ -279,6 +280,7 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         wakeUpCheckEnabled: false,
         wakeUpCheckDelayMinutes: WakeUpCheckTimingPolicy.defaultCheckDelayMinutes,
         wakeUpCheckResponseTimeoutMinutes: WakeUpCheckTimingPolicy.defaultResponseTimeoutMinutes,
+        tasksEnabled: true,
         tasks: [],
         volume: .default
     )
@@ -316,6 +318,7 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         case wakeUpCheckEnabled
         case wakeUpCheckDelayMinutes
         case wakeUpCheckResponseTimeoutMinutes
+        case tasksEnabled
         case tasks
         case volume
     }
@@ -327,6 +330,7 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         wakeUpCheckEnabled: Bool,
         wakeUpCheckDelayMinutes: Int,
         wakeUpCheckResponseTimeoutMinutes: Int,
+        tasksEnabled: Bool = true,
         tasks: [AlarmTask] = [],
         volume: AlarmVolumeSettings = .default
     ) {
@@ -336,6 +340,7 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         self.wakeUpCheckEnabled = wakeUpCheckEnabled
         self.wakeUpCheckDelayMinutes = WakeUpCheckTimingPolicy.clampCheckDelayMinutes(wakeUpCheckDelayMinutes)
         self.wakeUpCheckResponseTimeoutMinutes = WakeUpCheckTimingPolicy.normalizeResponseTimeoutMinutes(wakeUpCheckResponseTimeoutMinutes)
+        self.tasksEnabled = tasksEnabled
         self.tasks = tasks
         self.volume = volume
     }
@@ -352,6 +357,7 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         wakeUpCheckResponseTimeoutMinutes = WakeUpCheckTimingPolicy.normalizeResponseTimeoutMinutes(
             try container.decodeIfPresent(Int.self, forKey: .wakeUpCheckResponseTimeoutMinutes) ?? SharedAlarmSettings.featureDefaults.wakeUpCheckResponseTimeoutMinutes
         )
+        tasksEnabled = try container.decodeIfPresent(Bool.self, forKey: .tasksEnabled) ?? true
         tasks = try container.decodeIfPresent([AlarmTask].self, forKey: .tasks) ?? []
         volume = try container.decodeIfPresent(AlarmVolumeSettings.self, forKey: .volume) ?? .default
     }

@@ -19,7 +19,6 @@ final class AlarmPersistence: Sendable {
     private let napDefaultSharedSettingsKey = "OPENALARM_NAP_DEFAULT_SHARED_SETTINGS_V1"
     private let defaultNapDurationMinutesKey = "OPENALARM_DEFAULT_NAP_DURATION_MINUTES_V1"
     private let liveActivitiesEnabledKey = "OPENALARM_LIVE_ACTIVITIES_ENABLED_V1"
-    private let tasksEnabledKey = "OPENALARM_TASKS_ENABLED_V1"
     private let pendingWakeUpCheckShowConfirmUIIDsKey = "OPENALARM_PENDING_WAKE_CHECK_SHOW_CONFIRM_UI_IDS_V1"
     private let wakeCheckSessionsKey = "OPENALARM_WAKE_CHECK_SESSIONS_V1"
     private let pendingDisarmAlarmIDsKey = "OPENALARM_PENDING_DISARM_ALARM_IDS_V1"
@@ -47,7 +46,6 @@ final class AlarmPersistence: Sendable {
             "OPENALARM_NAP_DEFAULT_SHARED_SETTINGS_V1",
             "OPENALARM_DEFAULT_NAP_DURATION_MINUTES_V1",
             "OPENALARM_LIVE_ACTIVITIES_ENABLED_V1",
-            "OPENALARM_TASKS_ENABLED_V1",
             "OPENALARM_PENDING_WAKE_CHECK_SHOW_CONFIRM_UI_IDS_V1",
             "OPENALARM_WAKE_CHECK_SESSIONS_V1",
             "OPENALARM_PENDING_DISARM_ALARM_IDS_V1",
@@ -199,22 +197,11 @@ final class AlarmPersistence: Sendable {
         defaults.set(enabled, forKey: liveActivitiesEnabledKey)
     }
 
-    // MARK: - Global Task Toggle
-
-    func loadTasksEnabled() -> Bool {
-        if defaults.object(forKey: tasksEnabledKey) == nil { return true }
-        return defaults.bool(forKey: tasksEnabledKey)
-    }
-
-    func saveTasksEnabled(_ enabled: Bool) {
-        defaults.set(enabled, forKey: tasksEnabledKey)
-    }
-
     /// Single authority for "which tasks actually run". Consumed by StopIntent,
     /// AlarmStore, and the wake flow — never read settings.tasks directly for
     /// runtime decisions (spec section 1).
     func effectiveTasks(from settings: SharedAlarmSettings) -> [AlarmTask] {
-        loadTasksEnabled() ? settings.tasks : []
+        settings.tasksEnabled ? settings.tasks : []
     }
 
     // MARK: - Pending Wake-Up Check Show Confirm UI IDs

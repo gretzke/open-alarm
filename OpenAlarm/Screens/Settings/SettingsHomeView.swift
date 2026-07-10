@@ -23,28 +23,6 @@ struct SettingsHomeView: View {
             ScrollView {
                 VStack(spacing: 16) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Toggle(isOn: Binding(
-                            get: { alarmStore.tasksEnabled },
-                            set: { newValue in
-                                guard alarmStore.tasksEnabled != newValue else { return }
-                                Haptics.impact(.light)
-                                alarmStore.updateTasksEnabled(newValue)
-                            }
-                        )) {
-                            Text(L10n.settingsTasksGlobalToggle)
-                                .font(.body.weight(.semibold))
-                                .foregroundStyle(OAColor.textPrimary)
-                        }
-                        .tint(OAColor.actionCyan)
-
-                        Text(L10n.settingsTasksGlobalHint)
-                            .font(.footnote)
-                            .foregroundStyle(OAColor.textSecondary)
-                    }
-                    .padding(OASpacing.cardPadding)
-                    .oaGlassCard()
-
-                    VStack(alignment: .leading, spacing: 12) {
                         Text(L10n.settingsDefaultConfigTitle)
                             .font(.headline)
                             .foregroundStyle(OAColor.textPrimary)
