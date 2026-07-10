@@ -12,7 +12,6 @@
 		0B94972715ED422EAA18A64B /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B69D30D8FB6982C26A6AE32D /* MainTabView.swift */; };
 		0C4CED3E4A7B7512DDD26FDF /* AlarmSettingsCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D34BA5EB8874EFC8335CB2CF /* AlarmSettingsCore.swift */; };
 		1068E5E14AAA376BDD6E846B /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0511AEB1608CC1DFD19C495 /* L10n.swift */; };
-		10B6E6927375762D54364FF1 /* StepDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD6B8D3386C3864DAC75CE58 /* StepDetector.swift */; };
 		132DA05A759647BA17D5C4EF /* ShakeTaskDescriptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F8D42FB1C4E405F01316E3D /* ShakeTaskDescriptor.swift */; };
 		146CCBAF1431CDDFB450335F /* OpenAlarmSharedDefaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8806D09A2BB84C05748859AD /* OpenAlarmSharedDefaults.swift */; };
 		1B1488ECC64F591938DEA880 /* WakeUpCheckConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4C65D29F82E70C88900C16A /* WakeUpCheckConfirmationView.swift */; };
@@ -37,6 +36,7 @@
 		5A1F398C03CEF7087E96D903 /* AlarmPersistenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6A5DA3C14440E7AD45FD911 /* AlarmPersistenceStore.swift */; };
 		5BBDDAEC00D34E018EE30CC5 /* TaskDescriptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52C8F1CE7608625F167AE21 /* TaskDescriptor.swift */; };
 		5E5EF5BB744DA858767E2AB1 /* AlarmSoundLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F23ABC24B2EFA33EBE57548 /* AlarmSoundLiveActivityAttributes.swift */; };
+		616C230F6BD6A626D73F1446 /* PedometerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC95C421FBD8CD3AEE0C50A /* PedometerService.swift */; };
 		6836111E5DBAA81266281BB4 /* NapLiveActivityIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9F24A86427E96596EA65FC0 /* NapLiveActivityIntents.swift */; };
 		6A50E1ADBEA686D1DA26C3F0 /* OpenAlarmApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA110F30C0C8E9D50303CDA8 /* OpenAlarmApp.swift */; };
 		6A5543DF0CF2BE7084D81AD7 /* SnoozeIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = F96F41FC3F5238CCFA070204 /* SnoozeIntent.swift */; };
@@ -49,7 +49,6 @@
 		75F6F1776DF5731E152893A0 /* AlarmStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B70862277833BF001ABA7BBE /* AlarmStore.swift */; };
 		7743920775A80D0A96A0E580 /* ConfiguratorControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0A332FB8767D07D2F81AAFA /* ConfiguratorControls.swift */; };
 		77EF586640E2BA39DCC5BEC2 /* AlarmEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 338D2925467C9DAB2942FEFC /* AlarmEditorView.swift */; };
-		7BA060BB37B80BA412CEDAD2 /* CameraPermissionFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0D76FEDE3BB76B1F7293AA9 /* CameraPermissionFlow.swift */; };
 		7BB95DE5BC27762D0DBD5AF4 /* TaskConfiguratorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 453CBBCD833D2EBEDD7AC537 /* TaskConfiguratorSheet.swift */; };
 		7E0D34EB26A3B613FF9DADE9 /* HapticRamp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCE731BCCB1CA21F5D24555B /* HapticRamp.swift */; };
 		7E4B4B1F8DFE262475178B09 /* MathConfigurator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C78E3ECE947AFD666044F7A /* MathConfigurator.swift */; };
@@ -82,6 +81,7 @@
 		B576988177A89C0732E710A7 /* ObjectScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8261AEDC3C7E2357DBDAE53F /* ObjectScanner.swift */; };
 		BD8A90252F2F3669200E2C4F /* OpenAlarmTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 339F4E487D879956D310862D /* OpenAlarmTheme.swift */; };
 		BDD2C5EBBA247FBB4FD16F4D /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 2E7F4014449CC01093832222 /* InfoPlist.strings */; };
+		C015846F12B1BB782D9A0FCA /* TaskPermissionFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F56204943EF2EB414FECD3E8 /* TaskPermissionFlow.swift */; };
 		C327B3F413FE4A38DAF74852 /* BackstopSlotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0DD4B896793968D6338FC7 /* BackstopSlotStore.swift */; };
 		C46534E1686286BBEC56D511 /* MemoryConfigurator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1905F484888DEF43ACE01077 /* MemoryConfigurator.swift */; };
 		C51C46AE71920DAA1B16253B /* BackstopSlotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0DD4B896793968D6338FC7 /* BackstopSlotStore.swift */; };
@@ -141,6 +141,7 @@
 		07291350CDE6FB5A563F6EB0 /* NapBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NapBannerView.swift; sourceTree = "<group>"; };
 		08633EC56E1799D43A24AE9A /* TaskModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskModels.swift; sourceTree = "<group>"; };
 		08A54FDEF2083496C9F923CD /* AlarmSoundLiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmSoundLiveActivityManager.swift; sourceTree = "<group>"; };
+		0CC95C421FBD8CD3AEE0C50A /* PedometerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PedometerService.swift; sourceTree = "<group>"; };
 		0D166817BB079DD4546C285D /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		0F8D42FB1C4E405F01316E3D /* ShakeTaskDescriptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShakeTaskDescriptor.swift; sourceTree = "<group>"; };
 		1026E6B6735DA2D0141B5895 /* AlarmHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmHomeView.swift; sourceTree = "<group>"; };
@@ -190,7 +191,6 @@
 		9A5A2891C11E40725EB86AA0 /* ScanTaskDescriptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanTaskDescriptor.swift; sourceTree = "<group>"; };
 		A06DA178A073176D55E9CDD1 /* NapDurationPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NapDurationPicker.swift; sourceTree = "<group>"; };
 		A0A332FB8767D07D2F81AAFA /* ConfiguratorControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfiguratorControls.swift; sourceTree = "<group>"; };
-		A0D76FEDE3BB76B1F7293AA9 /* CameraPermissionFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPermissionFlow.swift; sourceTree = "<group>"; };
 		A33ABC03E5073EF42843F709 /* TaskSoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSoundManager.swift; sourceTree = "<group>"; };
 		AAC4F90011CEA2952C0DEC7A /* StopIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StopIntent.swift; sourceTree = "<group>"; };
 		AE222D66729DAB174BBE549D /* AlarmPermissionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmPermissionService.swift; sourceTree = "<group>"; };
@@ -213,7 +213,6 @@
 		D4C65D29F82E70C88900C16A /* WakeUpCheckConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeUpCheckConfirmationView.swift; sourceTree = "<group>"; };
 		DA110F30C0C8E9D50303CDA8 /* OpenAlarmApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAlarmApp.swift; sourceTree = "<group>"; };
 		DAD33FEE543D66DEBCB7E592 /* NapCountdownLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NapCountdownLiveActivityWidget.swift; sourceTree = "<group>"; };
-		DD6B8D3386C3864DAC75CE58 /* StepDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepDetector.swift; sourceTree = "<group>"; };
 		DDB2A8D48318B1F111F45CB8 /* NapCountdownLiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NapCountdownLiveActivityManager.swift; sourceTree = "<group>"; };
 		E43A03F552339F3CF4DBCF2C /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		E69BE263B8EB27F471F84921 /* DummyTaskView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DummyTaskView.swift; sourceTree = "<group>"; };
@@ -222,6 +221,7 @@
 		E9F25B8B78A0594DE5563131 /* AlarmDefinition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmDefinition.swift; sourceTree = "<group>"; };
 		EF31DE975F3205E7AB2835DB /* MemoryPatternGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryPatternGenerator.swift; sourceTree = "<group>"; };
 		F52C8F1CE7608625F167AE21 /* TaskDescriptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDescriptor.swift; sourceTree = "<group>"; };
+		F56204943EF2EB414FECD3E8 /* TaskPermissionFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskPermissionFlow.swift; sourceTree = "<group>"; };
 		F68BF27EA97B5D8C42193398 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		F6A5DA3C14440E7AD45FD911 /* AlarmPersistenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmPersistenceStore.swift; sourceTree = "<group>"; };
 		F96F41FC3F5238CCFA070204 /* SnoozeIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnoozeIntent.swift; sourceTree = "<group>"; };
@@ -288,6 +288,7 @@
 				2A7335668C12A3AE0B905A68 /* NotificationPermissionService.swift */,
 				8261AEDC3C7E2357DBDAE53F /* ObjectScanner.swift */,
 				30A4F32DD5585DAC4885AD99 /* OpenAlarmNotificationDelegate.swift */,
+				0CC95C421FBD8CD3AEE0C50A /* PedometerService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -368,12 +369,12 @@
 		771D83AC3FD25B917E843ED6 /* Tasks */ = {
 			isa = PBXGroup;
 			children = (
-				A0D76FEDE3BB76B1F7293AA9 /* CameraPermissionFlow.swift */,
 				85E2DD94D51593407FD3EE4D /* ForceCloseAlarmManager.swift */,
 				453CBBCD833D2EBEDD7AC537 /* TaskConfiguratorSheet.swift */,
 				69CD58B4B56C7061B7680177 /* TaskContainerView.swift */,
 				F52C8F1CE7608625F167AE21 /* TaskDescriptor.swift */,
 				08633EC56E1799D43A24AE9A /* TaskModels.swift */,
+				F56204943EF2EB414FECD3E8 /* TaskPermissionFlow.swift */,
 				47FED3CC874E76CAE49F2083 /* TaskPickerView.swift */,
 				A33ABC03E5073EF42843F709 /* TaskSoundManager.swift */,
 				3C782F1015010D823E642BC5 /* TaskSuccessOverlay.swift */,
@@ -414,7 +415,6 @@
 				EF31DE975F3205E7AB2835DB /* MemoryPatternGenerator.swift */,
 				240235EC641C7C41309129A9 /* ScanObjectCatalog.swift */,
 				8746634DEC601C7330B580D3 /* ShakeEnergyModel.swift */,
-				DD6B8D3386C3864DAC75CE58 /* StepDetector.swift */,
 			);
 			path = TaskLogic;
 			sourceTree = "<group>";
@@ -727,7 +727,6 @@
 				CEEB02817569AB0C4EDD35C2 /* AppRootView.swift in Sources */,
 				C327B3F413FE4A38DAF74852 /* BackstopSlotStore.swift in Sources */,
 				47FCB6814D4511114CEB807A /* BridgeDateCalculator.swift in Sources */,
-				7BA060BB37B80BA412CEDAD2 /* CameraPermissionFlow.swift in Sources */,
 				7743920775A80D0A96A0E580 /* ConfiguratorControls.swift in Sources */,
 				071ACA76C3342060EC83CC10 /* DawnTheme.swift in Sources */,
 				6ACE3E4E63888229376ABED0 /* DummyTaskView.swift in Sources */,
@@ -759,6 +758,7 @@
 				2A5D2E4A4D01C891C5015C30 /* OpenAlarmNotificationDelegate.swift in Sources */,
 				146CCBAF1431CDDFB450335F /* OpenAlarmSharedDefaults.swift in Sources */,
 				BD8A90252F2F3669200E2C4F /* OpenAlarmTheme.swift in Sources */,
+				616C230F6BD6A626D73F1446 /* PedometerService.swift in Sources */,
 				D9432E52F3D120C62E8C328D /* ScanConfigurator.swift in Sources */,
 				2E8D1CE7F97C55CFE5EC0617 /* ScanObjectCatalog.swift in Sources */,
 				4FFD6F992FDAA81B114DB38A /* ScanTaskDescriptor.swift in Sources */,
@@ -770,7 +770,6 @@
 				6AC02B86F9EEB040AD1538ED /* ShakeTaskView.swift in Sources */,
 				C669FDD2D25E4256D2430161 /* SharedAlarmSettingsEditor.swift in Sources */,
 				6A5543DF0CF2BE7084D81AD7 /* SnoozeIntent.swift in Sources */,
-				10B6E6927375762D54364FF1 /* StepDetector.swift in Sources */,
 				27435B590BF094FB2B446C34 /* StepsConfigurator.swift in Sources */,
 				A8AF500A84017665482B591C /* StepsTaskDescriptor.swift in Sources */,
 				CF554590636629F370F85DE7 /* StepsTaskView.swift in Sources */,
@@ -779,6 +778,7 @@
 				974FD79688FBEB8E7177C5D6 /* TaskContainerView.swift in Sources */,
 				5BBDDAEC00D34E018EE30CC5 /* TaskDescriptor.swift in Sources */,
 				8FA79F0AB5D2E8B852D32CB8 /* TaskModels.swift in Sources */,
+				C015846F12B1BB782D9A0FCA /* TaskPermissionFlow.swift in Sources */,
 				952549010D26250A8200DD59 /* TaskPickerView.swift in Sources */,
 				A101678070DC3DC291BCB24F /* TaskSoundManager.swift in Sources */,
 				91CA1CC8023DD197638A5896 /* TaskSuccessOverlay.swift in Sources */,

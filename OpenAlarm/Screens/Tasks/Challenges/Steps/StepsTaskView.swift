@@ -6,13 +6,9 @@ struct StepsTaskView: View {
     let mode: TaskMode
     var onEvent: (TaskEvent) -> Void
 
-    @State private var detector = StepDetector()
-    @State private var token: MotionService.Token?
     @State private var displayedSteps = 0
-    @State private var receivedSample = false
     @State private var showingFallback = false
     @State private var didComplete = false
-    @State private var noSampleTask: Task<Void, Never>?
 
     @ScaledMetric(relativeTo: .largeTitle) private var counterFontSize: CGFloat = 76
 
@@ -35,7 +31,7 @@ struct StepsTaskView: View {
             Spacer()
         }
         .padding(OASpacing.screenMargin)
-        .onAppear(perform: beginMotion)
+        .onAppear(perform: beginPedometer)
         .onDisappear(perform: stopEverything)
     }
 
@@ -55,65 +51,50 @@ struct StepsTaskView: View {
     }
 
     private var fallbackControl: some View {
-        Button {
-            completeTask()
-        } label: {
-            Text(L10n.taskStepsUnavailableFallback)
-                .font(OADawnType.button)
-                .foregroundStyle(DawnPalette.inkDark)
-                .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+        Group {
+            if mode == .preview {
+                VStack(spacing: OASpacing.m) {
+                    Image(systemName: "figure.walk")
+                        .font(.system(size: 44, weight: .semibold))
+
+                    Text(L10n.taskStepsUnavailablePreview)
+                        .font(OADawnType.chip)
+                        .multilineTextAlignment(.center)
+                }
+                .foregroundStyle(.white)
+            } else {
+                Button {
+                    completeTask()
+                } label: {
+                    Text(L10n.taskStepsUnavailableFallback)
+                        .font(OADawnType.button)
+                        .foregroundStyle(DawnPalette.inkDark)
+                        .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+                }
+                .background(Color.white, in: Capsule())
+                .buttonStyle(.plain)
+            }
         }
-        .background(Color.white, in: Capsule())
-        .buttonStyle(.plain)
     }
 
-    private func beginMotion() {
-        guard !didComplete, token == nil else {
+    private func beginPedometer() {
+        guard !didComplete else {
             return
         }
 
-        detector.reset()
         displayedSteps = 0
-        receivedSample = false
-        token = MotionService.shared.subscribe { magnitude, dt in
-            receiveSample(magnitude: magnitude, dt: dt)
-        }
-
-        guard token != nil else {
-            handleUnavailableMotion()
-            return
-        }
-
-        noSampleTask = Task { @MainActor in
-            do {
-                try await Task.sleep(for: .seconds(3))
-            } catch {
-                return
-            }
-
-            guard !Task.isCancelled, !receivedSample, !didComplete else {
-                return
-            }
-
-            handleUnavailableMotion()
-        }
+        PedometerService.shared.startUpdates(
+            receiveSteps,
+            onError: handleUnavailable
+        )
     }
 
-    private func receiveSample(magnitude: Double, dt: Double) {
+    private func receiveSteps(_ steps: Int) {
         guard !didComplete, !showingFallback else {
             return
         }
 
-        receivedSample = true
-        noSampleTask?.cancel()
-        noSampleTask = nil
-
-        let creditedSteps = detector.process(magnitude: magnitude, dt: dt)
-        guard creditedSteps > 0 else {
-            return
-        }
-
-        displayedSteps = detector.stepCount
+        displayedSteps = steps
         onEvent(.progress(min(Double(displayedSteps) / Double(count), 1)))
 
         if displayedSteps >= count {
@@ -121,10 +102,8 @@ struct StepsTaskView: View {
         }
     }
 
-    private func handleUnavailableMotion() {
-        // Previews intentionally retain their DEBUG simulator when Core Motion is
-        // unavailable, matching the shake task's simulator-friendly behavior.
-        guard mode == .wake else {
+    private func handleUnavailable() {
+        guard !didComplete else {
             return
         }
 
@@ -145,11 +124,6 @@ struct StepsTaskView: View {
     }
 
     private func stopEverything() {
-        if let token {
-            MotionService.shared.cancel(token)
-            self.token = nil
-        }
-        noSampleTask?.cancel()
-        noSampleTask = nil
+        PedometerService.shared.stopUpdates()
     }
 }

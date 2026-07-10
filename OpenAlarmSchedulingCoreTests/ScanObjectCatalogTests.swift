@@ -3,11 +3,14 @@ import XCTest
 
 final class ScanObjectCatalogTests: XCTestCase {
     func testEntriesAreNonEmptyAndHaveUniqueIdentifiers() {
-        XCTAssertFalse(ScanObjectCatalog.entries.isEmpty)
+        XCTAssertEqual(ScanObjectCatalog.entries.count, 9)
         XCTAssertEqual(
             Set(ScanObjectCatalog.entries.map(\.id)).count,
             ScanObjectCatalog.entries.count
         )
+        XCTAssertEqual(ScanObjectCatalog.entry(for: "book")?.systemImage, "book.fill")
+        XCTAssertEqual(ScanObjectCatalog.entry(for: "television")?.systemImage, "tv")
+        XCTAssertNil(ScanObjectCatalog.entry(for: "kitchen_sink"))
     }
 
     func testLookupReturnsMatchingEntryAndIsNilSafe() {

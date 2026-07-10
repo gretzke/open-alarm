@@ -12,6 +12,7 @@ enum TaskEvent {
 
 enum TaskPermission: Equatable {
     case camera
+    case motion
 }
 
 @MainActor

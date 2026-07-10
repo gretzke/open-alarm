@@ -15,9 +15,10 @@ struct ScanObjectCatalog {
         .init(id: "laptop", systemImage: "laptopcomputer"),
         .init(id: "computer_keyboard", systemImage: "keyboard"),
         .init(id: "refrigerator", systemImage: "refrigerator.fill"),
-        .init(id: "kitchen_sink", systemImage: "sink.fill"),
+        .init(id: "book", systemImage: "book.fill"),
         .init(id: "toilet_seat", systemImage: "toilet.fill"),
         .init(id: "shoes", systemImage: "shoe.2.fill"),
+        .init(id: "television", systemImage: "tv"),
     ]
 
     static func entry(for id: String) -> Entry? {

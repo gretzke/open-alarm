@@ -162,6 +162,11 @@ enum L10n {
     static let taskStepsTitle: LocalizedStringKey = "task_steps_title"
     static let taskStepsCountTitle: LocalizedStringKey = "task_steps_count_title"
     static let taskStepsUnavailableFallback: LocalizedStringKey = "task_steps_unavailable_fallback"
+    static let taskStepsUnavailablePreview: LocalizedStringKey = "task_steps_unavailable_preview"
+    static let taskStepsMotionPermissionPromptTitle: LocalizedStringKey = "task_steps_motion_permission_prompt_title"
+    static let taskStepsMotionPermissionPromptBody: LocalizedStringKey = "task_steps_motion_permission_prompt_body"
+    static let taskStepsMotionPermissionDeniedTitle: LocalizedStringKey = "task_steps_motion_permission_denied_title"
+    static let taskStepsMotionPermissionDeniedBody: LocalizedStringKey = "task_steps_motion_permission_denied_body"
     static let taskScanName = String(localized: "task_scan_name")
     static let taskScanTitle: LocalizedStringKey = "task_scan_title"
     static let taskScanObjectTitle: LocalizedStringKey = "task_scan_object_title"
@@ -183,9 +188,10 @@ enum L10n {
         case "laptop": String(localized: "task_scan_object_laptop")
         case "computer_keyboard": String(localized: "task_scan_object_computer_keyboard")
         case "refrigerator": String(localized: "task_scan_object_refrigerator")
-        case "kitchen_sink": String(localized: "task_scan_object_kitchen_sink")
+        case "book": String(localized: "task_scan_object_book")
         case "toilet_seat": String(localized: "task_scan_object_toilet_seat")
         case "shoes": String(localized: "task_scan_object_shoes")
+        case "television": String(localized: "task_scan_object_television")
         default: identifier
         }
     }

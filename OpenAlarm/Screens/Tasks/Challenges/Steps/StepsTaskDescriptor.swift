@@ -5,6 +5,7 @@ struct StepsTaskDescriptor: TaskDescriptor {
     let displayName = L10n.taskStepsName
     let systemImage = "figure.walk"
     let defaultTask: AlarmTask = .steps(count: 30)
+    let requiredPermission: TaskPermission? = .motion
 
     func matches(_ task: AlarmTask) -> Bool {
         if case .steps = task { return true }
