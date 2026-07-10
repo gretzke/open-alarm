@@ -24,3 +24,23 @@ struct ScanObjectCatalog {
         entries.first { $0.id == id }
     }
 }
+
+/// Decides whether a single classification frame counts as seeing the target.
+///
+/// Absolute Vision confidences run low in real cluttered scenes — a clearly
+/// visible object can score under 0.05 — so the target's rank among all
+/// classes is the primary signal, with a small confidence floor to reject
+/// frames where the classifier is guessing across the board.
+enum ScanMatchPolicy {
+    static let requiredConsecutiveMatches = 4
+
+    static func isMatch(rank: Int?, confidence: Double) -> Bool {
+        if confidence >= 0.15 {
+            return true
+        }
+        guard let rank else {
+            return false
+        }
+        return rank <= 3 && confidence >= 0.02
+    }
+}

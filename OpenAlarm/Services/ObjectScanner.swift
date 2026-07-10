@@ -5,10 +5,19 @@ import Vision
 /// Owns the camera and Vision work for a scan-object task instance.
 /// Session configuration and start/stop work stay off the main thread so the
 /// dawn UI remains responsive while the preview is visible.
+/// One evaluated classification frame. `frame` increments monotonically so
+/// SwiftUI onChange fires even when consecutive frames evaluate identically.
+struct ScanSample: Equatable {
+    let frame: Int
+    let isMatch: Bool
+}
+
 @MainActor
 final class ObjectScanner: NSObject, ObservableObject {
-    @Published private(set) var lastConfidence = 0.0
+    @Published private(set) var lastSample: ScanSample?
     @Published private(set) var isAvailable = true
+
+    private var frameCount = 0
 
     let previewLayer: AVCaptureVideoPreviewLayer?
 
@@ -30,9 +39,9 @@ final class ObjectScanner: NSObject, ObservableObject {
         super.init()
 
         previewLayer?.videoGravity = .resizeAspectFill
-        camera.onConfidence = { [weak self] confidence, generation in
+        camera.onSample = { [weak self] confidence, rank, generation in
             DispatchQueue.main.async { [weak self] in
-                self?.receive(confidence: confidence, generation: generation)
+                self?.receive(confidence: confidence, rank: rank, generation: generation)
             }
         }
         camera.onFailure = { [weak self] generation in
@@ -67,7 +76,8 @@ final class ObjectScanner: NSObject, ObservableObject {
         }
 
         isAvailable = true
-        lastConfidence = 0
+        lastSample = nil
+        frameCount = 0
         generation = UUID()
         let currentGeneration = generation
 
@@ -79,11 +89,15 @@ final class ObjectScanner: NSObject, ObservableObject {
         camera.stop()
     }
 
-    private func receive(confidence: Double, generation: UUID) {
+    private func receive(confidence: Double, rank: Int?, generation: UUID) {
         guard self.generation == generation else {
             return
         }
-        lastConfidence = min(max(confidence, 0), 1)
+        frameCount += 1
+        lastSample = ScanSample(
+            frame: frameCount,
+            isMatch: ScanMatchPolicy.isMatch(rank: rank, confidence: confidence)
+        )
     }
 
     private func receiveFailure(generation: UUID) {
@@ -99,7 +113,7 @@ final class ObjectScanner: NSObject, ObservableObject {
 /// The unchecked Sendable conformance documents that confinement for dispatch
 /// closures while `ObjectScanner` remains main-actor isolated for SwiftUI.
 private final class CameraSession: @unchecked Sendable {
-    var onConfidence: ((Double, UUID) -> Void)?
+    var onSample: ((Double, Int?, UUID) -> Void)?
     var onFailure: ((UUID) -> Void)?
 
     let session = AVCaptureSession()
@@ -112,8 +126,8 @@ private final class CameraSession: @unchecked Sendable {
 
     init() {
         previewLayer = AVCaptureVideoPreviewLayer(session: session)
-        processor.onConfidence = { [weak self] confidence, generation in
-            self?.onConfidence?(confidence, generation)
+        processor.onSample = { [weak self] confidence, rank, generation in
+            self?.onSample?(confidence, rank, generation)
         }
         processor.onFailure = { [weak self] generation in
             self?.onFailure?(generation)
@@ -187,7 +201,7 @@ private final class CameraSession: @unchecked Sendable {
 }
 
 private final class ClassificationProcessor: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
-    var onConfidence: ((Double, UUID) -> Void)?
+    var onSample: ((Double, Int?, UUID) -> Void)?
     var onFailure: ((UUID) -> Void)?
 
     private var request: VNClassifyImageRequest?
@@ -230,10 +244,12 @@ private final class ClassificationProcessor: NSObject, AVCaptureVideoDataOutputS
         do {
             let handler = VNImageRequestHandler(cmSampleBuffer: sampleBuffer, orientation: .up, options: [:])
             try handler.perform([request])
-            let confidence = request.results?
-                .first(where: { $0.identifier == target })?
-                .confidence ?? 0
-            onConfidence?(Double(confidence), generation)
+            let ranked = (request.results ?? []).sorted { $0.confidence > $1.confidence }
+            let rank = ranked
+                .firstIndex(where: { $0.identifier == target })
+                .map { $0 + 1 }
+            let confidence = rank.map { Double(ranked[$0 - 1].confidence) } ?? 0
+            onSample?(confidence, rank, generation)
         } catch {
             onFailure?(generation)
         }

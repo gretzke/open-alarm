@@ -34,8 +34,8 @@ struct ScanTaskView: View {
         .padding(OASpacing.screenMargin)
         .onAppear(perform: beginScanning)
         .onDisappear(perform: stopEverything)
-        .onChange(of: scanner.lastConfidence) { _, confidence in
-            handleConfidence(confidence)
+        .onChange(of: scanner.lastSample) { _, sample in
+            handleSample(sample)
         }
         .onChange(of: scanner.isAvailable) { _, isAvailable in
             if !isAvailable {
@@ -52,7 +52,7 @@ struct ScanTaskView: View {
                 VStack {
                     targetChip
                     Spacer()
-                    confidenceMeter
+                    lockOnMeter
                 }
                 .padding(OASpacing.m)
             }
@@ -74,24 +74,24 @@ struct ScanTaskView: View {
             .background(.white.opacity(0.88), in: Capsule())
     }
 
-    private var confidenceMeter: some View {
-        VStack(alignment: .leading, spacing: OASpacing.xs) {
-            GeometryReader { geometry in
-                Capsule()
-                    .fill(.white.opacity(0.28))
-                    .overlay(alignment: .leading) {
-                        Capsule()
-                            .fill(.white)
-                            .frame(width: geometry.size.width * min(max(scanner.lastConfidence / 0.25, 0), 1))
-                    }
-            }
-            .frame(height: OASpacing.s)
-
-            Text(scanner.lastConfidence, format: .percent.precision(.fractionLength(0)))
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.white)
-                .monospacedDigit()
+    // Lock-on progress: fills one segment per consecutive match frame. No raw
+    // classifier numbers — absolute Vision confidences are meaningless to users.
+    private var lockOnMeter: some View {
+        GeometryReader { geometry in
+            Capsule()
+                .fill(.white.opacity(0.28))
+                .overlay(alignment: .leading) {
+                    Capsule()
+                        .fill(.white)
+                        .frame(
+                            width: geometry.size.width
+                                * Double(consecutiveHits)
+                                / Double(ScanMatchPolicy.requiredConsecutiveMatches)
+                        )
+                }
         }
+        .frame(height: OASpacing.s)
+        .animation(.easeOut(duration: 0.25), value: consecutiveHits)
         .padding(OASpacing.m)
         .background(.black.opacity(0.32), in: RoundedRectangle(cornerRadius: OARadius.chip, style: .continuous))
     }
@@ -137,22 +137,22 @@ struct ScanTaskView: View {
         scanner.start(target: target)
     }
 
-    private func handleConfidence(_ confidence: Double) {
-        guard !didComplete, !showingFallback else {
+    private func handleSample(_ sample: ScanSample?) {
+        guard !didComplete, !showingFallback, let sample else {
             return
         }
 
-        guard confidence >= 0.25 else {
+        guard sample.isMatch else {
             consecutiveHits = 0
             onEvent(.progress(0))
             return
         }
 
         consecutiveHits += 1
-        onEvent(.progress(Double(consecutiveHits) / 4))
+        onEvent(.progress(Double(consecutiveHits) / Double(ScanMatchPolicy.requiredConsecutiveMatches)))
         Haptics.impact(.light)
 
-        if consecutiveHits >= 4 {
+        if consecutiveHits >= ScanMatchPolicy.requiredConsecutiveMatches {
             completeTask()
         }
     }
