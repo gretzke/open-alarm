@@ -11,6 +11,8 @@ struct TaskContainerView: View {
     @State private var forceCloseManager: ForceCloseAlarmManager?
     @State private var isDismissed = false
     @State private var currentTaskIndex = 0
+    @State private var hasCompletedCurrentTask = false
+    @State private var withinTaskProgress: Double = 0
 
     init(
         alarm: AlarmDefinition,
@@ -159,17 +161,20 @@ struct TaskContainerView: View {
         return String(localized: "a11y_task_mute_button")
     }
 
-    @ViewBuilder
     private func taskView(for task: AlarmTask) -> some View {
-        switch task {
-        case .dummy:
-            DummyTaskView {
-                advanceOrComplete()
-            }
-        case .math(let difficulty, let count):
-            MathTaskView(difficulty: difficulty, totalCount: count) {
-                advanceOrComplete()
-            }
+        TaskRegistry.descriptor(for: task)
+            .makeTaskView(task, mode: .wake, onEvent: handleTaskEvent)
+            .id(currentTaskIndex)
+    }
+
+    private func handleTaskEvent(_ event: TaskEvent) {
+        switch event {
+        case .progress(let progress):
+            withinTaskProgress = min(max(progress, 0), 1)
+        case .completed:
+            guard !hasCompletedCurrentTask else { return }
+            hasCompletedCurrentTask = true
+            advanceOrComplete()
         }
     }
 
@@ -179,6 +184,8 @@ struct TaskContainerView: View {
             complete()
         } else {
             currentTaskIndex = nextIndex
+            hasCompletedCurrentTask = false
+            withinTaskProgress = 0
         }
     }
 

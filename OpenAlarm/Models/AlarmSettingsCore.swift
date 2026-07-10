@@ -97,7 +97,7 @@ enum MathDifficulty: String, Codable, CaseIterable, Sendable {
     case hard
 }
 
-enum AlarmTask: Codable, Equatable, Sendable {
+enum AlarmTask: Codable, Equatable, Hashable, Sendable {
     case dummy
     case math(difficulty: MathDifficulty, count: Int)
 

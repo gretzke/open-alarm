@@ -2,43 +2,28 @@ import SwiftUI
 
 // MARK: - Task Registry
 
+@MainActor
 enum TaskRegistry {
-    enum TaskTypeID {
-        static let dummy = "dummy"
-        static let math = "math"
-    }
+    private static let dummyDescriptor = DummyTaskDescriptor()
+    private static let mathDescriptor = MathTaskDescriptor()
 
-    struct TaskTypeInfo: Identifiable {
-        let id: String
-        let displayName: String
-        let systemImage: String
-    }
-
-    static let dummyType = TaskTypeInfo(id: TaskTypeID.dummy, displayName: String(localized: "task_dummy_name"), systemImage: "hand.tap")
-    static let mathType = TaskTypeInfo(id: TaskTypeID.math, displayName: String(localized: "task_math_name"), systemImage: "number")
-
-    static let availableTypes: [TaskTypeInfo] = [
-        dummyType,
-        mathType,
+    static let descriptors: [any TaskDescriptor] = [
+        dummyDescriptor,
+        mathDescriptor,
     ]
 
-    static func typeInfo(for task: AlarmTask) -> TaskTypeInfo {
+    /// The runtime lookup intentionally does not apply picker-visibility rules.
+    /// Persisted dummy tasks must continue to run outside testing mode.
+    static func descriptor(for task: AlarmTask) -> any TaskDescriptor {
         switch task {
         case .dummy:
-            dummyType
+            dummyDescriptor
         case .math:
-            mathType
+            mathDescriptor
         }
     }
 
-    static func defaultTask(for typeInfo: TaskTypeInfo) -> AlarmTask? {
-        switch typeInfo.id {
-        case TaskTypeID.dummy:
-            .dummy
-        case TaskTypeID.math:
-            .math(difficulty: .simple, count: 3)
-        default:
-            nil
-        }
+    static func pickerDescriptors(testingMode: Bool) -> [any TaskDescriptor] {
+        descriptors.filter { $0.isVisibleInPicker(testingMode: testingMode) }
     }
 }

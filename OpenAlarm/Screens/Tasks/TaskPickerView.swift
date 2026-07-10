@@ -3,11 +3,12 @@ import UniformTypeIdentifiers
 
 struct TaskPickerView: View {
     @Binding var tasks: [AlarmTask]
+    @EnvironmentObject private var alarmStore: AlarmStore
     private let maxTasks = 5
 
     @State private var showingTypeList = false
     @State private var editingIndex: Int?
-    @State private var settingsTask: AlarmTask?
+    @State private var settingsTask: IdentifiedTask?
     @State private var draggingIndex: Int?
 
     var body: some View {
@@ -31,25 +32,25 @@ struct TaskPickerView: View {
         .sheet(isPresented: $showingTypeList) {
             taskTypeListSheet
         }
-        .sheet(item: $settingsTask) { task in
+        .sheet(item: $settingsTask) { identifiedTask in
             NavigationStack {
-                taskSettingsView(for: task)
+                taskSettingsView(for: identifiedTask)
             }
         }
     }
 
     private func filledTile(at index: Int) -> some View {
         let task = tasks[index]
-        let info = TaskRegistry.typeInfo(for: task)
+        let descriptor = TaskRegistry.descriptor(for: task)
         return ZStack(alignment: .topTrailing) {
             Button {
                 editingIndex = index
-                settingsTask = task
+                settingsTask = IdentifiedTask(task: task)
             } label: {
                 VStack(spacing: 4) {
-                    Image(systemName: info.systemImage)
+                    Image(systemName: descriptor.systemImage)
                         .font(.title3)
-                    Text(info.displayName)
+                    Text(descriptor.displayName)
                         .font(.caption2)
                         .lineLimit(1)
                 }
@@ -99,15 +100,15 @@ struct TaskPickerView: View {
 
     private var taskTypeListSheet: some View {
         NavigationStack {
-            List(TaskRegistry.availableTypes) { typeInfo in
+            List(TaskRegistry.pickerDescriptors(testingMode: alarmStore.testingModeEnabled), id: \.typeID) { descriptor in
                 Button {
                     showingTypeList = false
                     // Short delay for sheet dismiss animation
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        settingsTask = TaskRegistry.defaultTask(for: typeInfo)
+                        settingsTask = IdentifiedTask(task: descriptor.defaultTask)
                     }
                 } label: {
-                    Label(typeInfo.displayName, systemImage: typeInfo.systemImage)
+                    Label(descriptor.displayName, systemImage: descriptor.systemImage)
                 }
             }
             .navigationTitle(String(localized: "task_picker_choose_type"))
@@ -116,18 +117,18 @@ struct TaskPickerView: View {
     }
 
     @ViewBuilder
-    private func taskSettingsView(for task: AlarmTask) -> some View {
-        let isEditing = editingIndex != nil
-        switch task {
-        case .dummy:
-            DummySettingsView(existingTask: isEditing ? task : nil) { newTask in
-                applyTask(newTask)
+    private func taskSettingsView(for identifiedTask: IdentifiedTask) -> some View {
+        TaskRegistry.descriptor(for: identifiedTask.task).makeConfigurator(taskBinding(for: identifiedTask))
+    }
+
+    private func taskBinding(for identifiedTask: IdentifiedTask) -> Binding<AlarmTask> {
+        Binding(
+            get: { settingsTask?.task ?? identifiedTask.task },
+            set: { configuredTask in
+                guard settingsTask?.id == identifiedTask.id else { return }
+                applyTask(configuredTask)
             }
-        case .math:
-            MathSettingsView(existingTask: isEditing ? task : nil) { newTask in
-                applyTask(newTask)
-            }
-        }
+        )
     }
 
     private func applyTask(_ task: AlarmTask) {
@@ -139,6 +140,11 @@ struct TaskPickerView: View {
         settingsTask = nil
         editingIndex = nil
     }
+}
+
+private struct IdentifiedTask: Identifiable {
+    let id = UUID()
+    let task: AlarmTask
 }
 
 private struct TaskDropDelegate: DropDelegate {
@@ -161,14 +167,5 @@ private struct TaskDropDelegate: DropDelegate {
     func performDrop(info: DropInfo) -> Bool {
         draggingIndex = nil
         return true
-    }
-}
-
-extension AlarmTask: Identifiable {
-    var id: String {
-        switch self {
-        case .dummy: TaskRegistry.TaskTypeID.dummy
-        case .math(let d, let c): "\(TaskRegistry.TaskTypeID.math)_\(d.rawValue)_\(c)"
-        }
     }
 }
