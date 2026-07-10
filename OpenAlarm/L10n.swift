@@ -167,6 +167,12 @@ enum L10n {
     static let taskScanObjectTitle: LocalizedStringKey = "task_scan_object_title"
     static let taskScanUnavailableFallback: LocalizedStringKey = "task_scan_unavailable_fallback"
     static let taskScanSimulate: LocalizedStringKey = "task_scan_simulate"
+    static let taskScanCameraPermissionPromptTitle: LocalizedStringKey = "task_scan_camera_permission_prompt_title"
+    static let taskScanCameraPermissionPromptBody: LocalizedStringKey = "task_scan_camera_permission_prompt_body"
+    static let taskScanCameraPermissionDeniedTitle: LocalizedStringKey = "task_scan_camera_permission_denied_title"
+    static let taskScanCameraPermissionDeniedBody: LocalizedStringKey = "task_scan_camera_permission_denied_body"
+    static let taskScanCameraPlaceholder: LocalizedStringKey = "task_scan_camera_placeholder"
+    static let taskScanEnableCamera: LocalizedStringKey = "task_scan_enable_camera"
 
     static func taskStepsCounter(_ steps: Int, goal: Int) -> String {
         String(format: String(localized: "task_steps_counter_format"), steps, goal)

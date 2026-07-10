@@ -1,13 +1,18 @@
+import AVFoundation
 import SwiftUI
 
 struct TaskConfiguratorContent: View {
     let onSave: (AlarmTask) -> Void
     let onCancel: (() -> Void)?
 
+    @Environment(\.scenePhase) private var scenePhase
+    @EnvironmentObject private var alarmStore: AlarmStore
     @State private var draft: AlarmTask
     @State private var previewProgress = 0.3
     @State private var previewGeneration = 0
     @State private var previewResetTask: Task<Void, Never>?
+    @State private var cameraPermissionFlowStep: CameraPermissionFlowStep?
+    @State private var saveAfterPermissionCoverDismisses = false
 
     init(
         initial: AlarmTask,
@@ -42,7 +47,7 @@ struct TaskConfiguratorContent: View {
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 Button(L10n.taskConfiguratorSave) {
-                    onSave(draft)
+                    attemptSave()
                 }
             }
             if let onCancel {
@@ -58,6 +63,31 @@ struct TaskConfiguratorContent: View {
         }
         .onDisappear {
             previewResetTask?.cancel()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active,
+                  cameraPermissionFlowStep == .denied,
+                  AVCaptureDevice.authorizationStatus(for: .video) == .authorized else {
+                return
+            }
+            cameraPermissionFlowStep = nil
+        }
+        .fullScreenCover(
+            item: $cameraPermissionFlowStep,
+            onDismiss: handlePermissionCoverDismissed
+        ) { step in
+            switch step {
+            case .prePrompt:
+                CameraPermissionPrePromptView(
+                    onRequestPermission: requestCameraPermission,
+                    onCancel: { cameraPermissionFlowStep = nil }
+                )
+            case .denied:
+                CameraPermissionDeniedView(
+                    onOpenSettings: alarmStore.openSettings,
+                    onCancel: { cameraPermissionFlowStep = nil }
+                )
+            }
         }
     }
 
@@ -103,6 +133,45 @@ struct TaskConfiguratorContent: View {
             previewGeneration &+= 1
             previewResetTask = nil
         }
+    }
+
+    private func attemptSave() {
+        guard TaskRegistry.descriptor(for: draft).requiredPermission == .camera else {
+            onSave(draft)
+            return
+        }
+
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            onSave(draft)
+        case .notDetermined:
+            cameraPermissionFlowStep = .prePrompt
+        case .denied, .restricted:
+            cameraPermissionFlowStep = .denied
+        @unknown default:
+            cameraPermissionFlowStep = .denied
+        }
+    }
+
+    private func requestCameraPermission() {
+        AVCaptureDevice.requestAccess(for: .video) { granted in
+            Task { @MainActor in
+                if granted {
+                    saveAfterPermissionCoverDismisses = true
+                    cameraPermissionFlowStep = nil
+                } else {
+                    cameraPermissionFlowStep = .denied
+                }
+            }
+        }
+    }
+
+    private func handlePermissionCoverDismissed() {
+        guard saveAfterPermissionCoverDismisses else {
+            return
+        }
+        saveAfterPermissionCoverDismisses = false
+        onSave(draft)
     }
 
 }

@@ -226,6 +226,12 @@
 "task_scan_object_title" = "Zu scannendes Objekt";
 "task_scan_unavailable_fallback" = "Schließen";
 "task_scan_simulate" = "Zum Simulieren halten";
+"task_scan_camera_permission_prompt_title" = "Kamerazugriff erlauben";
+"task_scan_camera_permission_prompt_body" = "OpenAlarm verwendet die Kamera, um beim Klingeln zu prüfen, ob du das ausgewählte Objekt gefunden hast.";
+"task_scan_camera_permission_denied_title" = "Kamerazugriff ist deaktiviert";
+"task_scan_camera_permission_denied_body" = "Erlaube den Kamerazugriff in den Einstellungen, um Scan-Aufgaben zu verwenden. Der Zugriff kann auch durch Geräterichtlinien eingeschränkt sein.";
+"task_scan_camera_placeholder" = "Für die Vorschau dieser Scan-Aufgabe ist Kamerazugriff erforderlich.";
+"task_scan_enable_camera" = "Kamera aktivieren";
 "task_scan_object_mug" = "Tasse";
 "task_scan_object_backpack" = "Rucksack";
 "task_scan_object_laptop" = "Laptop";

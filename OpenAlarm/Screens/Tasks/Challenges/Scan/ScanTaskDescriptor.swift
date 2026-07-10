@@ -5,6 +5,7 @@ struct ScanTaskDescriptor: TaskDescriptor {
     let displayName = L10n.taskScanName
     let systemImage = "viewfinder"
     let defaultTask: AlarmTask = .scanObject(objectClass: "mug")
+    let requiredPermission: TaskPermission? = .camera
 
     func matches(_ task: AlarmTask) -> Bool {
         if case .scanObject = task { return true }

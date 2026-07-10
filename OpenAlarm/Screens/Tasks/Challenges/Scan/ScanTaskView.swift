@@ -8,8 +8,13 @@ struct ScanTaskView: View {
     let mode: TaskMode
     var onEvent: (TaskEvent) -> Void
 
+    @Environment(\.scenePhase) private var scenePhase
+    @EnvironmentObject private var alarmStore: AlarmStore
     @StateObject private var scanner: ObjectScanner
     @State private var target: String?
+    @State private var cameraAuthorizationStatus: AVAuthorizationStatus
+    @State private var cameraPermissionFlowStep: CameraPermissionFlowStep?
+    @State private var startScannerAfterPermissionCoverDismisses = false
     @State private var consecutiveHits = 0
     @State private var showingFallback = false
     @State private var didComplete = false
@@ -24,12 +29,17 @@ struct ScanTaskView: View {
         self.onEvent = onEvent
         _scanner = StateObject(wrappedValue: scanner)
         _target = State(initialValue: scanner.resolvedTarget(for: objectClass))
+        _cameraAuthorizationStatus = State(
+            initialValue: AVCaptureDevice.authorizationStatus(for: .video)
+        )
     }
 
     var body: some View {
         Group {
             if showingFallback || target == nil {
                 fallbackContent
+            } else if mode == .preview, cameraAuthorizationStatus != .authorized {
+                cameraPermissionPlaceholder
             } else {
                 scannerContent
             }
@@ -43,6 +53,29 @@ struct ScanTaskView: View {
         .onChange(of: scanner.isAvailable) { _, isAvailable in
             if !isAvailable {
                 showFallback()
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else {
+                return
+            }
+            refreshCameraAuthorization()
+        }
+        .fullScreenCover(
+            item: $cameraPermissionFlowStep,
+            onDismiss: handlePermissionCoverDismissed
+        ) { step in
+            switch step {
+            case .prePrompt:
+                CameraPermissionPrePromptView(
+                    onRequestPermission: requestCameraPermission,
+                    onCancel: { cameraPermissionFlowStep = nil }
+                )
+            case .denied:
+                CameraPermissionDeniedView(
+                    onOpenSettings: alarmStore.openSettings,
+                    onCancel: { cameraPermissionFlowStep = nil }
+                )
             }
         }
     }
@@ -120,6 +153,28 @@ struct ScanTaskView: View {
         }
     }
 
+    private var cameraPermissionPlaceholder: some View {
+        VStack(spacing: OASpacing.m) {
+            Image(systemName: "camera.fill")
+                .font(.system(size: 44, weight: .semibold))
+                .foregroundStyle(.white)
+
+            Text(L10n.taskScanCameraPlaceholder)
+                .font(OADawnType.chip)
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+
+            Button(action: attemptEnableCamera) {
+                Text(L10n.taskScanEnableCamera)
+                    .font(OADawnType.button)
+                    .foregroundStyle(DawnPalette.inkDark)
+                    .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+            }
+            .background(.white, in: Capsule())
+            .buttonStyle(.plain)
+        }
+    }
+
 #if DEBUG
     private var debugSimulationControl: some View {
         Button(action: {}) {
@@ -145,22 +200,71 @@ struct ScanTaskView: View {
             return
         }
 
-        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        cameraAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
+        switch cameraAuthorizationStatus {
         case .authorized:
             scanner.start(target: target)
-        case .notDetermined:
-            scanner.requestCameraAccess { granted in
-                guard granted, !didComplete else {
-                    showFallback()
-                    return
-                }
-                scanner.start(target: target)
+        case .notDetermined, .denied, .restricted:
+            if mode == .wake {
+                showFallback()
             }
-        case .denied, .restricted:
-            showFallback()
         @unknown default:
-            showFallback()
+            if mode == .wake {
+                showFallback()
+            }
         }
+    }
+
+    private func attemptEnableCamera() {
+        cameraAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
+        switch cameraAuthorizationStatus {
+        case .authorized:
+            beginScanning()
+        case .notDetermined:
+            cameraPermissionFlowStep = .prePrompt
+        case .denied, .restricted:
+            cameraPermissionFlowStep = .denied
+        @unknown default:
+            cameraPermissionFlowStep = .denied
+        }
+    }
+
+    private func requestCameraPermission() {
+        AVCaptureDevice.requestAccess(for: .video) { granted in
+            Task { @MainActor in
+                cameraAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
+                if granted {
+                    startScannerAfterPermissionCoverDismisses = true
+                    cameraPermissionFlowStep = nil
+                } else {
+                    cameraPermissionFlowStep = .denied
+                }
+            }
+        }
+    }
+
+    private func refreshCameraAuthorization() {
+        let previousStatus = cameraAuthorizationStatus
+        cameraAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
+
+        guard cameraAuthorizationStatus == .authorized else {
+            return
+        }
+
+        if cameraPermissionFlowStep == .denied {
+            startScannerAfterPermissionCoverDismisses = true
+            cameraPermissionFlowStep = nil
+        } else if mode == .preview, previousStatus != .authorized {
+            beginScanning()
+        }
+    }
+
+    private func handlePermissionCoverDismissed() {
+        guard startScannerAfterPermissionCoverDismisses else {
+            return
+        }
+        startScannerAfterPermissionCoverDismisses = false
+        beginScanning()
     }
 
     private func handleConfidence(_ confidence: Double) {

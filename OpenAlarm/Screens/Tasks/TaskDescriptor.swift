@@ -10,16 +10,25 @@ enum TaskEvent {
     case completed
 }
 
+enum TaskPermission: Equatable {
+    case camera
+}
+
 @MainActor
 protocol TaskDescriptor {
     var typeID: String { get }
     var displayName: String { get }
     var systemImage: String { get }
     var defaultTask: AlarmTask { get }
+    var requiredPermission: TaskPermission? { get }
     func matches(_ task: AlarmTask) -> Bool
     func isVisibleInPicker(testingMode: Bool) -> Bool
     func makeTaskView(_ task: AlarmTask, mode: TaskMode, onEvent: @escaping (TaskEvent) -> Void) -> AnyView
     func makeConfigurator(_ task: Binding<AlarmTask>) -> AnyView
+}
+
+extension TaskDescriptor {
+    var requiredPermission: TaskPermission? { nil }
 }
 
 struct DummyTaskDescriptor: TaskDescriptor {

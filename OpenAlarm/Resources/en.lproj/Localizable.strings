@@ -226,6 +226,12 @@
 "task_scan_object_title" = "Object to scan";
 "task_scan_unavailable_fallback" = "Dismiss";
 "task_scan_simulate" = "Hold to simulate";
+"task_scan_camera_permission_prompt_title" = "Allow camera access";
+"task_scan_camera_permission_prompt_body" = "OpenAlarm uses the camera to verify that you found the selected object when your alarm rings.";
+"task_scan_camera_permission_denied_title" = "Camera access is off";
+"task_scan_camera_permission_denied_body" = "Allow camera access in Settings to use scan tasks. Access may also be restricted by device policies.";
+"task_scan_camera_placeholder" = "Camera access is needed to preview this scan task.";
+"task_scan_enable_camera" = "Enable camera";
 "task_scan_object_mug" = "Mug";
 "task_scan_object_backpack" = "Backpack";
 "task_scan_object_laptop" = "Laptop";

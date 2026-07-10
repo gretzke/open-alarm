@@ -8,7 +8,6 @@ import Vision
 @MainActor
 final class ObjectScanner: NSObject, ObservableObject {
     @Published private(set) var lastConfidence = 0.0
-    @Published private(set) var isAuthorized: Bool
     @Published private(set) var isAvailable = true
 
     let previewLayer: AVCaptureVideoPreviewLayer?
@@ -18,8 +17,6 @@ final class ObjectScanner: NSObject, ObservableObject {
     private var generation = UUID()
 
     override init() {
-        isAuthorized = AVCaptureDevice.authorizationStatus(for: .video) == .authorized
-
         // Runtime validation is deliberately unconditional. A taxonomy change
         // must fail open rather than leave a release build with an impossible task.
         let request = VNClassifyImageRequest()
@@ -58,15 +55,6 @@ final class ObjectScanner: NSObject, ObservableObject {
         return supportedEntries.first?.id
     }
 
-    func requestCameraAccess(_ completion: @escaping (Bool) -> Void) {
-        AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
-            DispatchQueue.main.async {
-                self?.isAuthorized = granted
-                completion(granted)
-            }
-        }
-    }
-
     func start(target: String) {
         guard let target = resolvedTarget(for: target) else {
             isAvailable = false
@@ -74,12 +62,10 @@ final class ObjectScanner: NSObject, ObservableObject {
         }
 
         guard AVCaptureDevice.authorizationStatus(for: .video) == .authorized else {
-            isAuthorized = false
             isAvailable = false
             return
         }
 
-        isAuthorized = true
         isAvailable = true
         lastConfidence = 0
         generation = UUID()
