@@ -14,35 +14,35 @@ struct TaskSuccessOverlay: View {
     @State private var checkmarkScale = 0.65
 
     var body: some View {
-        ZStack {
-            Color.black.opacity(0.22)
+        VStack(spacing: OASpacing.m) {
+            // No dimming backdrop (it clipped against the preview frame); the
+            // glass badge and shadows carry contrast on the bright dawn sky.
+            ZStack {
+                Circle()
+                    .trim(from: 0, to: ringProgress)
+                    .stroke(
+                        Color.white,
+                        style: StrokeStyle(lineWidth: 5, lineCap: .round)
+                    )
+                    .rotationEffect(.degrees(-90))
 
-            VStack(spacing: OASpacing.m) {
-                ZStack {
-                    Circle()
-                        .fill(Color.white.opacity(0.18))
-
-                    Circle()
-                        .trim(from: 0, to: ringProgress)
-                        .stroke(
-                            Color.white,
-                            style: StrokeStyle(lineWidth: 5, lineCap: .round)
-                        )
-                        .rotationEffect(.degrees(-90))
-
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 46, weight: .black, design: .rounded))
-                        .foregroundStyle(.white)
-                        .scaleEffect(checkmarkScale)
-                }
-                .frame(width: 112, height: 112)
-
-                Text(L10n.taskSuccessTitle)
-                    .font(OADawnType.button)
+                Image(systemName: "checkmark")
+                    .font(.system(size: 46, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
+                    .scaleEffect(checkmarkScale)
             }
+            .frame(width: 112, height: 112)
+            .glassEffect(.regular, in: Circle())
+            .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 1))
+            .shadow(color: .black.opacity(0.20), radius: 14, x: 0, y: 5)
+
+            Text(L10n.taskSuccessTitle)
+                .font(OADawnType.button)
+                .foregroundStyle(.white)
+                .shadow(color: .black.opacity(0.30), radius: 5, x: 0, y: 1)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Still swallow taps behind the celebration while it plays.
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .onAppear {
