@@ -4,11 +4,11 @@ import XCTest
 final class MemoryPatternGeneratorTests: XCTestCase {
     func testSpecsMatchDifficultyTableAndClampInputs() {
         let expected: [MemoryPatternGenerator.Spec] = [
-            .init(gridSize: 3, patternLength: 3, flashSeconds: 0.60),
-            .init(gridSize: 3, patternLength: 4, flashSeconds: 0.54),
-            .init(gridSize: 4, patternLength: 5, flashSeconds: 0.47),
-            .init(gridSize: 4, patternLength: 6, flashSeconds: 0.41),
-            .init(gridSize: 5, patternLength: 7, flashSeconds: 0.35)
+            .init(gridSize: 3, patternCount: 3, flashSeconds: 1.2),
+            .init(gridSize: 3, patternCount: 4, flashSeconds: 1.1),
+            .init(gridSize: 4, patternCount: 5, flashSeconds: 1.0),
+            .init(gridSize: 4, patternCount: 7, flashSeconds: 0.9),
+            .init(gridSize: 5, patternCount: 8, flashSeconds: 0.8)
         ]
 
         XCTAssertEqual(MemoryPatternGenerator.spec(difficulty: 0), expected[0])
@@ -19,29 +19,53 @@ final class MemoryPatternGeneratorTests: XCTestCase {
         }
     }
 
-    func testPatternsHaveExpectedLengthBoundsAndNoImmediateRepeatsOverSeededRuns() {
+    func testPatternSetsHaveExpectedCountDistinctnessAndBounds() {
         for difficulty in 1...5 {
             let spec = MemoryPatternGenerator.spec(difficulty: difficulty)
 
             for seed in 0..<500 {
                 var rng = SplitMix64(seed: UInt64(seed))
-                let pattern = MemoryPatternGenerator.pattern(spec: spec, using: &rng)
+                let pattern = MemoryPatternGenerator.patternSet(spec: spec, using: &rng)
 
-                XCTAssertEqual(pattern.count, spec.patternLength)
+                XCTAssertEqual(pattern.count, spec.patternCount)
                 XCTAssertTrue(pattern.allSatisfy { (0..<(spec.gridSize * spec.gridSize)).contains($0) })
-                XCTAssertTrue(zip(pattern, pattern.dropFirst()).allSatisfy { $0 != $1 })
             }
         }
     }
 
-    func testPatternGenerationIsDeterministicForSeededGenerator() {
+    func testPatternSetGenerationIsDeterministicForSeededGenerator() {
         let spec = MemoryPatternGenerator.spec(difficulty: 5)
         var firstRNG = SplitMix64(seed: 0xF00D)
         var secondRNG = SplitMix64(seed: 0xF00D)
 
         XCTAssertEqual(
-            MemoryPatternGenerator.pattern(spec: spec, using: &firstRNG),
-            MemoryPatternGenerator.pattern(spec: spec, using: &secondRNG)
+            MemoryPatternGenerator.patternSet(spec: spec, using: &firstRNG),
+            MemoryPatternGenerator.patternSet(spec: spec, using: &secondRNG)
+        )
+    }
+
+    func testPatternSetDiffersFromPreviousWhenAlternativeExists() {
+        let spec = MemoryPatternGenerator.Spec(gridSize: 3, patternCount: 3, flashSeconds: 1)
+
+        for seed in 0..<100 {
+            var firstRNG = SplitMix64(seed: UInt64(seed))
+            let previous = MemoryPatternGenerator.patternSet(spec: spec, using: &firstRNG)
+            var secondRNG = SplitMix64(seed: UInt64(seed))
+
+            XCTAssertNotEqual(
+                MemoryPatternGenerator.patternSet(spec: spec, excluding: previous, using: &secondRNG),
+                previous
+            )
+        }
+    }
+
+    func testPatternSetReturnsFullSetWhenNoAlternativeExists() {
+        let spec = MemoryPatternGenerator.Spec(gridSize: 2, patternCount: 4, flashSeconds: 1)
+        var rng = SplitMix64(seed: 42)
+
+        XCTAssertEqual(
+            MemoryPatternGenerator.patternSet(spec: spec, excluding: [0, 1, 2, 3], using: &rng),
+            [0, 1, 2, 3]
         )
     }
 

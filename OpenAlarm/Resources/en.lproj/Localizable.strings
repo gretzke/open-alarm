@@ -207,7 +207,7 @@
 "task_shake_level_4" = "Furious";
 "task_shake_level_5" = "Earthquake";
 "task_memory_name" = "Memory";
-"task_memory_instruction" = "Watch the pattern";
+"task_memory_instruction" = "Memorize the squares, then tap them";
 "task_memory_difficulty_title" = "Difficulty";
 "task_memory_rounds_title" = "Rounds";
 "task_memory_level_1" = "Gentle";

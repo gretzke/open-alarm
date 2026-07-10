@@ -7,11 +7,10 @@ struct MemoryTaskView: View {
     let mode: TaskMode
     var onEvent: (TaskEvent) -> Void
 
-    @State private var pattern: [Int]
-    @State private var inputIndex = 0
+    @State private var pattern: Set<Int>
     @State private var roundsDone = 0
-    @State private var litCell: Int?
-    @State private var correctCells: Set<Int> = []
+    @State private var flashedCells: Set<Int> = []
+    @State private var foundCells: Set<Int> = []
     @State private var isPlaying = true
     @State private var didComplete = false
     @State private var playbackTask: Task<Void, Never>?
@@ -31,7 +30,7 @@ struct MemoryTaskView: View {
         self.mode = mode
         self.onEvent = onEvent
         self.spec = spec
-        _pattern = State(initialValue: Self.generatePattern(spec: spec))
+        _pattern = State(initialValue: Self.generatePatternSet(spec: spec))
     }
 
     var body: some View {
@@ -107,7 +106,7 @@ struct MemoryTaskView: View {
     }
 
     private func isLit(_ index: Int) -> Bool {
-        litCell == index || correctCells.contains(index)
+        flashedCells.contains(index) || foundCells.contains(index)
     }
 
     private func handleTap(_ index: Int) {
@@ -115,7 +114,11 @@ struct MemoryTaskView: View {
             return
         }
 
-        guard index == pattern[inputIndex] else {
+        guard !foundCells.contains(index) else {
+            return
+        }
+
+        guard pattern.contains(index) else {
             Haptics.error()
             if !reduceMotion {
                 shakeGeneration &+= 1
@@ -125,10 +128,9 @@ struct MemoryTaskView: View {
         }
 
         Haptics.impact(.light)
-        correctCells.insert(index)
-        inputIndex += 1
+        foundCells.insert(index)
 
-        guard inputIndex == pattern.count else {
+        guard foundCells == pattern else {
             return
         }
 
@@ -145,13 +147,8 @@ struct MemoryTaskView: View {
     }
 
     private func regeneratePatternAndPlay() {
-        var nextPattern = Self.generatePattern(spec: spec)
-        while nextPattern == pattern {
-            nextPattern = Self.generatePattern(spec: spec)
-        }
-        pattern = nextPattern
-        inputIndex = 0
-        correctCells.removeAll()
+        pattern = Self.generatePatternSet(spec: spec, excluding: pattern)
+        foundCells.removeAll()
         startPlayback()
     }
 
@@ -162,34 +159,28 @@ struct MemoryTaskView: View {
         }
 
         isPlaying = true
-        litCell = nil
-        let sequence = pattern
+        flashedCells = []
+        let flashedSet = pattern
         let flashSeconds = spec.flashSeconds
 
         playbackTask = Task { @MainActor in
-            for cell in sequence {
-                guard !Task.isCancelled, !didComplete else {
-                    return
-                }
+            guard !Task.isCancelled, !didComplete else {
+                return
+            }
 
-                litCell = cell
-                Haptics.selection()
+            flashedCells = flashedSet
+            Haptics.selection()
 
-                do {
-                    try await Task.sleep(for: .seconds(flashSeconds))
-                } catch {
-                    return
-                }
-
-                guard !Task.isCancelled, !didComplete else {
-                    return
-                }
-                litCell = nil
+            do {
+                try await Task.sleep(for: .seconds(flashSeconds))
+            } catch {
+                return
             }
 
             guard !Task.isCancelled, !didComplete else {
                 return
             }
+            flashedCells = []
             isPlaying = false
             playbackTask = nil
         }
@@ -198,13 +189,16 @@ struct MemoryTaskView: View {
     private func stopPlayback() {
         playbackTask?.cancel()
         playbackTask = nil
-        litCell = nil
+        flashedCells = []
         isPlaying = true
     }
 
-    private static func generatePattern(spec: MemoryPatternGenerator.Spec) -> [Int] {
+    private static func generatePatternSet(
+        spec: MemoryPatternGenerator.Spec,
+        excluding previous: Set<Int> = []
+    ) -> Set<Int> {
         var rng = SystemRandomNumberGenerator()
-        return MemoryPatternGenerator.pattern(spec: spec, using: &rng)
+        return MemoryPatternGenerator.patternSet(spec: spec, excluding: previous, using: &rng)
     }
 }
 
