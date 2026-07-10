@@ -47,6 +47,7 @@
 		88BE5A50C98A69D71F236893 /* TaskRegistryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8857F7CD62651E1F7B1E992 /* TaskRegistryTests.swift */; };
 		8AAF86D176DBC56AB7618D2A /* StopIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAC4F90011CEA2952C0DEC7A /* StopIntent.swift */; };
 		8FA79F0AB5D2E8B852D32CB8 /* TaskModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08633EC56E1799D43A24AE9A /* TaskModels.swift */; };
+		934097945BA93B950B4382B6 /* MathProblemGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D46FEF8EFF4DA652027BB024 /* MathProblemGenerator.swift */; };
 		935D7EBE5898D11D72E6E2F7 /* OpenAlarmTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 339F4E487D879956D310862D /* OpenAlarmTheme.swift */; };
 		9465C1CBD0145E57E07CF47F /* AlarmDefinition.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9F25B8B78A0594DE5563131 /* AlarmDefinition.swift */; };
 		952549010D26250A8200DD59 /* TaskPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47FED3CC874E76CAE49F2083 /* TaskPickerView.swift */; };
@@ -54,7 +55,6 @@
 		98D7DE03C986859C06252DE7 /* SettingsHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 804446594677F10342CA095A /* SettingsHomeView.swift */; };
 		995F15D0216F38025D8778AF /* AlarmModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 184B0039FCD22DB7F1E75096 /* AlarmModels.swift */; };
 		9998C36BC27B0AE89D0335C0 /* NotificationPermissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A7335668C12A3AE0B905A68 /* NotificationPermissionService.swift */; };
-		9A9541D1AA6A6DD65638C280 /* MathProblemGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F31BDCE20C3EF072995D5E7D /* MathProblemGenerator.swift */; };
 		9BC852B481628BE27CA2BB34 /* DummySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53FAF7884949542E49DD097E /* DummySettingsView.swift */; };
 		9D759D492BB6EB63D2BC59F9 /* ForceCloseAlarmManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85E2DD94D51593407FD3EE4D /* ForceCloseAlarmManager.swift */; };
 		9E86E8B65FFFED3B5C365F69 /* MathTaskView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 115F20ED82B803187012D8A2 /* MathTaskView.swift */; };
@@ -163,6 +163,7 @@
 		CFE2D4CDA835E9DD606528A0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D063C3267CB009AC3D00E6D2 /* AlarmStateMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmStateMachine.swift; sourceTree = "<group>"; };
 		D34BA5EB8874EFC8335CB2CF /* AlarmSettingsCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmSettingsCore.swift; sourceTree = "<group>"; };
+		D46FEF8EFF4DA652027BB024 /* MathProblemGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathProblemGenerator.swift; sourceTree = "<group>"; };
 		D4C65D29F82E70C88900C16A /* WakeUpCheckConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeUpCheckConfirmationView.swift; sourceTree = "<group>"; };
 		DA110F30C0C8E9D50303CDA8 /* OpenAlarmApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAlarmApp.swift; sourceTree = "<group>"; };
 		DAD33FEE543D66DEBCB7E592 /* NapCountdownLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NapCountdownLiveActivityWidget.swift; sourceTree = "<group>"; };
@@ -172,7 +173,6 @@
 		E8857F7CD62651E1F7B1E992 /* TaskRegistryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRegistryTests.swift; sourceTree = "<group>"; };
 		E9ACF85F89CF9D011BF26A5E /* OpenAlarm.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OpenAlarm.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E9F25B8B78A0594DE5563131 /* AlarmDefinition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmDefinition.swift; sourceTree = "<group>"; };
-		F31BDCE20C3EF072995D5E7D /* MathProblemGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathProblemGenerator.swift; sourceTree = "<group>"; };
 		F52C8F1CE7608625F167AE21 /* TaskDescriptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDescriptor.swift; sourceTree = "<group>"; };
 		F68BF27EA97B5D8C42193398 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		F6A5DA3C14440E7AD45FD911 /* AlarmPersistenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmPersistenceStore.swift; sourceTree = "<group>"; };
@@ -293,7 +293,6 @@
 		75F0A0D87755B1B806D97C7D /* Math */ = {
 			isa = PBXGroup;
 			children = (
-				F31BDCE20C3EF072995D5E7D /* MathProblemGenerator.swift */,
 				905B67369120642DC72FB9A2 /* MathSettingsView.swift */,
 				115F20ED82B803187012D8A2 /* MathTaskView.swift */,
 			);
@@ -336,6 +335,14 @@
 				E8857F7CD62651E1F7B1E992 /* TaskRegistryTests.swift */,
 			);
 			path = OpenAlarmTests;
+			sourceTree = "<group>";
+		};
+		B1B438C2BD73839A8DF5805A /* TaskLogic */ = {
+			isa = PBXGroup;
+			children = (
+				D46FEF8EFF4DA652027BB024 /* MathProblemGenerator.swift */,
+			);
+			path = TaskLogic;
 			sourceTree = "<group>";
 		};
 		B738EFAAC480706ABCAA971A /* Shared */ = {
@@ -428,6 +435,7 @@
 				184B0039FCD22DB7F1E75096 /* AlarmModels.swift */,
 				F6A5DA3C14440E7AD45FD911 /* AlarmPersistenceStore.swift */,
 				D34BA5EB8874EFC8335CB2CF /* AlarmSettingsCore.swift */,
+				B1B438C2BD73839A8DF5805A /* TaskLogic */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -613,7 +621,7 @@
 				80A59EECF5AC595F0A69EC46 /* IntentDiagnostics.swift in Sources */,
 				1068E5E14AAA376BDD6E846B /* L10n.swift in Sources */,
 				0B94972715ED422EAA18A64B /* MainTabView.swift in Sources */,
-				9A9541D1AA6A6DD65638C280 /* MathProblemGenerator.swift in Sources */,
+				934097945BA93B950B4382B6 /* MathProblemGenerator.swift in Sources */,
 				46FB0362F9F41E90495FA61C /* MathSettingsView.swift in Sources */,
 				9E86E8B65FFFED3B5C365F69 /* MathTaskView.swift in Sources */,
 				550B59450BA119BE04B396DA /* NapBannerView.swift in Sources */,

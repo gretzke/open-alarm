@@ -93,8 +93,11 @@ public enum WakeUpCheckTimingPolicy {
 // MARK: - Disarm Tasks
 
 enum MathDifficulty: String, Codable, CaseIterable, Sendable {
-    case simple
+    case easy
+    case medium
     case hard
+    case extreme
+    case nightmare
 }
 
 enum AlarmTask: Codable, Equatable, Hashable, Sendable {

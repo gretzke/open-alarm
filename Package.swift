@@ -23,6 +23,7 @@ let package = Package(
                 "Scheduling/BridgeDateCalculator.swift",
                 "Models/AlarmDefinition.swift",
                 "Models/AlarmSettingsCore.swift",
+                "Models/TaskLogic/MathProblemGenerator.swift",
                 "Models/AlarmPersistenceStore.swift",
                 "Shared/BackstopSlotStore.swift",
                 "Shared/IntentDiagnostics.swift",

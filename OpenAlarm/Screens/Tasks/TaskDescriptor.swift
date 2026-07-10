@@ -54,7 +54,7 @@ struct MathTaskDescriptor: TaskDescriptor {
     let typeID = "math"
     let displayName = String(localized: "task_math_name")
     let systemImage = "number"
-    let defaultTask: AlarmTask = .math(difficulty: .simple, count: 3)
+    let defaultTask: AlarmTask = .math(difficulty: .medium, count: 3)
 
     func matches(_ task: AlarmTask) -> Bool {
         if case .math = task { return true }

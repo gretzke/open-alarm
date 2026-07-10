@@ -4,15 +4,16 @@ struct MathSettingsView: View {
     var existingTask: AlarmTask?
     var onAdd: (AlarmTask) -> Void
 
-    @State private var difficulty: MathDifficulty = .simple
+    @State private var difficulty: MathDifficulty = .medium
     @State private var count: Int = 3
 
+    private let difficultyOptions: [MathDifficulty] = [.medium, .hard]
     private let countOptions = [1, 2, 3, 5, 10]
 
     var body: some View {
         VStack(spacing: 16) {
             VStack(spacing: 0) {
-                ForEach(MathDifficulty.allCases, id: \.self) { diff in
+                ForEach(difficultyOptions, id: \.self) { diff in
                     Button {
                         difficulty = diff
                     } label: {
@@ -29,7 +30,7 @@ struct MathSettingsView: View {
                         .padding(.vertical, 12)
                     }
 
-                    if diff != MathDifficulty.allCases.last {
+                    if diff != difficultyOptions.last {
                         Divider().overlay(OAColor.glassStroke.opacity(0.8))
                     }
                 }
@@ -91,7 +92,7 @@ struct MathSettingsView: View {
 extension MathDifficulty {
     var displayName: String {
         switch self {
-        case .simple: String(localized: "task_math_difficulty_simple")
+        case .easy, .medium, .extreme, .nightmare: String(localized: "task_math_difficulty_simple")
         case .hard: String(localized: "task_math_difficulty_hard")
         }
     }

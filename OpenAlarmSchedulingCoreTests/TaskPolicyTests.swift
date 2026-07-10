@@ -25,13 +25,13 @@ final class TaskPolicyTests: XCTestCase {
 
     func testEffectiveTasksPassthroughWhenEnabled() {
         var settings = SharedAlarmSettings.featureDefaults
-        settings.tasks = [.math(difficulty: .simple, count: 3)]
+        settings.tasks = [.math(difficulty: .medium, count: 3)]
         XCTAssertEqual(persistence.effectiveTasks(from: settings), settings.tasks)
     }
 
     func testEffectiveTasksEmptyWhenDisabled() {
         var settings = SharedAlarmSettings.featureDefaults
-        settings.tasks = [.math(difficulty: .simple, count: 3), .dummy]
+        settings.tasks = [.math(difficulty: .medium, count: 3), .dummy]
         persistence.saveTasksEnabled(false)
         XCTAssertEqual(persistence.effectiveTasks(from: settings), [])
     }
