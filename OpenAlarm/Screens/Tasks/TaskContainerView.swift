@@ -162,12 +162,17 @@ struct TaskContainerView: View {
     }
 
     private func taskView(for task: AlarmTask) -> some View {
-        TaskRegistry.descriptor(for: task)
-            .makeTaskView(task, mode: .wake, onEvent: handleTaskEvent)
-            .id(currentTaskIndex)
+        let index = currentTaskIndex
+        return TaskRegistry.descriptor(for: task)
+            .makeTaskView(task, mode: .wake) { event in
+                handleTaskEvent(event, fromTaskAt: index)
+            }
+            .id(index)
     }
 
-    private func handleTaskEvent(_ event: TaskEvent) {
+    private func handleTaskEvent(_ event: TaskEvent, fromTaskAt index: Int) {
+        // A late event from an already-advanced leaf must not touch the next task.
+        guard index == currentTaskIndex else { return }
         switch event {
         case .progress(let progress):
             withinTaskProgress = min(max(progress, 0), 1)
