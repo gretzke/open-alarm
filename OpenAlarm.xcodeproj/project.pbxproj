@@ -830,7 +830,7 @@
 				CODE_SIGN_ENTITLEMENTS = OpenAlarm/OpenAlarm.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 90;
+				CURRENT_PROJECT_VERSION = 91;
 				DEVELOPMENT_TEAM = 7P7CKKPH5L;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = OpenAlarm/Info.plist;
@@ -938,7 +938,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = OpenAlarmLiveActivities/OpenAlarmLiveActivities.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 90;
+				CURRENT_PROJECT_VERSION = 91;
 				DEVELOPMENT_TEAM = 7P7CKKPH5L;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = OpenAlarmLiveActivities/Info.plist;
@@ -964,7 +964,7 @@
 				CODE_SIGN_ENTITLEMENTS = OpenAlarm/OpenAlarm.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 90;
+				CURRENT_PROJECT_VERSION = 91;
 				DEVELOPMENT_TEAM = 7P7CKKPH5L;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = OpenAlarm/Info.plist;
@@ -989,7 +989,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = OpenAlarmLiveActivities/OpenAlarmLiveActivities.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 90;
+				CURRENT_PROJECT_VERSION = 91;
 				DEVELOPMENT_TEAM = 7P7CKKPH5L;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = OpenAlarmLiveActivities/Info.plist;
