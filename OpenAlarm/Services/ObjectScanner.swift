@@ -159,23 +159,18 @@ private final class CameraSession: @unchecked Sendable {
 
     private func configureAndStart(target: String, generation: UUID) {
         session.beginConfiguration()
-        defer { session.commitConfiguration() }
 
         output.setSampleBufferDelegate(nil, queue: nil)
         processor.cancel()
         session.inputs.forEach(session.removeInput)
         session.outputs.forEach(session.removeOutput)
 
-        guard let device = AVCaptureDevice.default(for: .video) else {
-            onFailure?(generation)
-            return
-        }
-
         do {
-            let input = try AVCaptureDeviceInput(device: device)
-            guard session.canAddInput(input) else {
+            guard let device = AVCaptureDevice.default(for: .video) else {
                 throw ScannerError.unavailable
             }
+            let input = try AVCaptureDeviceInput(device: device)
+            guard session.canAddInput(input) else { throw ScannerError.unavailable }
             session.addInput(input)
 
             output.alwaysDiscardsLateVideoFrames = true
@@ -188,10 +183,16 @@ private final class CameraSession: @unchecked Sendable {
             session.addOutput(output)
             processor.configure(target: target, generation: generation)
             output.setSampleBufferDelegate(processor, queue: videoOutputQueue)
-            session.startRunning()
+            session.commitConfiguration()
         } catch {
+            session.inputs.forEach(session.removeInput)
+            session.outputs.forEach(session.removeOutput)
+            session.commitConfiguration()
             onFailure?(generation)
+            return
         }
+
+        session.startRunning()
     }
 
     private enum ScannerError: Error {
