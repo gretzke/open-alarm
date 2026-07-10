@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0307D6667335FD1E43043C32 /* AlarmStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D063C3267CB009AC3D00E6D2 /* AlarmStateMachine.swift */; };
+		071ACA76C3342060EC83CC10 /* DawnTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79B6CE9DEB0B98BEACCA5515 /* DawnTheme.swift */; };
 		0B94972715ED422EAA18A64B /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B69D30D8FB6982C26A6AE32D /* MainTabView.swift */; };
 		0C4CED3E4A7B7512DDD26FDF /* AlarmSettingsCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D34BA5EB8874EFC8335CB2CF /* AlarmSettingsCore.swift */; };
 		1068E5E14AAA376BDD6E846B /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0511AEB1608CC1DFD19C495 /* L10n.swift */; };
@@ -146,6 +147,7 @@
 		6BE9CED8F972B49B4D5AB764 /* NapCountdownLiveActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NapCountdownLiveActivityAttributes.swift; sourceTree = "<group>"; };
 		6BEA79BA987079BEC109687B /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowView.swift; sourceTree = "<group>"; };
 		70170ACB8DF8F857D13F0713 /* OpenAlarmLiveActivities.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = OpenAlarmLiveActivities.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		79B6CE9DEB0B98BEACCA5515 /* DawnTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DawnTheme.swift; sourceTree = "<group>"; };
 		7F23ABC24B2EFA33EBE57548 /* AlarmSoundLiveActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmSoundLiveActivityAttributes.swift; sourceTree = "<group>"; };
 		804446594677F10342CA095A /* SettingsHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsHomeView.swift; sourceTree = "<group>"; };
 		85E2DD94D51593407FD3EE4D /* ForceCloseAlarmManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForceCloseAlarmManager.swift; sourceTree = "<group>"; };
@@ -329,6 +331,7 @@
 		8A89A9B2E5A269C2694A3422 /* Theme */ = {
 			isa = PBXGroup;
 			children = (
+				79B6CE9DEB0B98BEACCA5515 /* DawnTheme.swift */,
 				339F4E487D879956D310862D /* OpenAlarmTheme.swift */,
 			);
 			path = Theme;
@@ -629,6 +632,7 @@
 				CEEB02817569AB0C4EDD35C2 /* AppRootView.swift in Sources */,
 				C327B3F413FE4A38DAF74852 /* BackstopSlotStore.swift in Sources */,
 				47FCB6814D4511114CEB807A /* BridgeDateCalculator.swift in Sources */,
+				071ACA76C3342060EC83CC10 /* DawnTheme.swift in Sources */,
 				9BC852B481628BE27CA2BB34 /* DummySettingsView.swift in Sources */,
 				6ACE3E4E63888229376ABED0 /* DummyTaskView.swift in Sources */,
 				9D759D492BB6EB63D2BC59F9 /* ForceCloseAlarmManager.swift in Sources */,
