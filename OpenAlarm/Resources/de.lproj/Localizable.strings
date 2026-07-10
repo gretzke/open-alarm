@@ -189,8 +189,9 @@
 "task_math_difficulty_hard" = "Schwer";
 "task_math_count %lld" = "%lld Aufgaben";
 "task_configurator_title" = "Aufgabe konfigurieren";
+"task_configurator_save" = "Sichern";
 "task_math_difficulty_title" = "Schwierigkeit";
-"task_math_count_title" = "Aufgaben";
+"task_math_count_title" = "Anzahl der Aufgaben";
 "task_math_level_easy" = "Einfach";
 "task_math_level_medium" = "Mittel";
 "task_math_level_hard" = "Schwer";

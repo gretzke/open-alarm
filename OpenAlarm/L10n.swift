@@ -128,6 +128,7 @@ enum L10n {
     static let alarmButtonDone: LocalizedStringKey = "alarm_button_done"
 
     static let taskConfiguratorTitle: LocalizedStringKey = "task_configurator_title"
+    static let taskConfiguratorSave: LocalizedStringKey = "task_configurator_save"
     static let taskDummyDescription: LocalizedStringKey = "task_dummy_description"
     static let taskMathKeypadGo = String(localized: "task_math_keypad_go")
     static let a11yMathKeypadDelete = String(localized: "a11y_math_keypad_delete")

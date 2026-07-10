@@ -9,38 +9,22 @@ struct MemoryConfigurator: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: OASpacing.xl) {
-            sliderSection(title: L10n.taskMemoryDifficultyTitle) {
-                SteppedSlider(
-                    value: difficulty,
-                    range: 1...5,
-                    labels: [
-                        L10n.taskMemoryLevel1,
-                        L10n.taskMemoryLevel2,
-                        L10n.taskMemoryLevel3,
-                        L10n.taskMemoryLevel4,
-                        L10n.taskMemoryLevel5
-                    ]
-                )
-            }
+            ConfiguratorSlider(
+                title: L10n.taskMemoryDifficultyTitle,
+                value: difficulty,
+                in: 1...5,
+                format: memoryLevelName
+            )
+            .padding(OASpacing.m)
+            .oaGlassPanel()
 
-            sliderSection(title: L10n.taskMemoryRoundsTitle) {
-                SteppedSlider(value: rounds, range: 1...5)
-            }
-        }
-        .padding(OASpacing.m)
-        .oaGlassPanel()
-    }
-
-    @ViewBuilder
-    private func sliderSection<Content: View>(
-        title: LocalizedStringKey,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        VStack(alignment: .leading, spacing: OASpacing.m) {
-            Text(title)
-                .font(OAType.sectionLabel)
-                .foregroundStyle(OAColor.textPrimary)
-            content()
+            ConfiguratorStepper(
+                title: L10n.taskMemoryRoundsTitle,
+                value: rounds,
+                in: 1...5
+            )
+            .padding(OASpacing.m)
+            .oaGlassPanel()
         }
     }
 
@@ -76,5 +60,15 @@ struct MemoryConfigurator: View {
                 task = .memory(difficulty: min(max(difficulty, 1), 5), rounds: min(max(newRounds, 1), 5))
             }
         )
+    }
+
+    private func memoryLevelName(_ difficulty: Int) -> String {
+        switch difficulty {
+        case 1: L10n.taskMemoryLevel1
+        case 2: L10n.taskMemoryLevel2
+        case 3: L10n.taskMemoryLevel3
+        case 4: L10n.taskMemoryLevel4
+        default: L10n.taskMemoryLevel5
+        }
     }
 }

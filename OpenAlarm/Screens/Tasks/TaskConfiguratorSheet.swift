@@ -1,46 +1,56 @@
 import SwiftUI
 
-struct TaskConfiguratorSheet: View {
-    let onCommit: (AlarmTask) -> Void
+struct TaskConfiguratorContent: View {
+    let onSave: (AlarmTask) -> Void
+    let onCancel: (() -> Void)?
 
-    @Environment(\.dismiss) private var dismiss
     @State private var draft: AlarmTask
-    @State private var didCommit = false
     @State private var previewProgress = 0.3
     @State private var previewGeneration = 0
     @State private var previewResetTask: Task<Void, Never>?
 
-    init(initial: AlarmTask, onCommit: @escaping (AlarmTask) -> Void) {
-        self.onCommit = onCommit
+    init(
+        initial: AlarmTask,
+        onSave: @escaping (AlarmTask) -> Void,
+        onCancel: (() -> Void)? = nil
+    ) {
+        self.onSave = onSave
+        self.onCancel = onCancel
         _draft = State(initialValue: initial)
     }
 
     var body: some View {
-        NavigationStack {
-            GeometryReader { geometry in
-                VStack(spacing: 0) {
-                    preview
-                        .frame(height: geometry.size.height * 0.55)
+        GeometryReader { geometry in
+            VStack(spacing: 0) {
+                preview
+                    .frame(height: geometry.size.height * 0.5)
+                    .padding(.horizontal, OASpacing.screenMargin)
+                    .padding(.top, OASpacing.s)
+                    .padding(.bottom, OASpacing.m)
 
-                    ScrollView {
-                        TaskRegistry.descriptor(for: draft)
-                            .makeConfigurator($draft)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(OASpacing.screenMargin)
-                    }
-                    .background(OAColor.background)
+                ScrollView {
+                    TaskRegistry.descriptor(for: draft)
+                        .makeConfigurator($draft)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(OASpacing.screenMargin)
+                }
+                .background(OAColor.background)
+            }
+        }
+        .navigationTitle(L10n.taskConfiguratorTitle)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button(L10n.taskConfiguratorSave) {
+                    onSave(draft)
                 }
             }
-            .navigationTitle(L10n.taskConfiguratorTitle)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.alarmButtonDone) {
-                        commitAndDismiss()
-                    }
+            if let onCancel {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L10n.actionCancel, action: onCancel)
                 }
             }
         }
-        .presentationDetents([.large])
         .onChange(of: draft) { _, _ in
             previewResetTask?.cancel()
             previewResetTask = nil
@@ -48,7 +58,6 @@ struct TaskConfiguratorSheet: View {
         }
         .onDisappear {
             previewResetTask?.cancel()
-            commitIfNeeded()
         }
     }
 
@@ -61,8 +70,6 @@ struct TaskConfiguratorSheet: View {
                 .id(PreviewIdentity(task: draft, generation: previewGeneration))
         }
         .clipShape(RoundedRectangle(cornerRadius: OARadius.card, style: .continuous))
-        .padding(.horizontal, OASpacing.screenMargin)
-        .padding(.top, OASpacing.s)
     }
 
     private func handlePreviewEvent(_ event: TaskEvent) {
@@ -98,19 +105,6 @@ struct TaskConfiguratorSheet: View {
         }
     }
 
-    private func commitAndDismiss() {
-        commitIfNeeded()
-        dismiss()
-    }
-
-    private func commitIfNeeded() {
-        guard !didCommit else {
-            return
-        }
-
-        didCommit = true
-        onCommit(draft)
-    }
 }
 
 struct DummyConfigurator: View {

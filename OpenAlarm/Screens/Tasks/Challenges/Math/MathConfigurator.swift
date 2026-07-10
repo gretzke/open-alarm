@@ -9,17 +9,22 @@ struct MathConfigurator: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: OASpacing.xl) {
-            sliderSection(title: L10n.taskMathDifficultyTitle) {
-                SteppedSlider(
-                    value: difficultyIndex,
-                    range: 0...(MathDifficulty.allCases.count - 1),
-                    labels: MathDifficulty.allCases.map(L10n.taskMathLevelName)
-                )
-            }
+            ConfiguratorSlider(
+                title: L10n.taskMathDifficultyTitle,
+                value: difficultyIndex,
+                in: 0...(MathDifficulty.allCases.count - 1),
+                format: { L10n.taskMathLevelName(MathDifficulty.allCases[$0]) }
+            )
+            .padding(OASpacing.m)
+            .oaGlassPanel()
 
-            sliderSection(title: L10n.taskMathCountTitle) {
-                SteppedSlider(value: count, range: 1...10)
-            }
+            ConfiguratorStepper(
+                title: L10n.taskMathCountTitle,
+                value: count,
+                in: 1...10
+            )
+            .padding(OASpacing.m)
+            .oaGlassPanel()
         }
     }
 
@@ -56,20 +61,5 @@ struct MathConfigurator: View {
             preconditionFailure("MathConfigurator received a non-math task")
         }
         return min(max(count, 1), 10)
-    }
-
-    private func sliderSection<Content: View>(
-        title: LocalizedStringKey,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        VStack(alignment: .leading, spacing: OASpacing.m) {
-            Text(title)
-                .font(OAType.sectionLabel)
-                .foregroundStyle(OAColor.textPrimary)
-
-            content()
-        }
-        .padding(OASpacing.m)
-        .oaGlassPanel()
     }
 }

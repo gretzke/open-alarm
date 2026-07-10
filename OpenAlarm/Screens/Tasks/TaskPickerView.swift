@@ -6,9 +6,7 @@ struct TaskPickerView: View {
     @EnvironmentObject private var alarmStore: AlarmStore
     private let maxTasks = 5
 
-    @State private var showingTypeList = false
-    @State private var editingIndex: Int?
-    @State private var settingsTask: IdentifiedTask?
+    @State private var route: ConfiguratorRoute?
     @State private var draggingIndex: Int?
 
     var body: some View {
@@ -29,11 +27,8 @@ struct TaskPickerView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingTypeList) {
-            taskTypeListSheet
-        }
-        .sheet(item: $settingsTask) { identifiedTask in
-            TaskConfiguratorSheet(initial: identifiedTask.task, onCommit: applyTask)
+        .sheet(item: $route) { route in
+            configuratorSheet(for: route)
         }
     }
 
@@ -42,8 +37,7 @@ struct TaskPickerView: View {
         let descriptor = TaskRegistry.descriptor(for: task)
         return ZStack(alignment: .topTrailing) {
             Button {
-                editingIndex = index
-                settingsTask = IdentifiedTask(task: task)
+                route = .edit(index: index, task: task)
             } label: {
                 VStack(spacing: 4) {
                     Image(systemName: descriptor.systemImage)
@@ -79,8 +73,7 @@ struct TaskPickerView: View {
 
     private func addTile() -> some View {
         Button {
-            editingIndex = nil
-            showingTypeList = true
+            route = .add
         } label: {
             Image(systemName: "plus")
                 .font(.title3)
@@ -96,38 +89,77 @@ struct TaskPickerView: View {
             .frame(width: 56, height: 56)
     }
 
-    private var taskTypeListSheet: some View {
-        NavigationStack {
-            List(TaskRegistry.pickerDescriptors(testingMode: alarmStore.testingModeEnabled), id: \.typeID) { descriptor in
-                Button {
-                    showingTypeList = false
-                    // Short delay for sheet dismiss animation
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        settingsTask = IdentifiedTask(task: descriptor.defaultTask)
+    @ViewBuilder
+    private func configuratorSheet(for route: ConfiguratorRoute) -> some View {
+        switch route {
+        case .add:
+            TaskTypeListContent(
+                descriptors: TaskRegistry.pickerDescriptors(testingMode: alarmStore.testingModeEnabled),
+                onSave: { task in
+                    tasks.append(task)
+                    self.route = nil
+                }
+            )
+        case .edit(_, let task):
+            NavigationStack {
+                TaskConfiguratorContent(
+                    initial: task,
+                    onSave: { updatedTask in
+                        guard case .edit(let index, _) = self.route,
+                              tasks.indices.contains(index) else {
+                            return
+                        }
+                        tasks[index] = updatedTask
+                        self.route = nil
+                    },
+                    onCancel: {
+                        self.route = nil
                     }
+                )
+            }
+            .presentationDetents([.large])
+        }
+    }
+}
+
+private enum ConfiguratorRoute: Identifiable, Equatable {
+    case add
+    case edit(index: Int, task: AlarmTask)
+
+    var id: String {
+        switch self {
+        case .add:
+            "add"
+        case .edit(let index, _):
+            "edit-\(index)"
+        }
+    }
+}
+
+private struct TaskTypeListContent: View {
+    let descriptors: [any TaskDescriptor]
+    let onSave: (AlarmTask) -> Void
+
+    @State private var path: [String] = []
+
+    var body: some View {
+        NavigationStack(path: $path) {
+            List(descriptors, id: \.typeID) { descriptor in
+                Button {
+                    path.append(descriptor.typeID)
                 } label: {
                     Label(descriptor.displayName, systemImage: descriptor.systemImage)
                 }
             }
             .navigationTitle(String(localized: "task_picker_choose_type"))
+            .navigationDestination(for: String.self) { typeID in
+                if let descriptor = TaskRegistry.descriptors.first(where: { $0.typeID == typeID }) {
+                    TaskConfiguratorContent(initial: descriptor.defaultTask, onSave: onSave)
+                }
+            }
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.large])
     }
-
-    private func applyTask(_ task: AlarmTask) {
-        if let editIndex = editingIndex {
-            tasks[editIndex] = task
-        } else {
-            tasks.append(task)
-        }
-        settingsTask = nil
-        editingIndex = nil
-    }
-}
-
-private struct IdentifiedTask: Identifiable {
-    let id = UUID()
-    let task: AlarmTask
 }
 
 private struct TaskDropDelegate: DropDelegate {

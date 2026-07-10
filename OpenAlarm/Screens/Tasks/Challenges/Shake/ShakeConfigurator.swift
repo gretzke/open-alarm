@@ -9,20 +9,11 @@ struct ShakeConfigurator: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: OASpacing.m) {
-            Text(L10n.taskShakeIntensityTitle)
-                .font(OAType.sectionLabel)
-                .foregroundStyle(OAColor.textPrimary)
-
-            SteppedSlider(
+            ConfiguratorSlider(
+                title: L10n.taskShakeIntensityTitle,
                 value: intensity,
-                range: 1...5,
-                labels: [
-                    L10n.taskShakeLevel1,
-                    L10n.taskShakeLevel2,
-                    L10n.taskShakeLevel3,
-                    L10n.taskShakeLevel4,
-                    L10n.taskShakeLevel5
-                ]
+                in: 1...5,
+                format: shakeLevelName
             )
         }
         .padding(OASpacing.m)
@@ -41,5 +32,15 @@ struct ShakeConfigurator: View {
                 task = .shake(intensity: min(max(newIntensity, 1), 5))
             }
         )
+    }
+
+    private func shakeLevelName(_ intensity: Int) -> String {
+        switch intensity {
+        case 1: L10n.taskShakeLevel1
+        case 2: L10n.taskShakeLevel2
+        case 3: L10n.taskShakeLevel3
+        case 4: L10n.taskShakeLevel4
+        default: L10n.taskShakeLevel5
+        }
     }
 }
