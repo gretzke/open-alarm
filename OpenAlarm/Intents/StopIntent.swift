@@ -41,8 +41,11 @@ struct StopIntent: LiveActivityIntent {
         if let resolved = Self.resolveParentAlarm(for: id, persistence: persistence) {
             let parentID = resolved.alarm.id
             let previous = BackstopSlotStore.backstopID(forParent: parentID)
-            let needsProtection = !persistence.effectiveTasks(from: resolved.settings).isEmpty || resolved.settings.wakeUpCheckEnabled
-            IntentDiagnostics.log("StopIntent resolved parent=\(parentID.uuidString) tasks=\(persistence.effectiveTasks(from: resolved.settings).count) wakeCheck=\(resolved.settings.wakeUpCheckEnabled) protect=\(needsProtection)")
+            // Snapshot once: the toggle is mutable shared state, and the log must
+            // describe the same value the protection decision used.
+            let effectiveTaskCount = persistence.effectiveTasks(from: resolved.settings).count
+            let needsProtection = effectiveTaskCount > 0 || resolved.settings.wakeUpCheckEnabled
+            IntentDiagnostics.log("StopIntent resolved parent=\(parentID.uuidString) tasks=\(effectiveTaskCount) wakeCheck=\(resolved.settings.wakeUpCheckEnabled) protect=\(needsProtection)")
 
             if needsProtection {
                 await Self.scheduleDisarmBackstop(
