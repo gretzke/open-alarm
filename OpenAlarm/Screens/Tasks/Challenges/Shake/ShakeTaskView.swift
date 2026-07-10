@@ -15,9 +15,6 @@ struct ShakeTaskView: View {
     @State private var didComplete = false
     @State private var lastPublishTime: TimeInterval?
     @State private var noSampleTask: Task<Void, Never>?
-#if DEBUG
-    @State private var simulationTask: Task<Void, Never>?
-#endif
 
     @ScaledMetric(relativeTo: .largeTitle) private var percentageFontSize: CGFloat = 96
 
@@ -59,12 +56,6 @@ struct ShakeTaskView: View {
                 .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
-
-#if DEBUG
-            if mode == .preview {
-                debugSimulationControl
-            }
-#endif
         }
     }
 
@@ -80,25 +71,6 @@ struct ShakeTaskView: View {
         .background(Color.white, in: Capsule())
         .buttonStyle(.plain)
     }
-
-#if DEBUG
-    private var debugSimulationControl: some View {
-        Button(action: {}) {
-            Text(L10n.taskShakeSimulate)
-                .font(OADawnType.button)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
-                .padding(.horizontal, OASpacing.l)
-                .background(Color.white.opacity(0.18), in: Capsule())
-        }
-        .buttonStyle(.plain)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in startSimulation() }
-                .onEnded { _ in stopSimulation() }
-        )
-    }
-#endif
 
     private func beginMotion() {
         guard !didComplete, token == nil else {
@@ -183,33 +155,6 @@ struct ShakeTaskView: View {
         }
         noSampleTask?.cancel()
         noSampleTask = nil
-#if DEBUG
-        stopSimulation()
-#endif
         ramp.stop()
     }
-
-#if DEBUG
-    private func startSimulation() {
-        guard simulationTask == nil, !didComplete else {
-            return
-        }
-
-        simulationTask = Task { @MainActor in
-            while !Task.isCancelled, !didComplete {
-                receiveSample(magnitude: model.threshold + 3, dt: 0.02)
-                do {
-                    try await Task.sleep(for: .milliseconds(20))
-                } catch {
-                    return
-                }
-            }
-        }
-    }
-
-    private func stopSimulation() {
-        simulationTask?.cancel()
-        simulationTask = nil
-    }
-#endif
 }

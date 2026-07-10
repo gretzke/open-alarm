@@ -147,6 +147,7 @@
 "action_skip" = "Überspringen";
 "action_requesting" = "Wird angefragt…";
 "action_cancel" = "Abbrechen";
+"action_back" = "Zurück";
 "action_add" = "Hinzufügen";
 "action_save" = "Speichern";
 "action_delete" = "Löschen";
@@ -189,6 +190,7 @@
 "task_math_count %lld" = "%lld Aufgaben";
 "task_configurator_title" = "Aufgabe konfigurieren";
 "task_configurator_save" = "Sichern";
+"task_success_title" = "Aufgabe geschafft";
 "task_math_difficulty_title" = "Schwierigkeit";
 "task_math_count_title" = "Anzahl der Aufgaben";
 "task_math_level_easy" = "Einfach";
@@ -199,7 +201,6 @@
 "task_shake_name" = "Schütteln";
 "task_shake_instruction" = "Schütteln!";
 "task_shake_unavailable_fallback" = "Schließen";
-"task_shake_simulate" = "Zum Simulieren halten";
 "task_shake_intensity_title" = "Intensität";
 "task_shake_level_1" = "Sanft";
 "task_shake_level_2" = "Kräftig";
@@ -219,19 +220,16 @@
 "task_steps_title" = "Lauf es ab";
 "task_steps_count_title" = "Schrittziel";
 "task_steps_unavailable_fallback" = "Schließen";
-"task_steps_simulate" = "Zum Simulieren halten";
 "task_steps_counter_format" = "%d / %d";
 "task_scan_name" = "Objekt scannen";
 "task_scan_title" = "Finde es";
 "task_scan_object_title" = "Zu scannendes Objekt";
 "task_scan_unavailable_fallback" = "Schließen";
-"task_scan_simulate" = "Zum Simulieren halten";
+"task_scan_unavailable_preview" = "Die Kamera ist in dieser Vorschau nicht verfügbar.";
 "task_scan_camera_permission_prompt_title" = "Kamerazugriff erlauben";
 "task_scan_camera_permission_prompt_body" = "OpenAlarm verwendet die Kamera, um beim Klingeln zu prüfen, ob du das ausgewählte Objekt gefunden hast.";
 "task_scan_camera_permission_denied_title" = "Kamerazugriff ist deaktiviert";
 "task_scan_camera_permission_denied_body" = "Erlaube den Kamerazugriff in den Einstellungen, um Scan-Aufgaben zu verwenden. Der Zugriff kann auch durch Geräterichtlinien eingeschränkt sein.";
-"task_scan_camera_placeholder" = "Für die Vorschau dieser Scan-Aufgabe ist Kamerazugriff erforderlich.";
-"task_scan_enable_camera" = "Kamera aktivieren";
 "task_scan_object_mug" = "Tasse";
 "task_scan_object_backpack" = "Rucksack";
 "task_scan_object_laptop" = "Laptop";

@@ -118,6 +118,7 @@ enum L10n {
     static let actionSkip: LocalizedStringKey = "action_skip"
     static let actionRequesting: LocalizedStringKey = "action_requesting"
     static let actionCancel: LocalizedStringKey = "action_cancel"
+    static let actionBack: LocalizedStringKey = "action_back"
     static let actionAdd: LocalizedStringKey = "action_add"
     static let actionSave: LocalizedStringKey = "action_save"
     static let actionDelete: LocalizedStringKey = "action_delete"
@@ -128,6 +129,7 @@ enum L10n {
 
     static let taskConfiguratorTitle: LocalizedStringKey = "task_configurator_title"
     static let taskConfiguratorSave: LocalizedStringKey = "task_configurator_save"
+    static let taskSuccessTitle: LocalizedStringKey = "task_success_title"
     static let taskDummyDescription: LocalizedStringKey = "task_dummy_description"
     static let taskMathKeypadGo = String(localized: "task_math_keypad_go")
     static let a11yMathKeypadDelete = String(localized: "a11y_math_keypad_delete")
@@ -141,7 +143,6 @@ enum L10n {
     static let taskShakeName = String(localized: "task_shake_name")
     static let taskShakeInstruction: LocalizedStringKey = "task_shake_instruction"
     static let taskShakeUnavailableFallback: LocalizedStringKey = "task_shake_unavailable_fallback"
-    static let taskShakeSimulate: LocalizedStringKey = "task_shake_simulate"
     static let taskShakeIntensityTitle: LocalizedStringKey = "task_shake_intensity_title"
     static let taskShakeLevel1 = String(localized: "task_shake_level_1")
     static let taskShakeLevel2 = String(localized: "task_shake_level_2")
@@ -161,18 +162,15 @@ enum L10n {
     static let taskStepsTitle: LocalizedStringKey = "task_steps_title"
     static let taskStepsCountTitle: LocalizedStringKey = "task_steps_count_title"
     static let taskStepsUnavailableFallback: LocalizedStringKey = "task_steps_unavailable_fallback"
-    static let taskStepsSimulate: LocalizedStringKey = "task_steps_simulate"
     static let taskScanName = String(localized: "task_scan_name")
     static let taskScanTitle: LocalizedStringKey = "task_scan_title"
     static let taskScanObjectTitle: LocalizedStringKey = "task_scan_object_title"
     static let taskScanUnavailableFallback: LocalizedStringKey = "task_scan_unavailable_fallback"
-    static let taskScanSimulate: LocalizedStringKey = "task_scan_simulate"
+    static let taskScanUnavailablePreview: LocalizedStringKey = "task_scan_unavailable_preview"
     static let taskScanCameraPermissionPromptTitle: LocalizedStringKey = "task_scan_camera_permission_prompt_title"
     static let taskScanCameraPermissionPromptBody: LocalizedStringKey = "task_scan_camera_permission_prompt_body"
     static let taskScanCameraPermissionDeniedTitle: LocalizedStringKey = "task_scan_camera_permission_denied_title"
     static let taskScanCameraPermissionDeniedBody: LocalizedStringKey = "task_scan_camera_permission_denied_body"
-    static let taskScanCameraPlaceholder: LocalizedStringKey = "task_scan_camera_placeholder"
-    static let taskScanEnableCamera: LocalizedStringKey = "task_scan_enable_camera"
 
     static func taskStepsCounter(_ steps: Int, goal: Int) -> String {
         String(format: String(localized: "task_steps_counter_format"), steps, goal)

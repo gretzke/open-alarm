@@ -147,6 +147,7 @@
 "action_skip" = "Skip";
 "action_requesting" = "Requesting…";
 "action_cancel" = "Cancel";
+"action_back" = "Back";
 "action_add" = "Add";
 "action_save" = "Save";
 "action_delete" = "Delete";
@@ -189,6 +190,7 @@
 "task_math_count %lld" = "%lld problems";
 "task_configurator_title" = "Configure Task";
 "task_configurator_save" = "Save";
+"task_success_title" = "Task complete";
 "task_math_difficulty_title" = "Difficulty";
 "task_math_count_title" = "Number of problems";
 "task_math_level_easy" = "Easy";
@@ -199,7 +201,6 @@
 "task_shake_name" = "Shake";
 "task_shake_instruction" = "Shake!";
 "task_shake_unavailable_fallback" = "Dismiss";
-"task_shake_simulate" = "Hold to simulate";
 "task_shake_intensity_title" = "Intensity";
 "task_shake_level_1" = "Gentle";
 "task_shake_level_2" = "Firm";
@@ -219,19 +220,16 @@
 "task_steps_title" = "Walk it off";
 "task_steps_count_title" = "Step goal";
 "task_steps_unavailable_fallback" = "Dismiss";
-"task_steps_simulate" = "Hold to simulate";
 "task_steps_counter_format" = "%d / %d";
 "task_scan_name" = "Scan object";
 "task_scan_title" = "Find it";
 "task_scan_object_title" = "Object to scan";
 "task_scan_unavailable_fallback" = "Dismiss";
-"task_scan_simulate" = "Hold to simulate";
+"task_scan_unavailable_preview" = "Camera unavailable in this preview.";
 "task_scan_camera_permission_prompt_title" = "Allow camera access";
 "task_scan_camera_permission_prompt_body" = "OpenAlarm uses the camera to verify that you found the selected object when your alarm rings.";
 "task_scan_camera_permission_denied_title" = "Camera access is off";
 "task_scan_camera_permission_denied_body" = "Allow camera access in Settings to use scan tasks. Access may also be restricted by device policies.";
-"task_scan_camera_placeholder" = "Camera access is needed to preview this scan task.";
-"task_scan_enable_camera" = "Enable camera";
 "task_scan_object_mug" = "Mug";
 "task_scan_object_backpack" = "Backpack";
 "task_scan_object_laptop" = "Laptop";

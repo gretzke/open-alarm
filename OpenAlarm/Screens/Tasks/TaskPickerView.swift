@@ -1,13 +1,18 @@
+import AVFoundation
 import SwiftUI
 import UniformTypeIdentifiers
 
 struct TaskPickerView: View {
     @Binding var tasks: [AlarmTask]
+    @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var alarmStore: AlarmStore
     private let maxTasks = 5
 
     @State private var route: ConfiguratorRoute?
     @State private var draggingIndex: Int?
+    @State private var cameraPermissionFlowStep: CameraPermissionFlowStep?
+    @State private var pendingCameraRoute: ConfiguratorRoute?
+    @State private var openCameraRouteAfterPermissionCoverDismisses = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -27,8 +32,28 @@ struct TaskPickerView: View {
                 }
             }
         }
-        .sheet(item: $route) { route in
+        .fullScreenCover(item: $route) { route in
             configuratorSheet(for: route)
+        }
+        .fullScreenCover(
+            item: $cameraPermissionFlowStep,
+            onDismiss: handleCameraPermissionCoverDismissed
+        ) { step in
+            switch step {
+            case .prePrompt:
+                CameraPermissionPrePromptView(
+                    onRequestPermission: requestCameraPermission,
+                    onCancel: cancelCameraPermissionFlow
+                )
+            case .denied:
+                CameraPermissionDeniedView(
+                    onOpenSettings: alarmStore.openSettings,
+                    onCancel: cancelCameraPermissionFlow
+                )
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            handleCameraAuthorizationChange(phase)
         }
     }
 
@@ -37,7 +62,7 @@ struct TaskPickerView: View {
         let descriptor = TaskRegistry.descriptor(for: task)
         return ZStack(alignment: .topTrailing) {
             Button {
-                route = .edit(index: index, task: task)
+                requestRoute(.edit(index: index, task: task), for: descriptor)
             } label: {
                 VStack(spacing: 4) {
                     Image(systemName: descriptor.systemImage)
@@ -89,6 +114,69 @@ struct TaskPickerView: View {
             .frame(width: 56, height: 56)
     }
 
+    private func requestRoute(_ requestedRoute: ConfiguratorRoute, for descriptor: any TaskDescriptor) {
+        guard descriptor.requiredPermission == .camera else {
+            route = requestedRoute
+            return
+        }
+
+        pendingCameraRoute = requestedRoute
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            route = requestedRoute
+            pendingCameraRoute = nil
+        case .notDetermined:
+            cameraPermissionFlowStep = .prePrompt
+        case .denied, .restricted:
+            cameraPermissionFlowStep = .denied
+        @unknown default:
+            cameraPermissionFlowStep = .denied
+        }
+    }
+
+    private func requestCameraPermission() {
+        AVCaptureDevice.requestAccess(for: .video) { granted in
+            Task { @MainActor in
+                if granted {
+                    openCameraRouteAfterPermissionCoverDismisses = true
+                    cameraPermissionFlowStep = nil
+                } else {
+                    // Keep pendingCameraRoute: granting later in Settings
+                    // reopens it via handleCameraAuthorizationChange.
+                    cameraPermissionFlowStep = .denied
+                }
+            }
+        }
+    }
+
+    private func cancelCameraPermissionFlow() {
+        cameraPermissionFlowStep = nil
+        pendingCameraRoute = nil
+        openCameraRouteAfterPermissionCoverDismisses = false
+    }
+
+    private func handleCameraAuthorizationChange(_ phase: ScenePhase) {
+        guard phase == .active,
+              cameraPermissionFlowStep == .denied,
+              AVCaptureDevice.authorizationStatus(for: .video) == .authorized else {
+            return
+        }
+
+        openCameraRouteAfterPermissionCoverDismisses = true
+        cameraPermissionFlowStep = nil
+    }
+
+    private func handleCameraPermissionCoverDismissed() {
+        guard openCameraRouteAfterPermissionCoverDismisses,
+              let pendingCameraRoute else {
+            return
+        }
+
+        openCameraRouteAfterPermissionCoverDismisses = false
+        self.pendingCameraRoute = nil
+        route = pendingCameraRoute
+    }
+
     @ViewBuilder
     private func configuratorSheet(for route: ConfiguratorRoute) -> some View {
         switch route {
@@ -97,6 +185,9 @@ struct TaskPickerView: View {
                 descriptors: TaskRegistry.pickerDescriptors(testingMode: alarmStore.testingModeEnabled),
                 onSave: { task in
                     tasks.append(task)
+                    self.route = nil
+                },
+                onCancel: {
                     self.route = nil
                 }
             )
@@ -117,7 +208,6 @@ struct TaskPickerView: View {
                     }
                 )
             }
-            .presentationDetents([.large])
         }
     }
 }
@@ -139,26 +229,127 @@ private enum ConfiguratorRoute: Identifiable, Equatable {
 private struct TaskTypeListContent: View {
     let descriptors: [any TaskDescriptor]
     let onSave: (AlarmTask) -> Void
+    let onCancel: () -> Void
 
+    @Environment(\.scenePhase) private var scenePhase
+    @EnvironmentObject private var alarmStore: AlarmStore
     @State private var path: [String] = []
+    @State private var cameraPermissionFlowStep: CameraPermissionFlowStep?
+    @State private var pendingCameraTypeID: String?
+    @State private var openCameraTypeAfterPermissionCoverDismisses = false
 
     var body: some View {
         NavigationStack(path: $path) {
             List(descriptors, id: \.typeID) { descriptor in
                 Button {
-                    path.append(descriptor.typeID)
+                    selectDescriptor(descriptor)
                 } label: {
                     Label(descriptor.displayName, systemImage: descriptor.systemImage)
                 }
             }
             .navigationTitle(String(localized: "task_picker_choose_type"))
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L10n.actionCancel, action: onCancel)
+                }
+            }
             .navigationDestination(for: String.self) { typeID in
                 if let descriptor = TaskRegistry.descriptors.first(where: { $0.typeID == typeID }) {
-                    TaskConfiguratorContent(initial: descriptor.defaultTask, onSave: onSave)
+                    TaskConfiguratorContent(
+                        initial: descriptor.defaultTask,
+                        onSave: onSave,
+                        onCancel: {
+                            guard !path.isEmpty else { return }
+                            path.removeLast()
+                        },
+                        cancelLabel: L10n.actionBack
+                    )
                 }
             }
         }
-        .presentationDetents([.large])
+        .fullScreenCover(
+            item: $cameraPermissionFlowStep,
+            onDismiss: handleCameraPermissionCoverDismissed
+        ) { step in
+            switch step {
+            case .prePrompt:
+                CameraPermissionPrePromptView(
+                    onRequestPermission: requestCameraPermission,
+                    onCancel: cancelCameraPermissionFlow
+                )
+            case .denied:
+                CameraPermissionDeniedView(
+                    onOpenSettings: alarmStore.openSettings,
+                    onCancel: cancelCameraPermissionFlow
+                )
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            handleCameraAuthorizationChange(phase)
+        }
+    }
+
+    private func selectDescriptor(_ descriptor: any TaskDescriptor) {
+        guard descriptor.requiredPermission == .camera else {
+            path.append(descriptor.typeID)
+            return
+        }
+
+        pendingCameraTypeID = descriptor.typeID
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            path.append(descriptor.typeID)
+            pendingCameraTypeID = nil
+        case .notDetermined:
+            cameraPermissionFlowStep = .prePrompt
+        case .denied, .restricted:
+            cameraPermissionFlowStep = .denied
+        @unknown default:
+            cameraPermissionFlowStep = .denied
+        }
+    }
+
+    private func requestCameraPermission() {
+        AVCaptureDevice.requestAccess(for: .video) { granted in
+            Task { @MainActor in
+                if granted {
+                    openCameraTypeAfterPermissionCoverDismisses = true
+                    cameraPermissionFlowStep = nil
+                } else {
+                    // Keep pendingCameraTypeID: granting later in Settings
+                    // reopens it via handleCameraAuthorizationChange.
+                    cameraPermissionFlowStep = .denied
+                }
+            }
+        }
+    }
+
+    private func cancelCameraPermissionFlow() {
+        cameraPermissionFlowStep = nil
+        pendingCameraTypeID = nil
+        openCameraTypeAfterPermissionCoverDismisses = false
+    }
+
+    private func handleCameraAuthorizationChange(_ phase: ScenePhase) {
+        guard phase == .active,
+              cameraPermissionFlowStep == .denied,
+              AVCaptureDevice.authorizationStatus(for: .video) == .authorized else {
+            return
+        }
+
+        openCameraTypeAfterPermissionCoverDismisses = true
+        cameraPermissionFlowStep = nil
+    }
+
+    private func handleCameraPermissionCoverDismissed() {
+        guard openCameraTypeAfterPermissionCoverDismisses,
+              let pendingCameraTypeID else {
+            return
+        }
+
+        openCameraTypeAfterPermissionCoverDismisses = false
+        self.pendingCameraTypeID = nil
+        path.append(pendingCameraTypeID)
     }
 }
 

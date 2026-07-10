@@ -10,6 +10,8 @@ struct MathTaskView: View {
     @State private var solvedCount = 0
     @State private var userAnswer = ""
     @State private var showWrongAnswer = false
+    @State private var roundAdvanceTask: Task<Void, Never>?
+    @State private var isShowingRoundSuccess = false
 
     @ScaledMetric(relativeTo: .largeTitle) private var problemFontSize: CGFloat = 40
     @ScaledMetric(relativeTo: .largeTitle) private var answerFontSize: CGFloat = 32
@@ -28,6 +30,20 @@ struct MathTaskView: View {
     }
 
     var body: some View {
+        ZStack {
+            taskContent
+
+            if isShowingRoundSuccess {
+                TaskRoundSuccessEffect()
+            }
+        }
+        .animation(.easeInOut(duration: 0.18), value: isShowingRoundSuccess)
+        .onDisappear {
+            roundAdvanceTask?.cancel()
+        }
+    }
+
+    private var taskContent: some View {
         VStack(spacing: OASpacing.l) {
             Spacer()
 
@@ -87,12 +103,14 @@ struct MathTaskView: View {
                         )
                 }
                 .buttonStyle(.plain)
+                .disabled(isShowingRoundSuccess)
                 .accessibilityLabel(key.accessibilityLabel)
             }
         }
     }
 
     private func submitAnswer() {
+        guard !isShowingRoundSuccess else { return }
         guard !userAnswer.isEmpty else { return }
         guard let answer = Int(userAnswer) else {
             regenerateAfterWrongAnswer()
@@ -105,12 +123,31 @@ struct MathTaskView: View {
             if solvedCount >= totalCount {
                 onEvent(.completed)
             } else {
-                currentProblem = MathProblemGenerator.generate(difficulty: difficulty)
-                userAnswer = ""
-                showWrongAnswer = false
+                presentRoundSuccessThenContinue()
             }
         } else {
             regenerateAfterWrongAnswer()
+        }
+    }
+
+    private func presentRoundSuccessThenContinue() {
+        roundAdvanceTask?.cancel()
+        Haptics.success()
+        isShowingRoundSuccess = true
+
+        roundAdvanceTask = Task { @MainActor in
+            do {
+                try await Task.sleep(for: TaskRoundSuccessPresentation.duration)
+            } catch {
+                return
+            }
+
+            guard !Task.isCancelled else { return }
+            currentProblem = MathProblemGenerator.generate(difficulty: difficulty)
+            userAnswer = ""
+            showWrongAnswer = false
+            isShowingRoundSuccess = false
+            roundAdvanceTask = nil
         }
     }
 

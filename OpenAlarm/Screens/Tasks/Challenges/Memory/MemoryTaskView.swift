@@ -14,6 +14,8 @@ struct MemoryTaskView: View {
     @State private var isPlaying = true
     @State private var didComplete = false
     @State private var playbackTask: Task<Void, Never>?
+    @State private var roundAdvanceTask: Task<Void, Never>?
+    @State private var isShowingRoundSuccess = false
     @State private var shakeGeneration = 0
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -56,7 +58,10 @@ struct MemoryTaskView: View {
         }
         .padding(OASpacing.screenMargin)
         .onAppear(perform: startPlayback)
-        .onDisappear(perform: stopPlayback)
+        .onDisappear {
+            roundAdvanceTask?.cancel()
+            stopPlayback()
+        }
     }
 
     private var grid: some View {
@@ -65,23 +70,30 @@ struct MemoryTaskView: View {
             count: spec.gridSize
         )
 
-        return Group {
-            if reduceMotion {
-                gridCells(columns: columns)
-            } else {
-                gridCells(columns: columns)
-                    .keyframeAnimator(initialValue: GridShakeValues(), trigger: shakeGeneration) { content, value in
-                        content.offset(x: value.offset)
-                    } keyframes: { _ in
-                        KeyframeTrack(\.offset) {
-                            LinearKeyframe(-10, duration: 0.06)
-                            LinearKeyframe(10, duration: 0.06)
-                            LinearKeyframe(-6, duration: 0.06)
-                            LinearKeyframe(0, duration: 0.06)
+        return ZStack {
+            Group {
+                if reduceMotion {
+                    gridCells(columns: columns)
+                } else {
+                    gridCells(columns: columns)
+                        .keyframeAnimator(initialValue: GridShakeValues(), trigger: shakeGeneration) { content, value in
+                            content.offset(x: value.offset)
+                        } keyframes: { _ in
+                            KeyframeTrack(\.offset) {
+                                LinearKeyframe(-10, duration: 0.06)
+                                LinearKeyframe(10, duration: 0.06)
+                                LinearKeyframe(-6, duration: 0.06)
+                                LinearKeyframe(0, duration: 0.06)
+                            }
                         }
-                    }
+                }
+            }
+
+            if isShowingRoundSuccess {
+                TaskRoundSuccessEffect()
             }
         }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: isShowingRoundSuccess)
     }
 
     private func gridCells(columns: [GridItem]) -> some View {
@@ -137,11 +149,36 @@ struct MemoryTaskView: View {
         roundsDone += 1
         onEvent(.progress(Double(roundsDone) / Double(rounds)))
 
-        if roundsDone == rounds {
+        // >= not ==: the preview keeps this view alive when the rounds stepper
+        // changes, so roundsDone may already exceed a lowered goal.
+        if roundsDone >= rounds {
             didComplete = true
             stopPlayback()
             onEvent(.completed)
         } else {
+            presentRoundSuccessThenContinue()
+        }
+    }
+
+    private func presentRoundSuccessThenContinue() {
+        roundAdvanceTask?.cancel()
+        isPlaying = true
+        Haptics.success()
+        isShowingRoundSuccess = true
+
+        roundAdvanceTask = Task { @MainActor in
+            do {
+                try await Task.sleep(for: TaskRoundSuccessPresentation.duration)
+            } catch {
+                return
+            }
+
+            guard !Task.isCancelled, !didComplete else {
+                return
+            }
+
+            isShowingRoundSuccess = false
+            roundAdvanceTask = nil
             regeneratePatternAndPlay()
         }
     }

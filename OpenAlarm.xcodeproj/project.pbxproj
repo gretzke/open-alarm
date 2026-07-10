@@ -62,6 +62,7 @@
 		8CEDB46EFBC52B5C9FF7A0A6 /* MemoryTaskDescriptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DC8A38B09C5A65762413EB5 /* MemoryTaskDescriptor.swift */; };
 		8FA79F0AB5D2E8B852D32CB8 /* TaskModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08633EC56E1799D43A24AE9A /* TaskModels.swift */; };
 		9019A131C1424D09904F0128 /* MemoryPatternGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF31DE975F3205E7AB2835DB /* MemoryPatternGenerator.swift */; };
+		91CA1CC8023DD197638A5896 /* TaskSuccessOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C782F1015010D823E642BC5 /* TaskSuccessOverlay.swift */; };
 		928DD1858C8D574ED3C497E6 /* MemoryTaskView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11CB074E4958FE167D272472 /* MemoryTaskView.swift */; };
 		934097945BA93B950B4382B6 /* MathProblemGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D46FEF8EFF4DA652027BB024 /* MathProblemGenerator.swift */; };
 		935D7EBE5898D11D72E6E2F7 /* OpenAlarmTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 339F4E487D879956D310862D /* OpenAlarmTheme.swift */; };
@@ -156,6 +157,7 @@
 		339F4E487D879956D310862D /* OpenAlarmTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAlarmTheme.swift; sourceTree = "<group>"; };
 		341FC3BCCDBBEF7993E126AF /* AlarmSoundLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmSoundLiveActivityWidget.swift; sourceTree = "<group>"; };
 		37024F354236CD82B68AA50F /* OpenAlarm.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = OpenAlarm.entitlements; sourceTree = "<group>"; };
+		3C782F1015010D823E642BC5 /* TaskSuccessOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSuccessOverlay.swift; sourceTree = "<group>"; };
 		453CBBCD833D2EBEDD7AC537 /* TaskConfiguratorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskConfiguratorSheet.swift; sourceTree = "<group>"; };
 		47FED3CC874E76CAE49F2083 /* TaskPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskPickerView.swift; sourceTree = "<group>"; };
 		4A618400BCD854BA5ECB76F5 /* StepsConfigurator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepsConfigurator.swift; sourceTree = "<group>"; };
@@ -374,6 +376,7 @@
 				08633EC56E1799D43A24AE9A /* TaskModels.swift */,
 				47FED3CC874E76CAE49F2083 /* TaskPickerView.swift */,
 				A33ABC03E5073EF42843F709 /* TaskSoundManager.swift */,
+				3C782F1015010D823E642BC5 /* TaskSuccessOverlay.swift */,
 				5E81EF7826C258E337114095 /* Challenges */,
 			);
 			path = Tasks;
@@ -778,6 +781,7 @@
 				8FA79F0AB5D2E8B852D32CB8 /* TaskModels.swift in Sources */,
 				952549010D26250A8200DD59 /* TaskPickerView.swift in Sources */,
 				A101678070DC3DC291BCB24F /* TaskSoundManager.swift in Sources */,
+				91CA1CC8023DD197638A5896 /* TaskSuccessOverlay.swift in Sources */,
 				1B1488ECC64F591938DEA880 /* WakeUpCheckConfirmationView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

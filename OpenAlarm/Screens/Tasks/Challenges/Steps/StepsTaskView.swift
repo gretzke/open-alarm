@@ -13,9 +13,6 @@ struct StepsTaskView: View {
     @State private var showingFallback = false
     @State private var didComplete = false
     @State private var noSampleTask: Task<Void, Never>?
-#if DEBUG
-    @State private var simulationTask: Task<Void, Never>?
-#endif
 
     @ScaledMetric(relativeTo: .largeTitle) private var counterFontSize: CGFloat = 76
 
@@ -54,12 +51,6 @@ struct StepsTaskView: View {
                 .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.45)
-
-#if DEBUG
-            if mode == .preview {
-                debugSimulationControl
-            }
-#endif
         }
     }
 
@@ -75,25 +66,6 @@ struct StepsTaskView: View {
         .background(Color.white, in: Capsule())
         .buttonStyle(.plain)
     }
-
-#if DEBUG
-    private var debugSimulationControl: some View {
-        Button(action: {}) {
-            Text(L10n.taskStepsSimulate)
-                .font(OADawnType.button)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
-                .padding(.horizontal, OASpacing.l)
-                .background(Color.white.opacity(0.18), in: Capsule())
-        }
-        .buttonStyle(.plain)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in startSimulation() }
-                .onEnded { _ in stopSimulation() }
-        )
-    }
-#endif
 
     private func beginMotion() {
         guard !didComplete, token == nil else {
@@ -179,37 +151,5 @@ struct StepsTaskView: View {
         }
         noSampleTask?.cancel()
         noSampleTask = nil
-#if DEBUG
-        stopSimulation()
-#endif
     }
-
-#if DEBUG
-    private func startSimulation() {
-        guard simulationTask == nil, !didComplete else {
-            return
-        }
-
-        simulationTask = Task { @MainActor in
-            var sampleIndex = 0
-            while !Task.isCancelled, !didComplete {
-                receiveSample(
-                    magnitude: sampleIndex.isMultiple(of: 25) ? 0.5 : 0,
-                    dt: 0.02
-                )
-                sampleIndex += 1
-                do {
-                    try await Task.sleep(for: .milliseconds(20))
-                } catch {
-                    return
-                }
-            }
-        }
-    }
-
-    private func stopSimulation() {
-        simulationTask?.cancel()
-        simulationTask = nil
-    }
-#endif
 }

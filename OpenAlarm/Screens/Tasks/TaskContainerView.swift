@@ -13,6 +13,8 @@ struct TaskContainerView: View {
     @State private var currentTaskIndex = 0
     @State private var hasCompletedCurrentTask = false
     @State private var withinTaskProgress: Double = 0
+    @State private var isShowingTaskSuccess = false
+    @State private var completionTask: Task<Void, Never>?
 
     @ScaledMetric(relativeTo: .largeTitle) private var dismissTimeFontSize: CGFloat = 84
 
@@ -65,6 +67,7 @@ struct TaskContainerView: View {
             forceCloseManager = manager
         }
         .onDisappear {
+            completionTask?.cancel()
             soundManager.stopPlaying()
             forceCloseManager?.stop()
             AlarmSoundLiveActivityManager.shared.stop()
@@ -134,7 +137,14 @@ struct TaskContainerView: View {
                         .padding(.top)
                 }
 
-                taskView(for: tasks[currentTaskIndex])
+                ZStack {
+                    taskView(for: tasks[currentTaskIndex])
+
+                    if isShowingTaskSuccess {
+                        TaskSuccessOverlay()
+                    }
+                }
+                .animation(.easeInOut(duration: 0.2), value: isShowingTaskSuccess)
             }
         }
     }
@@ -200,10 +210,41 @@ struct TaskContainerView: View {
         guard index == currentTaskIndex else { return }
         switch event {
         case .progress(let progress):
+            guard !hasCompletedCurrentTask else { return }
             withinTaskProgress = min(max(progress, 0), 1)
         case .completed:
             guard !hasCompletedCurrentTask else { return }
             hasCompletedCurrentTask = true
+            withinTaskProgress = 1
+            presentSuccessThenAdvance(fromTaskAt: index)
+        }
+    }
+
+    private func presentSuccessThenAdvance(fromTaskAt index: Int) {
+        completionTask?.cancel()
+        Haptics.success()
+
+        if index == tasks.count - 1 {
+            soundManager.stopPlaying()
+        }
+
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isShowingTaskSuccess = true
+        }
+
+        completionTask = Task { @MainActor in
+            do {
+                try await Task.sleep(for: TaskSuccessPresentation.duration)
+            } catch {
+                return
+            }
+
+            guard !Task.isCancelled, index == currentTaskIndex else {
+                return
+            }
+
+            isShowingTaskSuccess = false
+            completionTask = nil
             advanceOrComplete()
         }
     }
@@ -211,13 +252,13 @@ struct TaskContainerView: View {
     private func advanceOrComplete() {
         let nextIndex = currentTaskIndex + 1
         if nextIndex >= tasks.count {
-            Haptics.success()
             Haptics.impact(.heavy)
             complete()
         } else {
             currentTaskIndex = nextIndex
             hasCompletedCurrentTask = false
             withinTaskProgress = 0
+            isShowingTaskSuccess = false
         }
     }
 
