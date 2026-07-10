@@ -78,6 +78,8 @@ enum L10n {
     static let settingsNapDefaultsConfigButton: LocalizedStringKey = "settings_nap_defaults_config_button"
     static let settingsNapDefaultsUseGlobalToggle: LocalizedStringKey = "settings_nap_defaults_use_global_toggle"
     static let settingsNapDefaultsUseGlobalHint: LocalizedStringKey = "settings_nap_defaults_use_global_hint"
+    static let settingsTasksGlobalToggle: LocalizedStringKey = "settings_tasks_global_toggle"
+    static let settingsTasksGlobalHint: LocalizedStringKey = "settings_tasks_global_hint"
     static let settingsLiveActivitiesTitle: LocalizedStringKey = "settings_live_activities_title"
     static let settingsLiveActivitiesBody: LocalizedStringKey = "settings_live_activities_body"
     static let settingsLiveActivitiesGlobalToggle: LocalizedStringKey = "settings_live_activities_global_toggle"

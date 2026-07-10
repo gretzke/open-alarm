@@ -99,6 +99,8 @@
 "settings_nap_defaults_config_button" = "Configure nap defaults";
 "settings_nap_defaults_use_global_toggle" = "Use global defaults";
 "settings_nap_defaults_use_global_hint" = "When enabled, nap alarms use the same defaults as regular alarms.";
+"settings_tasks_global_toggle" = "Wake-up tasks";
+"settings_tasks_global_hint" = "Turn this off to skip wake-up tasks while keeping their configurations for later.";
 "settings_live_activities_title" = "Live Activities";
 "settings_live_activities_body" = "Control which Live Activities OpenAlarm shows. The alarm-ringing activity always stays enabled.";
 "settings_live_activities_global_toggle" = "Enable Live Activities";

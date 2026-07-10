@@ -99,6 +99,8 @@
 "settings_nap_defaults_config_button" = "Nap-Standardeinstellungen";
 "settings_nap_defaults_use_global_toggle" = "Globale Standards verwenden";
 "settings_nap_defaults_use_global_hint" = "Wenn aktiviert, verwenden Nap-Alarme dieselben Standards wie reguläre Alarme.";
+"settings_tasks_global_toggle" = "Aufwachaufgaben";
+"settings_tasks_global_hint" = "Deaktiviere dies, um Aufwachaufgaben zu überspringen. Ihre Konfigurationen bleiben für später erhalten.";
 "settings_live_activities_title" = "Live-Aktivitäten";
 "settings_live_activities_body" = "Steuere, welche Live-Aktivitäten OpenAlarm anzeigt. Die Alarm-Klingel-Aktivität bleibt immer aktiviert.";
 "settings_live_activities_global_toggle" = "Live-Aktivitäten aktivieren";

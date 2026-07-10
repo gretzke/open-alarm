@@ -41,8 +41,8 @@ struct StopIntent: LiveActivityIntent {
         if let resolved = Self.resolveParentAlarm(for: id, persistence: persistence) {
             let parentID = resolved.alarm.id
             let previous = BackstopSlotStore.backstopID(forParent: parentID)
-            let needsProtection = !resolved.settings.tasks.isEmpty || resolved.settings.wakeUpCheckEnabled
-            IntentDiagnostics.log("StopIntent resolved parent=\(parentID.uuidString) tasks=\(resolved.settings.tasks.count) wakeCheck=\(resolved.settings.wakeUpCheckEnabled) protect=\(needsProtection)")
+            let needsProtection = !persistence.effectiveTasks(from: resolved.settings).isEmpty || resolved.settings.wakeUpCheckEnabled
+            IntentDiagnostics.log("StopIntent resolved parent=\(parentID.uuidString) tasks=\(persistence.effectiveTasks(from: resolved.settings).count) wakeCheck=\(resolved.settings.wakeUpCheckEnabled) protect=\(needsProtection)")
 
             if needsProtection {
                 await Self.scheduleDisarmBackstop(

@@ -39,6 +39,7 @@ final class AlarmStore: ObservableObject {
     @Published var testingModeEnabled: Bool
     @Published var pinAlarmVolumeEnabled: Bool
     @Published var liveActivitiesEnabled: Bool
+    @Published private(set) var tasksEnabled: Bool
     @Published var liveActivitiesSystemEnabled: Bool
     @Published var permissionStatus: AlarmPermissionStatus
     @Published var notificationPermissionStatus: NotificationPermissionStatus = .notDetermined
@@ -140,6 +141,7 @@ final class AlarmStore: ObservableObject {
         self.testingModeEnabled = persistence.loadTestingModeEnabled()
         self.pinAlarmVolumeEnabled = persistence.loadPinAlarmVolumeEnabled()
         self.liveActivitiesEnabled = persistence.loadLiveActivitiesEnabled()
+        self.tasksEnabled = persistence.loadTasksEnabled()
         self.liveActivitiesSystemEnabled = ActivityAuthorizationInfo().areActivitiesEnabled
         self.permissionStatus = self.permissionService.currentStatus()
 
@@ -715,6 +717,12 @@ final class AlarmStore: ObservableObject {
         }
     }
 
+    func updateTasksEnabled(_ enabled: Bool) {
+        guard tasksEnabled != enabled else { return }
+        tasksEnabled = enabled
+        persistence.saveTasksEnabled(enabled)
+    }
+
     func updateNapDefaultSharedSettings(_ settings: SharedAlarmSettings?) {
         guard napDefaultSharedSettings != settings else { return }
         napDefaultSharedSettings = settings
@@ -978,7 +986,7 @@ final class AlarmStore: ObservableObject {
         disarmPresentation = DisarmPresentation(
             id: alarms[index].id,
             alarm: alarm,
-            tasks: settings.tasks,
+            tasks: persistence.effectiveTasks(from: settings),
             resolvedSettings: settings
         )
         IntentDiagnostics.log("AlarmStore disarm presentation shown alarm=\(alarm.id.uuidString)")
