@@ -171,13 +171,17 @@
 "task_picker_choose_type" = "Choose Task";
 "task_dismiss_title" = "Alarm";
 "task_dismiss_alarm_button" = "Dismiss Alarm";
+"task_dismiss_tasks_hint_one" = "%lld task between you and snooze-proof";
+"task_dismiss_tasks_hint_other" = "%lld tasks between you and snooze-proof";
 "task_mute_button" = "Mute";
 "task_mute_countdown %lld" = "%llds";
 "a11y_task_mute_button" = "Mute alarm sound";
 "a11y_task_mute_countdown %lld" = "Sound muted, %lld seconds remaining";
+"a11y_math_keypad_delete" = "Delete";
 "task_progress %lld %lld" = "Task %lld of %lld";
 "task_math_progress %lld %lld" = "Problem %lld of %lld";
 "task_math_submit" = "Submit";
+"task_math_keypad_go" = "Go";
 "task_math_wrong_answer" = "Wrong answer. Try again!";
 "task_math_difficulty_simple" = "Simple";
 "task_math_difficulty_hard" = "Hard";

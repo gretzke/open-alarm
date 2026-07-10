@@ -68,9 +68,14 @@ struct MathTaskDescriptor: TaskDescriptor {
             preconditionFailure("MathTaskDescriptor received a non-math task")
         }
 
-        return AnyView(MathTaskView(difficulty: difficulty, totalCount: count) {
-            onEvent(.completed)
-        })
+        return AnyView(
+            MathTaskView(
+                difficulty: difficulty,
+                totalCount: count,
+                mode: mode,
+                onEvent: onEvent
+            )
+        )
     }
 
     func makeConfigurator(_ task: Binding<AlarmTask>) -> AnyView {

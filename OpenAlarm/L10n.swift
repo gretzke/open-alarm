@@ -127,6 +127,8 @@ enum L10n {
 
     static let taskConfiguratorTitle: LocalizedStringKey = "task_configurator_title"
     static let taskDummyDescription: LocalizedStringKey = "task_dummy_description"
+    static let taskMathKeypadGo = String(localized: "task_math_keypad_go")
+    static let a11yMathKeypadDelete = String(localized: "a11y_math_keypad_delete")
     static let taskMathDifficultyTitle: LocalizedStringKey = "task_math_difficulty_title"
     static let taskMathCountTitle: LocalizedStringKey = "task_math_count_title"
     static let taskMathLevelEasy = String(localized: "task_math_level_easy")
@@ -143,6 +145,13 @@ enum L10n {
         case .extreme: taskMathLevelExtreme
         case .nightmare: taskMathLevelNightmare
         }
+    }
+
+    static func taskDismissTasksHint(_ count: Int) -> String {
+        let format = count == 1
+            ? String(localized: "task_dismiss_tasks_hint_one")
+            : String(localized: "task_dismiss_tasks_hint_other")
+        return String(format: format, count)
     }
 
     static let wakeCheckConfirmTitle: LocalizedStringKey = "wake_check_confirm_title"

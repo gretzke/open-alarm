@@ -12,50 +12,53 @@ struct WakeUpCheckConfirmationView: View {
     @ScaledMetric(relativeTo: .largeTitle) private var countdownFontSize: CGFloat = 64
 
     var body: some View {
-        VStack(spacing: 24) {
-            VStack(spacing: 16) {
-                Image(systemName: "alarm.waves.left.and.right.fill")
-                    .font(.system(size: 52, weight: .semibold))
-                    .foregroundStyle(OAColor.actionCyan)
+        ZStack {
+            DawnBackground(progress: DawnProgress.wakeCheck)
 
-                Text(L10n.wakeCheckConfirmTitle)
-                    .font(.title.bold())
-                    .foregroundStyle(OAColor.textPrimary)
-                    .multilineTextAlignment(.center)
+            VStack(spacing: 24) {
+                VStack(spacing: 16) {
+                    Image(systemName: "alarm.waves.left.and.right.fill")
+                        .font(.system(size: 52, weight: .semibold))
+                        .foregroundStyle(DawnPalette.inkDark)
 
-                Text(L10n.wakeCheckConfirmSubtitle)
-                    .font(.body)
-                    .foregroundStyle(OAColor.textSecondary)
-                    .multilineTextAlignment(.center)
+                    Text(L10n.wakeCheckConfirmTitle)
+                        .font(OADawnType.display(32))
+                        .foregroundStyle(DawnPalette.inkDark)
+                        .multilineTextAlignment(.center)
 
-                Text(formattedCountdown)
-                    .font(OAType.display(countdownFontSize))
-                    .monospacedDigit()
-                    .foregroundStyle(remainingSeconds <= 10 ? OAColor.danger : OAColor.textPrimary)
-                    .contentTransition(.numericText())
-                    .animation(.default, value: remainingSeconds)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
+                    Text(L10n.wakeCheckConfirmSubtitle)
+                        .font(.body)
+                        .foregroundStyle(DawnPalette.inkDark.opacity(0.75))
+                        .multilineTextAlignment(.center)
+
+                    Text(formattedCountdown)
+                        .font(OADawnType.display(countdownFontSize))
+                        .monospacedDigit()
+                        .foregroundStyle(remainingSeconds <= 10 ? DawnPalette.stops[1] : DawnPalette.inkDark)
+                        .contentTransition(.numericText())
+                        .animation(.default, value: remainingSeconds)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                }
+                .padding(OASpacing.onboardingMargin)
+                .background(Color.white.opacity(0.24), in: RoundedRectangle(cornerRadius: OARadius.card, style: .continuous))
+
+                Button {
+                    Task {
+                        await alarmStore.confirmWakeUpCheck(for: alarmID)
+                    }
+                } label: {
+                    Text(L10n.wakeCheckConfirmAction)
+                        .font(OADawnType.button)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+                }
+                .background(DawnPalette.inkDark, in: Capsule())
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("wake_check_confirm_awake")
             }
             .padding(OASpacing.onboardingMargin)
-            .oaGlassCard()
-
-            Button {
-                Task {
-                    await alarmStore.confirmWakeUpCheck(for: alarmID)
-                }
-            } label: {
-                Text(L10n.wakeCheckConfirmAction)
-                    .font(OAType.buttonLabel)
-                    .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
-            }
-            .buttonStyle(.glassProminent)
-            .tint(OAColor.actionCyan)
-            .accessibilityIdentifier("wake_check_confirm_awake")
         }
-        .padding(OASpacing.onboardingMargin)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(OAColor.background.ignoresSafeArea())
         .interactiveDismissDisabled()
         .onAppear {
             hasDisappeared = false

@@ -14,6 +14,8 @@ struct TaskContainerView: View {
     @State private var hasCompletedCurrentTask = false
     @State private var withinTaskProgress: Double = 0
 
+    @ScaledMetric(relativeTo: .largeTitle) private var dismissTimeFontSize: CGFloat = 84
+
     init(
         alarm: AlarmDefinition,
         tasks: [AlarmTask],
@@ -35,7 +37,7 @@ struct TaskContainerView: View {
 
     var body: some View {
         ZStack {
-            OAColor.background.ignoresSafeArea()
+            DawnBackground(progress: dawnProgress)
 
             if !isDismissed {
                 dismissScreen
@@ -75,10 +77,28 @@ struct TaskContainerView: View {
 
             Spacer()
 
-            Text(alarm.name.isEmpty ? String(localized: "task_dismiss_title") : alarm.name)
-                .font(.largeTitle.weight(.bold))
-                .foregroundStyle(OAColor.textPrimary)
-                .multilineTextAlignment(.center)
+            VStack(spacing: OASpacing.m) {
+                Text(alarm.name.isEmpty ? String(localized: "task_dismiss_title") : alarm.name)
+                    .font(OADawnType.chip)
+                    .foregroundStyle(dawnInk)
+                    .padding(.horizontal, OASpacing.m)
+                    .padding(.vertical, OASpacing.s)
+                    .background(dawnInk.opacity(0.18), in: Capsule())
+
+                Text(alarmTime)
+                    .font(OADawnType.display(dismissTimeFontSize))
+                    .monospacedDigit()
+                    .foregroundStyle(dawnInk)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+
+                if !tasks.isEmpty {
+                    Text(L10n.taskDismissTasksHint(tasks.count))
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(dawnInk.opacity(0.82))
+                        .multilineTextAlignment(.center)
+                }
+            }
 
             Spacer()
 
@@ -86,11 +106,12 @@ struct TaskContainerView: View {
                 isDismissed = true
             } label: {
                 Text(String(localized: "task_dismiss_alarm_button"))
-                    .font(OAType.buttonLabel)
+                    .font(OADawnType.button)
+                    .foregroundStyle(DawnPalette.inkDark)
                     .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
             }
-            .buttonStyle(.glassProminent)
-            .tint(OAColor.actionCyan)
+            .background(Color.white, in: Capsule())
+            .buttonStyle(.plain)
 
             Spacer()
         }
@@ -105,8 +126,11 @@ struct TaskContainerView: View {
 
                 if tasks.count > 1 {
                     Text(String(localized: "task_progress \(currentTaskIndex + 1) \(tasks.count)"))
-                        .font(.subheadline)
-                        .foregroundStyle(OAColor.textSecondary)
+                        .font(OADawnType.chip)
+                        .foregroundStyle(dawnInk)
+                        .padding(.horizontal, OASpacing.m)
+                        .padding(.vertical, OASpacing.s)
+                        .background(dawnInk.opacity(0.18), in: Capsule())
                         .padding(.top)
                 }
 
@@ -131,12 +155,13 @@ struct TaskContainerView: View {
                     } icon: {
                         Image(systemName: "speaker.slash.fill")
                     }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(OAColor.textPrimary)
+                    .font(OADawnType.chip)
+                    .foregroundStyle(dawnInk)
                     .padding(.horizontal, 14)
                     .frame(minHeight: OASize.minTouchTarget)
                 }
-                .buttonStyle(.glassAccentBorder)
+                .background(dawnInk.opacity(0.18), in: Capsule())
+                .buttonStyle(.plain)
                 .accessibilityLabel(temporaryMuteAccessibilityLabel)
                 .accessibilityIdentifier("task_sound_temporary_mute")
             }
@@ -186,6 +211,8 @@ struct TaskContainerView: View {
     private func advanceOrComplete() {
         let nextIndex = currentTaskIndex + 1
         if nextIndex >= tasks.count {
+            Haptics.success()
+            Haptics.impact(.heavy)
             complete()
         } else {
             currentTaskIndex = nextIndex
@@ -199,5 +226,29 @@ struct TaskContainerView: View {
         AlarmSoundLiveActivityManager.shared.stop()
         forceCloseManager?.stop()
         onCompleted()
+    }
+
+    private var dawnProgress: Double {
+        guard isDismissed, !tasks.isEmpty, currentTaskIndex < tasks.count else {
+            return DawnProgress.dismiss
+        }
+
+        return DawnProgress.forTask(
+            index: currentTaskIndex,
+            of: tasks.count,
+            within: withinTaskProgress
+        )
+    }
+
+    private var dawnInk: Color {
+        DawnPalette.ink(progress: dawnProgress)
+    }
+
+    private var alarmTime: String {
+        var components = Calendar.autoupdatingCurrent.dateComponents([.year, .month, .day], from: .now)
+        components.hour = alarm.hour
+        components.minute = alarm.minute
+        let date = Calendar.autoupdatingCurrent.date(from: components) ?? .now
+        return date.formatted(date: .omitted, time: .shortened)
     }
 }

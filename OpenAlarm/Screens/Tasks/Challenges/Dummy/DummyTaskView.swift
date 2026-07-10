@@ -8,8 +8,8 @@ struct DummyTaskView: View {
             Spacer()
 
             Text(String(localized: "task_dummy_instruction"))
-                .font(.title2)
-                .foregroundStyle(OAColor.textPrimary)
+                .font(OADawnType.display(28))
+                .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
 
             Spacer()
@@ -18,11 +18,12 @@ struct DummyTaskView: View {
                 onCompleted()
             } label: {
                 Text(String(localized: "task_dummy_button"))
-                    .font(OAType.buttonLabel)
+                    .font(OADawnType.button)
+                    .foregroundStyle(DawnPalette.inkDark)
                     .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
             }
-            .buttonStyle(.glassProminent)
-            .tint(OAColor.actionCyan)
+            .background(Color.white, in: Capsule())
+            .buttonStyle(.plain)
 
             Spacer()
         }
