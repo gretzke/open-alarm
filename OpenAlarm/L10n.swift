@@ -123,6 +123,27 @@ enum L10n {
     static let actionPause: LocalizedStringKey = "action_pause"
     static let actionContinue: LocalizedStringKey = "action_continue"
     static let actionClear: LocalizedStringKey = "action_clear"
+    static let alarmButtonDone: LocalizedStringKey = "alarm_button_done"
+
+    static let taskConfiguratorTitle: LocalizedStringKey = "task_configurator_title"
+    static let taskDummyDescription: LocalizedStringKey = "task_dummy_description"
+    static let taskMathDifficultyTitle: LocalizedStringKey = "task_math_difficulty_title"
+    static let taskMathCountTitle: LocalizedStringKey = "task_math_count_title"
+    static let taskMathLevelEasy = String(localized: "task_math_level_easy")
+    static let taskMathLevelMedium = String(localized: "task_math_level_medium")
+    static let taskMathLevelHard = String(localized: "task_math_level_hard")
+    static let taskMathLevelExtreme = String(localized: "task_math_level_extreme")
+    static let taskMathLevelNightmare = String(localized: "task_math_level_nightmare")
+
+    static func taskMathLevelName(_ difficulty: MathDifficulty) -> String {
+        switch difficulty {
+        case .easy: taskMathLevelEasy
+        case .medium: taskMathLevelMedium
+        case .hard: taskMathLevelHard
+        case .extreme: taskMathLevelExtreme
+        case .nightmare: taskMathLevelNightmare
+        }
+    }
 
     static let wakeCheckConfirmTitle: LocalizedStringKey = "wake_check_confirm_title"
     static let wakeCheckConfirmSubtitle: LocalizedStringKey = "wake_check_confirm_subtitle"

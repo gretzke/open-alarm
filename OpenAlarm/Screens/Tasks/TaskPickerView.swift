@@ -33,9 +33,7 @@ struct TaskPickerView: View {
             taskTypeListSheet
         }
         .sheet(item: $settingsTask) { identifiedTask in
-            NavigationStack {
-                taskSettingsView(for: identifiedTask)
-            }
+            TaskConfiguratorSheet(initial: identifiedTask.task, onCommit: applyTask)
         }
     }
 
@@ -114,21 +112,6 @@ struct TaskPickerView: View {
             .navigationTitle(String(localized: "task_picker_choose_type"))
         }
         .presentationDetents([.medium])
-    }
-
-    @ViewBuilder
-    private func taskSettingsView(for identifiedTask: IdentifiedTask) -> some View {
-        TaskRegistry.descriptor(for: identifiedTask.task).makeConfigurator(taskBinding(for: identifiedTask))
-    }
-
-    private func taskBinding(for identifiedTask: IdentifiedTask) -> Binding<AlarmTask> {
-        Binding(
-            get: { settingsTask?.task ?? identifiedTask.task },
-            set: { configuredTask in
-                guard settingsTask?.id == identifiedTask.id else { return }
-                applyTask(configuredTask)
-            }
-        )
     }
 
     private func applyTask(_ task: AlarmTask) {

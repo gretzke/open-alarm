@@ -182,6 +182,14 @@
 "task_math_difficulty_simple" = "Einfach";
 "task_math_difficulty_hard" = "Schwer";
 "task_math_count %lld" = "%lld Aufgaben";
+"task_configurator_title" = "Aufgabe konfigurieren";
+"task_math_difficulty_title" = "Schwierigkeit";
+"task_math_count_title" = "Aufgaben";
+"task_math_level_easy" = "Einfach";
+"task_math_level_medium" = "Mittel";
+"task_math_level_hard" = "Schwer";
+"task_math_level_extreme" = "Extrem";
+"task_math_level_nightmare" = "Albtraum";
 
 /* Durations */
 "duration_hours_minutes_short" = "%dh %dm";

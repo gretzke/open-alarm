@@ -146,7 +146,7 @@ enum DawnProgress {
         DawnBackground(progress: progress)
 
         VStack(spacing: OASpacing.m) {
-            Text("Dawn theme")
+            Text(verbatim: "Dawn theme")
                 .font(OADawnType.display(36))
                 .foregroundStyle(DawnPalette.ink(progress: progress))
 

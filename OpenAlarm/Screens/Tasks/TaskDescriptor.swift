@@ -44,9 +44,7 @@ struct DummyTaskDescriptor: TaskDescriptor {
     }
 
     func makeConfigurator(_ task: Binding<AlarmTask>) -> AnyView {
-        AnyView(DummySettingsView(existingTask: task.wrappedValue) { configuredTask in
-            task.wrappedValue = configuredTask
-        })
+        AnyView(DummyConfigurator())
     }
 }
 
@@ -76,8 +74,6 @@ struct MathTaskDescriptor: TaskDescriptor {
     }
 
     func makeConfigurator(_ task: Binding<AlarmTask>) -> AnyView {
-        AnyView(MathSettingsView(existingTask: task.wrappedValue) { configuredTask in
-            task.wrappedValue = configuredTask
-        })
+        AnyView(MathConfigurator(task: task))
     }
 }
