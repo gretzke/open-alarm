@@ -251,7 +251,7 @@ struct AlarmRowView: View {
     private var toggleWithPopover: some View {
         Toggle(isOn: Binding(
             get: { effectiveToggleIsOn },
-            set: { onToggle($0) }
+            set: { Haptics.impact(); onToggle($0) }
         )) {
             // Hidden visually, but gives VoiceOver a meaningful switch label.
             Text(alarm.triggerDateForDisplay, style: .time)

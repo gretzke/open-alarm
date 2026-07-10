@@ -96,6 +96,7 @@ struct ActiveNapRowView: View {
 
             HStack(spacing: 10) {
                 Button {
+                    Haptics.impact()
                     if nap.isPaused {
                         onContinue()
                     } else {
@@ -110,7 +111,10 @@ struct ActiveNapRowView: View {
                 }
                 .buttonStyle(.glass)
 
-                Button(action: onDelete) {
+                Button {
+                    Haptics.impact(.rigid)
+                    onDelete()
+                } label: {
                     Label(L10n.actionDelete, systemImage: "xmark")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(OAColor.danger)
@@ -130,7 +134,10 @@ struct ActiveNapRowView: View {
         accessibilityLabel: LocalizedStringKey,
         action: @escaping () -> Void
     ) -> some View {
-        Button(action: action) {
+        Button {
+            Haptics.impact()
+            action()
+        } label: {
             Text(title)
                 .font(.footnote.weight(.bold))
                 .foregroundStyle(OAColor.actionCyan)

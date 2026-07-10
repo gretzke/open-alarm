@@ -269,6 +269,7 @@ struct AlarmEditorView: View {
         let isSelected = draft.repeatDays.contains(day)
 
         return Button {
+            Haptics.selection()
             draft.toggleRepeatDay(day)
         } label: {
             Text(day.veryShortSymbol())
@@ -354,6 +355,7 @@ struct AlarmEditorView: View {
                 } else {
                     try await alarmStore.createAlarm(from: draft)
                 }
+                Haptics.success()
                 dismiss()
             } catch {
                 errorMessage = alarmStore.userFacingErrorMessage(for: error)

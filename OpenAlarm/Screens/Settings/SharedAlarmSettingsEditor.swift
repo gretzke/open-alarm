@@ -104,7 +104,13 @@ struct SharedAlarmSettingsEditor: View {
 
                 Spacer(minLength: 0)
 
-                Toggle(isOn: $settings.snoozeEnabled) {
+                Toggle(isOn: Binding(
+                    get: { settings.snoozeEnabled },
+                    set: { enabled in
+                        Haptics.impact()
+                        settings.snoozeEnabled = enabled
+                    }
+                )) {
                     // Hidden visually, but gives VoiceOver a meaningful switch label.
                     Text(L10n.alarmEditorSnoozeTitle)
                 }
@@ -137,6 +143,7 @@ struct SharedAlarmSettingsEditor: View {
                 Toggle(isOn: Binding(
                     get: { settings.wakeUpCheckEnabled },
                     set: { enabled in
+                        Haptics.impact()
                         guard enabled else {
                             settings.wakeUpCheckEnabled = false
                             return

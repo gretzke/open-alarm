@@ -123,6 +123,7 @@ struct NapEditorView: View {
         Task {
             do {
                 try await alarmStore.createNap(from: draft)
+                Haptics.success()
                 dismiss()
             } catch {
                 errorMessage = alarmStore.userFacingErrorMessage(for: error)

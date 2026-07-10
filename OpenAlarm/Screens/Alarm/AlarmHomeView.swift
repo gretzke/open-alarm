@@ -191,6 +191,7 @@ struct AlarmHomeView: View {
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                         if presentation.isInteractive {
                             Button(role: .destructive) {
+                                Haptics.impact(.rigid)
                                 alarmStore.deleteAlarm(alarm)
                             } label: {
                                 Label(L10n.actionDelete, systemImage: "trash")
