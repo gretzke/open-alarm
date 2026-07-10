@@ -138,6 +138,16 @@ enum L10n {
     static let taskMathLevelHard = String(localized: "task_math_level_hard")
     static let taskMathLevelExtreme = String(localized: "task_math_level_extreme")
     static let taskMathLevelNightmare = String(localized: "task_math_level_nightmare")
+    static let taskShakeName = String(localized: "task_shake_name")
+    static let taskShakeInstruction: LocalizedStringKey = "task_shake_instruction"
+    static let taskShakeUnavailableFallback: LocalizedStringKey = "task_shake_unavailable_fallback"
+    static let taskShakeSimulate: LocalizedStringKey = "task_shake_simulate"
+    static let taskShakeIntensityTitle: LocalizedStringKey = "task_shake_intensity_title"
+    static let taskShakeLevel1 = String(localized: "task_shake_level_1")
+    static let taskShakeLevel2 = String(localized: "task_shake_level_2")
+    static let taskShakeLevel3 = String(localized: "task_shake_level_3")
+    static let taskShakeLevel4 = String(localized: "task_shake_level_4")
+    static let taskShakeLevel5 = String(localized: "task_shake_level_5")
 
     static func taskMathLevelName(_ difficulty: MathDifficulty) -> String {
         switch difficulty {

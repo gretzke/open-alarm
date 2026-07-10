@@ -6,10 +6,12 @@ import SwiftUI
 enum TaskRegistry {
     private static let dummyDescriptor = DummyTaskDescriptor()
     private static let mathDescriptor = MathTaskDescriptor()
+    private static let shakeDescriptor = ShakeTaskDescriptor()
 
     static let descriptors: [any TaskDescriptor] = [
         dummyDescriptor,
         mathDescriptor,
+        shakeDescriptor,
     ]
 
     /// The runtime lookup intentionally does not apply picker-visibility rules.
@@ -20,6 +22,8 @@ enum TaskRegistry {
             dummyDescriptor
         case .math:
             mathDescriptor
+        case .shake:
+            shakeDescriptor
         }
     }
 

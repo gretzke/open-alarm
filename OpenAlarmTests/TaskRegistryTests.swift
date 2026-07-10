@@ -6,7 +6,8 @@ import XCTest
 final class TaskRegistryTests: XCTestCase {
     private let representativeTasks: [AlarmTask] = [
         .dummy,
-        .math(difficulty: .simple, count: 3),
+        .math(difficulty: .medium, count: 3),
+        .shake(intensity: 3),
     ]
 
     func testDescriptorTypeIDsAreUnique() {

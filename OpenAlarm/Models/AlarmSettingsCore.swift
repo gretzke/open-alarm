@@ -103,12 +103,80 @@ enum MathDifficulty: String, Codable, CaseIterable, Sendable {
 enum AlarmTask: Codable, Equatable, Hashable, Sendable {
     case dummy
     case math(difficulty: MathDifficulty, count: Int)
+    case shake(intensity: Int)
 
     var displayName: String {
         switch self {
         case .dummy: String(localized: "task_dummy_name")
         case .math: String(localized: "task_math_name")
+        case .shake: String(localized: "task_shake_name")
         }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        guard container.allKeys.count == 1 else {
+            throw DecodingError.typeMismatch(
+                AlarmTask.self,
+                DecodingError.Context(
+                    codingPath: decoder.codingPath,
+                    debugDescription: "Expected exactly one alarm task case."
+                )
+            )
+        }
+
+        if container.contains(.dummy) {
+            self = .dummy
+        } else if container.contains(.math) {
+            let math = try container.nestedContainer(keyedBy: MathCodingKeys.self, forKey: .math)
+            self = .math(
+                difficulty: try math.decode(MathDifficulty.self, forKey: .difficulty),
+                count: try math.decode(Int.self, forKey: .count)
+            )
+        } else if container.contains(.shake) {
+            let shake = try container.nestedContainer(keyedBy: ShakeCodingKeys.self, forKey: .shake)
+            let intensity = try shake.decode(Int.self, forKey: .intensity)
+            self = .shake(intensity: min(max(intensity, 1), 5))
+        } else {
+            throw DecodingError.dataCorrupted(
+                DecodingError.Context(
+                    codingPath: decoder.codingPath,
+                    debugDescription: "Unknown alarm task case."
+                )
+            )
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        switch self {
+        case .dummy:
+            try container.encode([String: String](), forKey: .dummy)
+        case let .math(difficulty, count):
+            var math = container.nestedContainer(keyedBy: MathCodingKeys.self, forKey: .math)
+            try math.encode(difficulty, forKey: .difficulty)
+            try math.encode(count, forKey: .count)
+        case let .shake(intensity):
+            var shake = container.nestedContainer(keyedBy: ShakeCodingKeys.self, forKey: .shake)
+            try shake.encode(min(max(intensity, 1), 5), forKey: .intensity)
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case dummy
+        case math
+        case shake
+    }
+
+    private enum MathCodingKeys: String, CodingKey {
+        case difficulty
+        case count
+    }
+
+    private enum ShakeCodingKeys: String, CodingKey {
+        case intensity
     }
 }
 

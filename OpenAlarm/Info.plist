@@ -42,6 +42,8 @@
 	<string>$(IPHONEOS_DEPLOYMENT_TARGET)</string>
 	<key>NSAlarmKitUsageDescription</key>
 	<string>OpenAlarm needs alarm access to schedule alarms and timers you create.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>OpenAlarm uses motion to verify shake wake-up tasks.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSSupportsLiveActivities</key>

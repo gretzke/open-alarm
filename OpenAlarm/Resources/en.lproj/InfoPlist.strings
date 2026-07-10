@@ -1,1 +1,2 @@
 "NSAlarmKitUsageDescription" = "OpenAlarm needs alarm access to schedule alarms and timers you create.";
+"NSMotionUsageDescription" = "OpenAlarm uses motion to verify shake wake-up tasks.";

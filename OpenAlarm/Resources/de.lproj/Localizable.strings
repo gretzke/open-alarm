@@ -196,6 +196,16 @@
 "task_math_level_hard" = "Schwer";
 "task_math_level_extreme" = "Extrem";
 "task_math_level_nightmare" = "Albtraum";
+"task_shake_name" = "Schütteln";
+"task_shake_instruction" = "Schütteln!";
+"task_shake_unavailable_fallback" = "Schließen";
+"task_shake_simulate" = "Zum Simulieren halten";
+"task_shake_intensity_title" = "Intensität";
+"task_shake_level_1" = "Sanft";
+"task_shake_level_2" = "Kräftig";
+"task_shake_level_3" = "Heftig";
+"task_shake_level_4" = "Rasend";
+"task_shake_level_5" = "Erdbeben";
 
 /* Durations */
 "duration_hours_minutes_short" = "%dh %dm";

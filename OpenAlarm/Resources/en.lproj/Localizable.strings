@@ -196,6 +196,16 @@
 "task_math_level_hard" = "Hard";
 "task_math_level_extreme" = "Extreme";
 "task_math_level_nightmare" = "Nightmare";
+"task_shake_name" = "Shake";
+"task_shake_instruction" = "Shake!";
+"task_shake_unavailable_fallback" = "Dismiss";
+"task_shake_simulate" = "Hold to simulate";
+"task_shake_intensity_title" = "Intensity";
+"task_shake_level_1" = "Gentle";
+"task_shake_level_2" = "Firm";
+"task_shake_level_3" = "Vigorous";
+"task_shake_level_4" = "Furious";
+"task_shake_level_5" = "Earthquake";
 
 /* Durations */
 "duration_hours_minutes_short" = "%dh %dm";
