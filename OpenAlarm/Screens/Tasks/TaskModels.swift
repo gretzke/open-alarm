@@ -8,12 +8,14 @@ enum TaskRegistry {
     private static let mathDescriptor = MathTaskDescriptor()
     private static let shakeDescriptor = ShakeTaskDescriptor()
     private static let memoryDescriptor = MemoryTaskDescriptor()
+    private static let stepsDescriptor = StepsTaskDescriptor()
 
     static let descriptors: [any TaskDescriptor] = [
         dummyDescriptor,
         mathDescriptor,
         shakeDescriptor,
         memoryDescriptor,
+        stepsDescriptor,
     ]
 
     /// The runtime lookup intentionally does not apply picker-visibility rules.
@@ -28,6 +30,8 @@ enum TaskRegistry {
             shakeDescriptor
         case .memory:
             memoryDescriptor
+        case .steps:
+            stepsDescriptor
         }
     }
 

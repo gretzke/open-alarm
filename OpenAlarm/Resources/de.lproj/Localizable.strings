@@ -215,6 +215,12 @@
 "task_memory_level_3" = "Konzentriert";
 "task_memory_level_4" = "Intensiv";
 "task_memory_level_5" = "Fotografisch";
+"task_steps_name" = "Schritte";
+"task_steps_title" = "Lauf es ab";
+"task_steps_count_title" = "Schrittziel";
+"task_steps_unavailable_fallback" = "Schließen";
+"task_steps_simulate" = "Zum Simulieren halten";
+"task_steps_counter_format" = "%d / %d";
 
 /* Durations */
 "duration_hours_minutes_short" = "%dh %dm";

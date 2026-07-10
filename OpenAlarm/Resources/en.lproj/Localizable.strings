@@ -215,6 +215,12 @@
 "task_memory_level_3" = "Focused";
 "task_memory_level_4" = "Intense";
 "task_memory_level_5" = "Photographic";
+"task_steps_name" = "Steps";
+"task_steps_title" = "Walk it off";
+"task_steps_count_title" = "Step goal";
+"task_steps_unavailable_fallback" = "Dismiss";
+"task_steps_simulate" = "Hold to simulate";
+"task_steps_counter_format" = "%d / %d";
 
 /* Durations */
 "duration_hours_minutes_short" = "%dh %dm";

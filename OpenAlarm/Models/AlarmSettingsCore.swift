@@ -105,6 +105,7 @@ enum AlarmTask: Codable, Equatable, Hashable, Sendable {
     case math(difficulty: MathDifficulty, count: Int)
     case shake(intensity: Int)
     case memory(difficulty: Int, rounds: Int)
+    case steps(count: Int)
 
     var displayName: String {
         switch self {
@@ -112,6 +113,7 @@ enum AlarmTask: Codable, Equatable, Hashable, Sendable {
         case .math: String(localized: "task_math_name")
         case .shake: String(localized: "task_shake_name")
         case .memory: String(localized: "task_memory_name")
+        case .steps: String(localized: "task_steps_name")
         }
     }
 
@@ -148,6 +150,9 @@ enum AlarmTask: Codable, Equatable, Hashable, Sendable {
                 difficulty: min(max(difficulty, 1), 5),
                 rounds: min(max(rounds, 1), 5)
             )
+        } else if container.contains(.steps) {
+            let steps = try container.nestedContainer(keyedBy: StepsCodingKeys.self, forKey: .steps)
+            self = .steps(count: try steps.decode(Int.self, forKey: .count))
         } else {
             throw DecodingError.dataCorrupted(
                 DecodingError.Context(
@@ -175,6 +180,9 @@ enum AlarmTask: Codable, Equatable, Hashable, Sendable {
             var memory = container.nestedContainer(keyedBy: MemoryCodingKeys.self, forKey: .memory)
             try memory.encode(min(max(difficulty, 1), 5), forKey: .difficulty)
             try memory.encode(min(max(rounds, 1), 5), forKey: .rounds)
+        case let .steps(count):
+            var steps = container.nestedContainer(keyedBy: StepsCodingKeys.self, forKey: .steps)
+            try steps.encode(count, forKey: .count)
         }
     }
 
@@ -183,6 +191,7 @@ enum AlarmTask: Codable, Equatable, Hashable, Sendable {
         case math
         case shake
         case memory
+        case steps
     }
 
     private enum MathCodingKeys: String, CodingKey {
@@ -197,6 +206,10 @@ enum AlarmTask: Codable, Equatable, Hashable, Sendable {
     private enum MemoryCodingKeys: String, CodingKey {
         case difficulty
         case rounds
+    }
+
+    private enum StepsCodingKeys: String, CodingKey {
+        case count
     }
 }
 

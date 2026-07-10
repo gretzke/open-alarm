@@ -9,6 +9,7 @@ final class TaskRegistryTests: XCTestCase {
         .math(difficulty: .medium, count: 3),
         .shake(intensity: 3),
         .memory(difficulty: 3, rounds: 3),
+        .steps(count: 30),
     ]
 
     func testDescriptorTypeIDsAreUnique() {

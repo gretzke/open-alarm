@@ -157,6 +157,15 @@ enum L10n {
     static let taskMemoryLevel3 = String(localized: "task_memory_level_3")
     static let taskMemoryLevel4 = String(localized: "task_memory_level_4")
     static let taskMemoryLevel5 = String(localized: "task_memory_level_5")
+    static let taskStepsName = String(localized: "task_steps_name")
+    static let taskStepsTitle: LocalizedStringKey = "task_steps_title"
+    static let taskStepsCountTitle: LocalizedStringKey = "task_steps_count_title"
+    static let taskStepsUnavailableFallback: LocalizedStringKey = "task_steps_unavailable_fallback"
+    static let taskStepsSimulate: LocalizedStringKey = "task_steps_simulate"
+
+    static func taskStepsCounter(_ steps: Int, goal: Int) -> String {
+        String(format: String(localized: "task_steps_counter_format"), steps, goal)
+    }
 
     static func taskMathLevelName(_ difficulty: MathDifficulty) -> String {
         switch difficulty {
