@@ -206,6 +206,15 @@
 "task_shake_level_3" = "Vigorous";
 "task_shake_level_4" = "Furious";
 "task_shake_level_5" = "Earthquake";
+"task_memory_name" = "Memory";
+"task_memory_instruction" = "Watch the pattern";
+"task_memory_difficulty_title" = "Difficulty";
+"task_memory_rounds_title" = "Rounds";
+"task_memory_level_1" = "Gentle";
+"task_memory_level_2" = "Steady";
+"task_memory_level_3" = "Focused";
+"task_memory_level_4" = "Intense";
+"task_memory_level_5" = "Photographic";
 
 /* Durations */
 "duration_hours_minutes_short" = "%dh %dm";

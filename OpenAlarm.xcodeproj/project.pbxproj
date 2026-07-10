@@ -52,7 +52,10 @@
 		88ACCBE3AD6D321648A7EA0B /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26CC8C5DB6E575E3E2908E15 /* Haptics.swift */; };
 		88BE5A50C98A69D71F236893 /* TaskRegistryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8857F7CD62651E1F7B1E992 /* TaskRegistryTests.swift */; };
 		8AAF86D176DBC56AB7618D2A /* StopIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAC4F90011CEA2952C0DEC7A /* StopIntent.swift */; };
+		8CEDB46EFBC52B5C9FF7A0A6 /* MemoryTaskDescriptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DC8A38B09C5A65762413EB5 /* MemoryTaskDescriptor.swift */; };
 		8FA79F0AB5D2E8B852D32CB8 /* TaskModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08633EC56E1799D43A24AE9A /* TaskModels.swift */; };
+		9019A131C1424D09904F0128 /* MemoryPatternGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF31DE975F3205E7AB2835DB /* MemoryPatternGenerator.swift */; };
+		928DD1858C8D574ED3C497E6 /* MemoryTaskView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11CB074E4958FE167D272472 /* MemoryTaskView.swift */; };
 		934097945BA93B950B4382B6 /* MathProblemGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D46FEF8EFF4DA652027BB024 /* MathProblemGenerator.swift */; };
 		935D7EBE5898D11D72E6E2F7 /* OpenAlarmTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 339F4E487D879956D310862D /* OpenAlarmTheme.swift */; };
 		9465C1CBD0145E57E07CF47F /* AlarmDefinition.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9F25B8B78A0594DE5563131 /* AlarmDefinition.swift */; };
@@ -71,6 +74,7 @@
 		BD8A90252F2F3669200E2C4F /* OpenAlarmTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 339F4E487D879956D310862D /* OpenAlarmTheme.swift */; };
 		BDD2C5EBBA247FBB4FD16F4D /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 2E7F4014449CC01093832222 /* InfoPlist.strings */; };
 		C327B3F413FE4A38DAF74852 /* BackstopSlotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0DD4B896793968D6338FC7 /* BackstopSlotStore.swift */; };
+		C46534E1686286BBEC56D511 /* MemoryConfigurator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1905F484888DEF43ACE01077 /* MemoryConfigurator.swift */; };
 		C51C46AE71920DAA1B16253B /* BackstopSlotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0DD4B896793968D6338FC7 /* BackstopSlotStore.swift */; };
 		C669FDD2D25E4256D2430161 /* SharedAlarmSettingsEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 672FBF5B1749EB576E198EF2 /* SharedAlarmSettingsEditor.swift */; };
 		C66E7E158C86C510683DEAB7 /* AlarmSoundLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F23ABC24B2EFA33EBE57548 /* AlarmSoundLiveActivityAttributes.swift */; };
@@ -130,7 +134,9 @@
 		0F8D42FB1C4E405F01316E3D /* ShakeTaskDescriptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShakeTaskDescriptor.swift; sourceTree = "<group>"; };
 		1026E6B6735DA2D0141B5895 /* AlarmHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmHomeView.swift; sourceTree = "<group>"; };
 		115F20ED82B803187012D8A2 /* MathTaskView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathTaskView.swift; sourceTree = "<group>"; };
+		11CB074E4958FE167D272472 /* MemoryTaskView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryTaskView.swift; sourceTree = "<group>"; };
 		184B0039FCD22DB7F1E75096 /* AlarmModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmModels.swift; sourceTree = "<group>"; };
+		1905F484888DEF43ACE01077 /* MemoryConfigurator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryConfigurator.swift; sourceTree = "<group>"; };
 		1AAB5EE73D1350495BF00CA8 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		26CC8C5DB6E575E3E2908E15 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		2A7335668C12A3AE0B905A68 /* NotificationPermissionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPermissionService.swift; sourceTree = "<group>"; };
@@ -163,6 +169,7 @@
 		8806D09A2BB84C05748859AD /* OpenAlarmSharedDefaults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAlarmSharedDefaults.swift; sourceTree = "<group>"; };
 		896CD183713535DB742DC78B /* NapEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NapEditorView.swift; sourceTree = "<group>"; };
 		8C78E3ECE947AFD666044F7A /* MathConfigurator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathConfigurator.swift; sourceTree = "<group>"; };
+		8DC8A38B09C5A65762413EB5 /* MemoryTaskDescriptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryTaskDescriptor.swift; sourceTree = "<group>"; };
 		9668E7AF9A16407772B1C8D9 /* ShakeConfigurator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShakeConfigurator.swift; sourceTree = "<group>"; };
 		A06DA178A073176D55E9CDD1 /* NapDurationPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NapDurationPicker.swift; sourceTree = "<group>"; };
 		A33ABC03E5073EF42843F709 /* TaskSoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSoundManager.swift; sourceTree = "<group>"; };
@@ -191,6 +198,7 @@
 		E8857F7CD62651E1F7B1E992 /* TaskRegistryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRegistryTests.swift; sourceTree = "<group>"; };
 		E9ACF85F89CF9D011BF26A5E /* OpenAlarm.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OpenAlarm.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E9F25B8B78A0594DE5563131 /* AlarmDefinition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmDefinition.swift; sourceTree = "<group>"; };
+		EF31DE975F3205E7AB2835DB /* MemoryPatternGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryPatternGenerator.swift; sourceTree = "<group>"; };
 		F52C8F1CE7608625F167AE21 /* TaskDescriptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDescriptor.swift; sourceTree = "<group>"; };
 		F68BF27EA97B5D8C42193398 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		F6A5DA3C14440E7AD45FD911 /* AlarmPersistenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmPersistenceStore.swift; sourceTree = "<group>"; };
@@ -307,6 +315,7 @@
 			children = (
 				FE1C7592379CF9B600F6D852 /* Dummy */,
 				75F0A0D87755B1B806D97C7D /* Math */,
+				FF22A8D179555E450B1DDB1C /* Memory */,
 				19C12D16B7460F9C26EFCA0B /* Shake */,
 			);
 			path = Challenges;
@@ -375,6 +384,7 @@
 			isa = PBXGroup;
 			children = (
 				D46FEF8EFF4DA652027BB024 /* MathProblemGenerator.swift */,
+				EF31DE975F3205E7AB2835DB /* MemoryPatternGenerator.swift */,
 				8746634DEC601C7330B580D3 /* ShakeEnergyModel.swift */,
 			);
 			path = TaskLogic;
@@ -481,6 +491,16 @@
 				B1B438C2BD73839A8DF5805A /* TaskLogic */,
 			);
 			path = Models;
+			sourceTree = "<group>";
+		};
+		FF22A8D179555E450B1DDB1C /* Memory */ = {
+			isa = PBXGroup;
+			children = (
+				1905F484888DEF43ACE01077 /* MemoryConfigurator.swift */,
+				8DC8A38B09C5A65762413EB5 /* MemoryTaskDescriptor.swift */,
+				11CB074E4958FE167D272472 /* MemoryTaskView.swift */,
+			);
+			path = Memory;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -669,6 +689,10 @@
 				7E4B4B1F8DFE262475178B09 /* MathConfigurator.swift in Sources */,
 				934097945BA93B950B4382B6 /* MathProblemGenerator.swift in Sources */,
 				9E86E8B65FFFED3B5C365F69 /* MathTaskView.swift in Sources */,
+				C46534E1686286BBEC56D511 /* MemoryConfigurator.swift in Sources */,
+				9019A131C1424D09904F0128 /* MemoryPatternGenerator.swift in Sources */,
+				8CEDB46EFBC52B5C9FF7A0A6 /* MemoryTaskDescriptor.swift in Sources */,
+				928DD1858C8D574ED3C497E6 /* MemoryTaskView.swift in Sources */,
 				F875FA6D25EEE9E11D494D99 /* MotionService.swift in Sources */,
 				550B59450BA119BE04B396DA /* NapBannerView.swift in Sources */,
 				DB6DB8D3439F8BA4226A4B06 /* NapCountdownLiveActivityAttributes.swift in Sources */,

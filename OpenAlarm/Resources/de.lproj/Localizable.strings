@@ -206,6 +206,15 @@
 "task_shake_level_3" = "Heftig";
 "task_shake_level_4" = "Rasend";
 "task_shake_level_5" = "Erdbeben";
+"task_memory_name" = "Gedächtnis";
+"task_memory_instruction" = "Merke dir das Muster";
+"task_memory_difficulty_title" = "Schwierigkeit";
+"task_memory_rounds_title" = "Runden";
+"task_memory_level_1" = "Sanft";
+"task_memory_level_2" = "Beständig";
+"task_memory_level_3" = "Konzentriert";
+"task_memory_level_4" = "Intensiv";
+"task_memory_level_5" = "Fotografisch";
 
 /* Durations */
 "duration_hours_minutes_short" = "%dh %dm";

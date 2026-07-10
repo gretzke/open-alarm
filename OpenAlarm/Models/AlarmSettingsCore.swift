@@ -104,12 +104,14 @@ enum AlarmTask: Codable, Equatable, Hashable, Sendable {
     case dummy
     case math(difficulty: MathDifficulty, count: Int)
     case shake(intensity: Int)
+    case memory(difficulty: Int, rounds: Int)
 
     var displayName: String {
         switch self {
         case .dummy: String(localized: "task_dummy_name")
         case .math: String(localized: "task_math_name")
         case .shake: String(localized: "task_shake_name")
+        case .memory: String(localized: "task_memory_name")
         }
     }
 
@@ -138,6 +140,14 @@ enum AlarmTask: Codable, Equatable, Hashable, Sendable {
             let shake = try container.nestedContainer(keyedBy: ShakeCodingKeys.self, forKey: .shake)
             let intensity = try shake.decode(Int.self, forKey: .intensity)
             self = .shake(intensity: min(max(intensity, 1), 5))
+        } else if container.contains(.memory) {
+            let memory = try container.nestedContainer(keyedBy: MemoryCodingKeys.self, forKey: .memory)
+            let difficulty = try memory.decode(Int.self, forKey: .difficulty)
+            let rounds = try memory.decode(Int.self, forKey: .rounds)
+            self = .memory(
+                difficulty: min(max(difficulty, 1), 5),
+                rounds: min(max(rounds, 1), 5)
+            )
         } else {
             throw DecodingError.dataCorrupted(
                 DecodingError.Context(
@@ -161,6 +171,10 @@ enum AlarmTask: Codable, Equatable, Hashable, Sendable {
         case let .shake(intensity):
             var shake = container.nestedContainer(keyedBy: ShakeCodingKeys.self, forKey: .shake)
             try shake.encode(min(max(intensity, 1), 5), forKey: .intensity)
+        case let .memory(difficulty, rounds):
+            var memory = container.nestedContainer(keyedBy: MemoryCodingKeys.self, forKey: .memory)
+            try memory.encode(min(max(difficulty, 1), 5), forKey: .difficulty)
+            try memory.encode(min(max(rounds, 1), 5), forKey: .rounds)
         }
     }
 
@@ -168,6 +182,7 @@ enum AlarmTask: Codable, Equatable, Hashable, Sendable {
         case dummy
         case math
         case shake
+        case memory
     }
 
     private enum MathCodingKeys: String, CodingKey {
@@ -177,6 +192,11 @@ enum AlarmTask: Codable, Equatable, Hashable, Sendable {
 
     private enum ShakeCodingKeys: String, CodingKey {
         case intensity
+    }
+
+    private enum MemoryCodingKeys: String, CodingKey {
+        case difficulty
+        case rounds
     }
 }
 

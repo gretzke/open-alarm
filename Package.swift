@@ -25,6 +25,7 @@ let package = Package(
                 "Models/AlarmSettingsCore.swift",
                 "Models/TaskLogic/MathProblemGenerator.swift",
                 "Models/TaskLogic/ShakeEnergyModel.swift",
+                "Models/TaskLogic/MemoryPatternGenerator.swift",
                 "Models/AlarmPersistenceStore.swift",
                 "Shared/BackstopSlotStore.swift",
                 "Shared/IntentDiagnostics.swift",
