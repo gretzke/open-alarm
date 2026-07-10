@@ -130,6 +130,8 @@ require_cmd xcodebuild
 [[ -d "$PROJECT" ]] || die "Xcode project not found at: $PROJECT"
 PBXPROJ_PATH="$PROJECT/project.pbxproj"
 [[ -f "$PBXPROJ_PATH" ]] || die "project.pbxproj not found at: $PBXPROJ_PATH"
+PROJECT_YML_PATH="$ROOT_DIR/project.yml"
+[[ -f "$PROJECT_YML_PATH" ]] || die "XcodeGen project file not found at: $PROJECT_YML_PATH"
 [[ -r "$ASC_KEY_PATH" ]] || die "ASC key file is not readable: $ASC_KEY_PATH"
 
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -184,14 +186,16 @@ PY
 )"
 log "Latest ASC build detected: ${LATEST_ASC_BUILD}"
 
-VERSION_INFO="$(python3 - "$PBXPROJ_PATH" "$LATEST_ASC_BUILD" <<'PY'
+VERSION_INFO="$(python3 - "$PBXPROJ_PATH" "$PROJECT_YML_PATH" "$LATEST_ASC_BUILD" <<'PY'
 import re
 import sys
 from pathlib import Path
 
 pbxproj_path = Path(sys.argv[1])
-asc_build = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isdigit() else 0
+project_yml_path = Path(sys.argv[2])
+asc_build = int(sys.argv[3]) if len(sys.argv) > 3 and sys.argv[3].isdigit() else 0
 text = pbxproj_path.read_text(encoding="utf-8")
+project_yml = project_yml_path.read_text(encoding="utf-8")
 
 build_matches = re.findall(r"CURRENT_PROJECT_VERSION = ([0-9]+);", text)
 if not build_matches:
@@ -207,12 +211,39 @@ if len(unique_builds) != 1:
     raise SystemExit(1)
 
 current_build = int(unique_builds[0])
+
+source_matches = re.findall(r"CURRENT_PROJECT_VERSION:\s*([0-9]+)", project_yml)
+if not source_matches:
+    print("Missing CURRENT_PROJECT_VERSION in project.yml", file=sys.stderr)
+    raise SystemExit(1)
+
+unique_source_builds = sorted(set(source_matches))
+if len(unique_source_builds) != 1:
+    print(
+        f"Inconsistent CURRENT_PROJECT_VERSION values in project.yml: {', '.join(unique_source_builds)}",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
+
+source_build = int(unique_source_builds[0])
+if source_build != current_build:
+    print(
+        f"Build number mismatch: project.yml={source_build}, project.pbxproj={current_build}. Run make generate first.",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
+
 base_build = max(current_build, asc_build)
 next_build = base_build + 1
 text = re.sub(
     r"CURRENT_PROJECT_VERSION = [0-9]+;",
     f"CURRENT_PROJECT_VERSION = {next_build};",
     text,
+)
+project_yml = re.sub(
+    r"CURRENT_PROJECT_VERSION:\s*[0-9]+",
+    f"CURRENT_PROJECT_VERSION: {next_build}",
+    project_yml,
 )
 
 marketing_match = re.search(r"MARKETING_VERSION = ([^;]+);", text)
@@ -222,6 +253,7 @@ if not marketing_match:
 
 marketing_version = marketing_match.group(1).strip().strip('"')
 pbxproj_path.write_text(text, encoding="utf-8")
+project_yml_path.write_text(project_yml, encoding="utf-8")
 print(f"{current_build}|{next_build}|{marketing_version}")
 PY
 )"
@@ -229,7 +261,7 @@ PY
 IFS='|' read -r CURRENT_BUILD NEXT_BUILD MARKETING_VERSION <<<"$VERSION_INFO"
 
 log "Build number bump: ${CURRENT_BUILD} -> ${NEXT_BUILD}"
-git add "$PBXPROJ_PATH"
+git add "$PBXPROJ_PATH" "$PROJECT_YML_PATH"
 git commit -m "chore: bump testflight build number to ${NEXT_BUILD}" >/dev/null
 ok "Committed build number bump"
 
