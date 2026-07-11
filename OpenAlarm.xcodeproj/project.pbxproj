@@ -7,46 +7,76 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		02529DC9C50598BED02C197A /* ringtone_dawn_deliberatethought.caf in Resources */ = {isa = PBXBuildFile; fileRef = 34534E3D08E0711249C61248 /* ringtone_dawn_deliberatethought.caf */; };
 		0307D6667335FD1E43043C32 /* AlarmStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D063C3267CB009AC3D00E6D2 /* AlarmStateMachine.swift */; };
+		0661D2BC0EEF16771BA13F05 /* ringtone_dawn_deliberatethought_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = EFE0FE93EE69CDC902F19F54 /* ringtone_dawn_deliberatethought_full.m4a */; };
 		071ACA76C3342060EC83CC10 /* DawnTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79B6CE9DEB0B98BEACCA5515 /* DawnTheme.swift */; };
+		08EDCBF40E0AA06D78A70739 /* ringtone_classic_ghanta.caf in Resources */ = {isa = PBXBuildFile; fileRef = 0FB54A2E0E42CF750EFF27AB /* ringtone_classic_ghanta.caf */; };
+		0A39F0AB2C10B4CD2F005BAB /* ringtone_energetic_glitterblast_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 5CE5FCD2600C609E90F47E0C /* ringtone_energetic_glitterblast_full.m4a */; };
+		0A5C064A6B365225CCCFE1E9 /* ringtone_nature_oceanwaves.caf in Resources */ = {isa = PBXBuildFile; fileRef = EE2C8CF871CAFC34471270A1 /* ringtone_nature_oceanwaves.caf */; };
+		0AD49C36AACCEFD1F5F11087 /* ringtone_energetic_avemarimba.caf in Resources */ = {isa = PBXBuildFile; fileRef = BE9CD91C19940E2632E08FF4 /* ringtone_energetic_avemarimba.caf */; };
 		0B94972715ED422EAA18A64B /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B69D30D8FB6982C26A6AE32D /* MainTabView.swift */; };
 		0C4CED3E4A7B7512DDD26FDF /* AlarmSettingsCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D34BA5EB8874EFC8335CB2CF /* AlarmSettingsCore.swift */; };
 		0CC35926881B075580A7F6C3 /* AlertReferenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A68254B37ED88B2B332295B2 /* AlertReferenceStore.swift */; };
+		0CC44EAD17B6C567E818C0E7 /* ringtone_dawn_wisdominthesun.caf in Resources */ = {isa = PBXBuildFile; fileRef = 04BD1E4800B533745C7EB218 /* ringtone_dawn_wisdominthesun.caf */; };
+		0D117227001B284416C4087C /* ringtone_dawn_dreamer.caf in Resources */ = {isa = PBXBuildFile; fileRef = B3FE74A81BB42ADDB910AEFA /* ringtone_dawn_dreamer.caf */; };
 		1068E5E14AAA376BDD6E846B /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0511AEB1608CC1DFD19C495 /* L10n.swift */; };
 		132DA05A759647BA17D5C4EF /* ShakeTaskDescriptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F8D42FB1C4E405F01316E3D /* ShakeTaskDescriptor.swift */; };
 		146CCBAF1431CDDFB450335F /* OpenAlarmSharedDefaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8806D09A2BB84C05748859AD /* OpenAlarmSharedDefaults.swift */; };
+		179076F9484760F252E62DB5 /* ringtone_dawn_motions.caf in Resources */ = {isa = PBXBuildFile; fileRef = AD764FDE354C6942E01916C4 /* ringtone_dawn_motions.caf */; };
+		1A1A6059CD55125E0841776D /* SOURCES.md in Resources */ = {isa = PBXBuildFile; fileRef = 75A5D1D8C9DD07A56B85E396 /* SOURCES.md */; };
 		1B1488ECC64F591938DEA880 /* WakeUpCheckConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4C65D29F82E70C88900C16A /* WakeUpCheckConfirmationView.swift */; };
 		1D799E25C9B080CBF25C6806 /* ringtone_classical_valkyries.caf in Resources */ = {isa = PBXBuildFile; fileRef = 54FCA00AAE46C39B52756877 /* ringtone_classical_valkyries.caf */; };
+		1EF604C81233C0A79B94813B /* ringtone_energetic_ravingenergy_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = E01F3A1A20E48E06D14E90C6 /* ringtone_energetic_ravingenergy_full.m4a */; };
 		212B68FCAA26D5F29A216BD8 /* ringtone_classical_bluedanube.caf in Resources */ = {isa = PBXBuildFile; fileRef = EC5DAE7B4013A69C5A044889 /* ringtone_classical_bluedanube.caf */; };
 		213B06C5B261E28D13D1FE1F /* NapCountdownLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAD33FEE543D66DEBCB7E592 /* NapCountdownLiveActivityWidget.swift */; };
 		22CC75FE635B87512828CA78 /* AlarmModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 184B0039FCD22DB7F1E75096 /* AlarmModels.swift */; };
+		245313C773278943D871E8A1 /* ringtone_dawn_dreamer.caf in Resources */ = {isa = PBXBuildFile; fileRef = B3FE74A81BB42ADDB910AEFA /* ringtone_dawn_dreamer.caf */; };
 		253590E5F646B6E2B8AA92C8 /* ringtone_classical_cellosuite.caf in Resources */ = {isa = PBXBuildFile; fileRef = B01A0C795DA6BC983D2B110B /* ringtone_classical_cellosuite.caf */; };
 		27435B590BF094FB2B446C34 /* StepsConfigurator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A618400BCD854BA5ECB76F5 /* StepsConfigurator.swift */; };
+		2A327BBB966BE06591B6F9CC /* ringtone_dawn_motions_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = C6130A93EBD9A673908EAD59 /* ringtone_dawn_motions_full.m4a */; };
 		2A5D2E4A4D01C891C5015C30 /* OpenAlarmNotificationDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30A4F32DD5585DAC4885AD99 /* OpenAlarmNotificationDelegate.swift */; };
+		2AFBE3E478A729AE45198600 /* ringtone_dawn_wisdominthesun_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 9C4FA4CB216FBA69A0950667 /* ringtone_dawn_wisdominthesun_full.m4a */; };
+		2BC9E78B7D697DBB5C11E1CB /* ringtone_dawn_morning.caf in Resources */ = {isa = PBXBuildFile; fileRef = 8ADAA63CCA6193B5AB895229 /* ringtone_dawn_morning.caf */; };
+		2C7D6AEB4216BD889FABE163 /* ringtone_classic_koshichime.caf in Resources */ = {isa = PBXBuildFile; fileRef = 24430F3795A6619F1B7C6535 /* ringtone_classic_koshichime.caf */; };
+		2E0A39885142DA247BA7A536 /* ringtone_energetic_avemarimba.caf in Resources */ = {isa = PBXBuildFile; fileRef = BE9CD91C19940E2632E08FF4 /* ringtone_energetic_avemarimba.caf */; };
 		2E8D1CE7F97C55CFE5EC0617 /* ScanObjectCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 240235EC641C7C41309129A9 /* ScanObjectCatalog.swift */; };
+		2FEA63FCBCA8A3401299FF88 /* ringtone_nature_rain_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 08E1FD7D52DDF3908C5ACBEA /* ringtone_nature_rain_full.m4a */; };
 		3007A33EBBCE7630B4D98963 /* OnboardingEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B186AAD75B89CF765141943F /* OnboardingEngine.swift */; };
 		3033CE1DBADAA18ED7564BAA /* NapDurationPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A06DA178A073176D55E9CDD1 /* NapDurationPicker.swift */; };
+		338900F15D36A6C4604901FE /* ringtone_energetic_glitterblast.caf in Resources */ = {isa = PBXBuildFile; fileRef = 84EC93E32D54DC4BAD6F0C6E /* ringtone_energetic_glitterblast.caf */; };
+		3662A49E79C19B6636E5642A /* ringtone_energetic_hearwhattheysay_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 400C67317BB2CD2E9D20AFED /* ringtone_energetic_hearwhattheysay_full.m4a */; };
+		3B00FA41D3E3E4FEB7E4A841 /* ringtone_energetic_newerwave.caf in Resources */ = {isa = PBXBuildFile; fileRef = 25C3A257CD23B71437B78E87 /* ringtone_energetic_newerwave.caf */; };
+		409F11BA8BA61ED78DFF9812 /* ringtone_nature_rooster_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = E55FA0C55C164FE917B01D27 /* ringtone_nature_rooster_full.m4a */; };
 		40FC7F4295F6FF44F3F72965 /* AlarmRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C31159CD06DFA85A7F28AB7E /* AlarmRowView.swift */; };
 		427A105D713E7FEEB1F24E0B /* AlarmPersistenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6A5DA3C14440E7AD45FD911 /* AlarmPersistenceStore.swift */; };
+		43DC4B2DEEECA13F590C115A /* ringtone_nature_morningbirds.caf in Resources */ = {isa = PBXBuildFile; fileRef = 29732BD9C653AC401F951480 /* ringtone_nature_morningbirds.caf */; };
+		4495811125A68D5301DA360D /* ringtone_dawn_morning_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 126DC4FBFC9FF5BB21D7CD49 /* ringtone_dawn_morning_full.m4a */; };
 		46736EE4086E768FF315F0C2 /* AlarmSoundLiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08A54FDEF2083496C9F923CD /* AlarmSoundLiveActivityManager.swift */; };
+		469DABE1AAB58E7A03430824 /* ringtone_dawn_motions.caf in Resources */ = {isa = PBXBuildFile; fileRef = AD764FDE354C6942E01916C4 /* ringtone_dawn_motions.caf */; };
 		4796FE34E7D27B854FB78CB6 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 8E679FED54733251272BD0A9 /* Localizable.strings */; };
 		47C904E0E9C74855B52C6167 /* IntentDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B910E31AA40B29343D4DBBE4 /* IntentDiagnostics.swift */; };
 		47FCB6814D4511114CEB807A /* BridgeDateCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 525A2ECDDC1B2BCF59BAE164 /* BridgeDateCalculator.swift */; };
-		487BDE85E7E24EC2A3AC9F62 /* ringtone_nature_placeholder.caf in Resources */ = {isa = PBXBuildFile; fileRef = 8CBC03DF78AACA3851B9A832 /* ringtone_nature_placeholder.caf */; };
+		4973B8E78F522DD6341790A7 /* ringtone_nature_morningbirds_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 8EBA82957F11C4956D275DB7 /* ringtone_nature_morningbirds_full.m4a */; };
+		499BB43B7A5BBEEC1483EA86 /* ringtone_dawn_lightthought.caf in Resources */ = {isa = PBXBuildFile; fileRef = 04CDD1DFD04ACB7DF2F22EDD /* ringtone_dawn_lightthought.caf */; };
+		49D36A74399751EC923AD2B3 /* ringtone_dawn_lightthought.caf in Resources */ = {isa = PBXBuildFile; fileRef = 04CDD1DFD04ACB7DF2F22EDD /* ringtone_dawn_lightthought.caf */; };
+		4DFD36D70E988606CCF620A9 /* ringtone_nature_oceanwaves.caf in Resources */ = {isa = PBXBuildFile; fileRef = EE2C8CF871CAFC34471270A1 /* ringtone_nature_oceanwaves.caf */; };
+		4F55392D51EE38AC4F159AB9 /* ringtone_energetic_clouddancer.caf in Resources */ = {isa = PBXBuildFile; fileRef = 80BB4F971C6190B9BF30EF02 /* ringtone_energetic_clouddancer.caf */; };
 		4FFD6F992FDAA81B114DB38A /* ScanTaskDescriptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A5A2891C11E40725EB86AA0 /* ScanTaskDescriptor.swift */; };
 		523D9DD75026165D7A82E9E4 /* AlarmPermissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE222D66729DAB174BBE549D /* AlarmPermissionService.swift */; };
 		54F0370917883AEC84424F0F /* AlarmSoundLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 341FC3BCCDBBEF7993E126AF /* AlarmSoundLiveActivityWidget.swift */; };
 		550B59450BA119BE04B396DA /* NapBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07291350CDE6FB5A563F6EB0 /* NapBannerView.swift */; };
+		575D9A628BCF8AF186AC67D0 /* ringtone_nature_morningbirds.caf in Resources */ = {isa = PBXBuildFile; fileRef = 29732BD9C653AC401F951480 /* ringtone_nature_morningbirds.caf */; };
 		5824049B9D337E771858C73B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CFE2D4CDA835E9DD606528A0 /* Assets.xcassets */; };
 		5A1F398C03CEF7087E96D903 /* AlarmPersistenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6A5DA3C14440E7AD45FD911 /* AlarmPersistenceStore.swift */; };
 		5BBDDAEC00D34E018EE30CC5 /* TaskDescriptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52C8F1CE7608625F167AE21 /* TaskDescriptor.swift */; };
 		5E3C229E99A0DFC15864E5B8 /* ringtone_classical_russiandance.caf in Resources */ = {isa = PBXBuildFile; fileRef = 6BED047FE88B52D05152C6D1 /* ringtone_classical_russiandance.caf */; };
 		5E5EF5BB744DA858767E2AB1 /* AlarmSoundLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F23ABC24B2EFA33EBE57548 /* AlarmSoundLiveActivityAttributes.swift */; };
 		5F5E130D6ACFEC78B1067CD6 /* ringtone_classical_bluedanube.caf in Resources */ = {isa = PBXBuildFile; fileRef = EC5DAE7B4013A69C5A044889 /* ringtone_classical_bluedanube.caf */; };
+		602DF81A8613197E0704BFBA /* ringtone_nature_foreststream.caf in Resources */ = {isa = PBXBuildFile; fileRef = 0D26DBA100AF04CCEB84FECB /* ringtone_nature_foreststream.caf */; };
 		60918536CF97C3503586093F /* CreditsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23065EB1E48EFC6C589D9E10 /* CreditsView.swift */; };
 		616C230F6BD6A626D73F1446 /* PedometerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC95C421FBD8CD3AEE0C50A /* PedometerService.swift */; };
-		6347274BB4FB56CFFBA5E37F /* ringtone_dawn_placeholder.caf in Resources */ = {isa = PBXBuildFile; fileRef = D091FCCF48F6A15AB8E04E42 /* ringtone_dawn_placeholder.caf */; };
-		67F2D6BC75C3CAA7D9B08059 /* ringtone_energetic_placeholder.caf in Resources */ = {isa = PBXBuildFile; fileRef = 5E223B725D4B026EC13D84B0 /* ringtone_energetic_placeholder.caf */; };
+		6429A95441DC74DB8E221ADC /* ringtone_dawn_magicscout_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 8D7598A660D85986751CB75E /* ringtone_dawn_magicscout_full.m4a */; };
 		6836111E5DBAA81266281BB4 /* NapLiveActivityIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9F24A86427E96596EA65FC0 /* NapLiveActivityIntents.swift */; };
 		6A50E1ADBEA686D1DA26C3F0 /* OpenAlarmApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA110F30C0C8E9D50303CDA8 /* OpenAlarmApp.swift */; };
 		6A5543DF0CF2BE7084D81AD7 /* SnoozeIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = F96F41FC3F5238CCFA070204 /* SnoozeIntent.swift */; };
@@ -54,12 +84,14 @@
 		6ACE3E4E63888229376ABED0 /* DummyTaskView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69BE263B8EB27F471F84921 /* DummyTaskView.swift */; };
 		6C8E383F167FCA06BCD90369 /* NapLiveActivityIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9F24A86427E96596EA65FC0 /* NapLiveActivityIntents.swift */; };
 		6CC600452F7D147D34FD2A03 /* StopIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAC4F90011CEA2952C0DEC7A /* StopIntent.swift */; };
+		6D35962B5AACAEA4A956A88B /* ringtone_dawn_dreamculture.caf in Resources */ = {isa = PBXBuildFile; fileRef = 7C958FB0FDDB99A00E181149 /* ringtone_dawn_dreamculture.caf */; };
 		6DAF29F47FD1E6004674040F /* AlarmHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1026E6B6735DA2D0141B5895 /* AlarmHomeView.swift */; };
 		6ED4579B3B7B769F98008026 /* ringtone_classical_russiandance_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 210FFD46966D362F6C48F4CA /* ringtone_classical_russiandance_full.m4a */; };
 		6F8608FE3E1CBFCB1C29F1D2 /* ringtone_classical_bluedanube_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = BB4C5C435B210F4CC25B113F /* ringtone_classical_bluedanube_full.m4a */; };
 		7483400678871859D8FF6CC2 /* ScanTaskView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9D3621D849ED9FED9ACF9C3 /* ScanTaskView.swift */; };
 		75F6F1776DF5731E152893A0 /* AlarmStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B70862277833BF001ABA7BBE /* AlarmStore.swift */; };
 		7743920775A80D0A96A0E580 /* ConfiguratorControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0A332FB8767D07D2F81AAFA /* ConfiguratorControls.swift */; };
+		7758D967D9631AF7DFADE809 /* ringtone_classic_digitalalarm.caf in Resources */ = {isa = PBXBuildFile; fileRef = D464C3AF2C96731316E09872 /* ringtone_classic_digitalalarm.caf */; };
 		77EF586640E2BA39DCC5BEC2 /* AlarmEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 338D2925467C9DAB2942FEFC /* AlarmEditorView.swift */; };
 		793E59030B69242504D49336 /* ringtone_classical_winter.caf in Resources */ = {isa = PBXBuildFile; fileRef = 3044A86C6B9E2FC6A2CDB8B6 /* ringtone_classical_winter.caf */; };
 		7BB95DE5BC27762D0DBD5AF4 /* TaskConfiguratorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 453CBBCD833D2EBEDD7AC537 /* TaskConfiguratorSheet.swift */; };
@@ -67,11 +99,17 @@
 		7E4B4B1F8DFE262475178B09 /* MathConfigurator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C78E3ECE947AFD666044F7A /* MathConfigurator.swift */; };
 		7FCBEB09DE152F5B6367A121 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 8E679FED54733251272BD0A9 /* Localizable.strings */; };
 		80A59EECF5AC595F0A69EC46 /* IntentDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B910E31AA40B29343D4DBBE4 /* IntentDiagnostics.swift */; };
+		82EF2F8DD5E5EC8CA0D49720 /* ringtone_dawn_magicscout.caf in Resources */ = {isa = PBXBuildFile; fileRef = F549476BCB2B8DF8CA9FA439 /* ringtone_dawn_magicscout.caf */; };
 		8346F3565E43AE8420A474E1 /* OpenAlarmSharedDefaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8806D09A2BB84C05748859AD /* OpenAlarmSharedDefaults.swift */; };
+		840F15AD0A9E727FE2ECBA31 /* ringtone_dawn_deliberatethought.caf in Resources */ = {isa = PBXBuildFile; fileRef = 34534E3D08E0711249C61248 /* ringtone_dawn_deliberatethought.caf */; };
+		868808A84D6E00F11385A35D /* ringtone_classic_ghanta.caf in Resources */ = {isa = PBXBuildFile; fileRef = 0FB54A2E0E42CF750EFF27AB /* ringtone_classic_ghanta.caf */; };
+		86E3D62B1EEE7C6C21012BDC /* ringtone_energetic_voxelrevolution_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 7A00021038013BDB91FA529E /* ringtone_energetic_voxelrevolution_full.m4a */; };
 		88ACCBE3AD6D321648A7EA0B /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26CC8C5DB6E575E3E2908E15 /* Haptics.swift */; };
 		88BE5A50C98A69D71F236893 /* TaskRegistryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8857F7CD62651E1F7B1E992 /* TaskRegistryTests.swift */; };
+		894F11CF10274973A2EE90DB /* ringtone_dawn_morning.caf in Resources */ = {isa = PBXBuildFile; fileRef = 8ADAA63CCA6193B5AB895229 /* ringtone_dawn_morning.caf */; };
 		8AAF86D176DBC56AB7618D2A /* StopIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAC4F90011CEA2952C0DEC7A /* StopIntent.swift */; };
 		8CEDB46EFBC52B5C9FF7A0A6 /* MemoryTaskDescriptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DC8A38B09C5A65762413EB5 /* MemoryTaskDescriptor.swift */; };
+		8F899C393AB24399C4E97325 /* ringtone_classic_bedsideclock.caf in Resources */ = {isa = PBXBuildFile; fileRef = 4FC2F16B5F5A09820714276E /* ringtone_classic_bedsideclock.caf */; };
 		8FA79F0AB5D2E8B852D32CB8 /* TaskModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08633EC56E1799D43A24AE9A /* TaskModels.swift */; };
 		9019A131C1424D09904F0128 /* MemoryPatternGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF31DE975F3205E7AB2835DB /* MemoryPatternGenerator.swift */; };
 		9127A92AD957878B49EE8DFF /* ringtone_classical_cellosuite_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 3F2E456FE6128BC7BFE5532C /* ringtone_classical_cellosuite_full.m4a */; };
@@ -83,6 +121,7 @@
 		9407A779AE239B3B8B48A8D3 /* RingtoneResourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 547C10CA4E86A4E7FD9CE4C3 /* RingtoneResourceTests.swift */; };
 		9465C1CBD0145E57E07CF47F /* AlarmDefinition.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9F25B8B78A0594DE5563131 /* AlarmDefinition.swift */; };
 		952549010D26250A8200DD59 /* TaskPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47FED3CC874E76CAE49F2083 /* TaskPickerView.swift */; };
+		952BF2E2F869EA7A2821FB5B /* ringtone_energetic_voxelrevolution.caf in Resources */ = {isa = PBXBuildFile; fileRef = F41086C8E7E964C70B596FAD /* ringtone_energetic_voxelrevolution.caf */; };
 		974FD79688FBEB8E7177C5D6 /* TaskContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69CD58B4B56C7061B7680177 /* TaskContainerView.swift */; };
 		98D7DE03C986859C06252DE7 /* SettingsHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 804446594677F10342CA095A /* SettingsHomeView.swift */; };
 		995F15D0216F38025D8778AF /* AlarmModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 184B0039FCD22DB7F1E75096 /* AlarmModels.swift */; };
@@ -94,45 +133,71 @@
 		A101678070DC3DC291BCB24F /* TaskSoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A33ABC03E5073EF42843F709 /* TaskSoundManager.swift */; };
 		A30825462BC21CE518A70565 /* ringtone_classical_winter_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = BAF6D629EFE2BA2F7985E10A /* ringtone_classical_winter_full.m4a */; };
 		A4672A8205B28B9695842B5A /* RingtoneCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 898DF33D0BF7DC6AAF8F16B6 /* RingtoneCatalog.swift */; };
+		A4AC1B44CA4EC0052000DEC8 /* ringtone_nature_rain.caf in Resources */ = {isa = PBXBuildFile; fileRef = 3FC06967B9E53769922877C8 /* ringtone_nature_rain.caf */; };
+		A80DBE56307100F99C7A0F42 /* ringtone_classic_koshichime.caf in Resources */ = {isa = PBXBuildFile; fileRef = 24430F3795A6619F1B7C6535 /* ringtone_classic_koshichime.caf */; };
 		A8AF500A84017665482B591C /* StepsTaskDescriptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 624997C42E3B64847820F32C /* StepsTaskDescriptor.swift */; };
+		A8B1D092650C662BFC03D7C8 /* ringtone_dawn_dreamculture_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 57F46D19A912102464C0F5BE /* ringtone_dawn_dreamculture_full.m4a */; };
+		AE8C4A61D3C065FD31237D0B /* ringtone_classic_twinbell.caf in Resources */ = {isa = PBXBuildFile; fileRef = BFC8D7E592B56E0FCDE3D9A1 /* ringtone_classic_twinbell.caf */; };
+		B0989C000AE6B7312D94112B /* ringtone_energetic_clouddancer_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 2B127C91E1252D6054E0E09A /* ringtone_energetic_clouddancer_full.m4a */; };
+		B0BDAF773EBCD409839F2123 /* ringtone_energetic_hearwhattheysay.caf in Resources */ = {isa = PBXBuildFile; fileRef = DB7226230FB508F1F44AC1C7 /* ringtone_energetic_hearwhattheysay.caf */; };
+		B30D5F78AD1548EFDE655011 /* ringtone_dawn_dreamculture.caf in Resources */ = {isa = PBXBuildFile; fileRef = 7C958FB0FDDB99A00E181149 /* ringtone_dawn_dreamculture.caf */; };
 		B3932125110F499C70A42022 /* AlarmConfigurationBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6555600F045507A0C7E2B9A0 /* AlarmConfigurationBuilder.swift */; };
 		B3EDF8101A0D47C0B429C865 /* ringtone_classical_valkyries_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = EC867FDDFA2E5A20B689C098 /* ringtone_classical_valkyries_full.m4a */; };
+		B5088D8FEEB86FC15B714CD6 /* ringtone_nature_rooster.caf in Resources */ = {isa = PBXBuildFile; fileRef = DEAF587CF26925D6930FCF21 /* ringtone_nature_rooster.caf */; };
 		B576988177A89C0732E710A7 /* ObjectScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8261AEDC3C7E2357DBDAE53F /* ObjectScanner.swift */; };
-		B7277B24DB8807ACAED86974 /* ringtone_classic_placeholder.caf in Resources */ = {isa = PBXBuildFile; fileRef = 2D2AF77985B09BD6C9FC48B3 /* ringtone_classic_placeholder.caf */; };
 		B7A9F2F3F00781062F4DDBBC /* AlertReferenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A68254B37ED88B2B332295B2 /* AlertReferenceStore.swift */; };
 		B98890CFE01FEBA4A343B377 /* RingtoneCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 898DF33D0BF7DC6AAF8F16B6 /* RingtoneCatalog.swift */; };
+		BC7C4FF99D1FD9CDB952EDF0 /* ringtone_dawn_lightthought_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1ACB3A57D2FF9DEC7666A904 /* ringtone_dawn_lightthought_full.m4a */; };
+		BCD18D8FE0EECE24602E08BB /* ringtone_classic_digitalalarm.caf in Resources */ = {isa = PBXBuildFile; fileRef = D464C3AF2C96731316E09872 /* ringtone_classic_digitalalarm.caf */; };
+		BD1B427024E80410E01371DB /* ringtone_energetic_ravingenergy.caf in Resources */ = {isa = PBXBuildFile; fileRef = FBEBADE083B2A5AEB4973E85 /* ringtone_energetic_ravingenergy.caf */; };
 		BD8A90252F2F3669200E2C4F /* OpenAlarmTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 339F4E487D879956D310862D /* OpenAlarmTheme.swift */; };
 		BDD2C5EBBA247FBB4FD16F4D /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 2E7F4014449CC01093832222 /* InfoPlist.strings */; };
 		C015846F12B1BB782D9A0FCA /* TaskPermissionFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F56204943EF2EB414FECD3E8 /* TaskPermissionFlow.swift */; };
 		C03C1AF423A57E97BE696AA8 /* ringtone_classical_russiandance.caf in Resources */ = {isa = PBXBuildFile; fileRef = 6BED047FE88B52D05152C6D1 /* ringtone_classical_russiandance.caf */; };
 		C07AF6525014A17A24016F3E /* ringtone_classical_winter.caf in Resources */ = {isa = PBXBuildFile; fileRef = 3044A86C6B9E2FC6A2CDB8B6 /* ringtone_classical_winter.caf */; };
+		C0C5DB3CA3295C5FD262F398 /* ringtone_classic_twinbell.caf in Resources */ = {isa = PBXBuildFile; fileRef = BFC8D7E592B56E0FCDE3D9A1 /* ringtone_classic_twinbell.caf */; };
 		C327B3F413FE4A38DAF74852 /* BackstopSlotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0DD4B896793968D6338FC7 /* BackstopSlotStore.swift */; };
 		C46534E1686286BBEC56D511 /* MemoryConfigurator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1905F484888DEF43ACE01077 /* MemoryConfigurator.swift */; };
 		C51C46AE71920DAA1B16253B /* BackstopSlotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0DD4B896793968D6338FC7 /* BackstopSlotStore.swift */; };
 		C669FDD2D25E4256D2430161 /* SharedAlarmSettingsEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 672FBF5B1749EB576E198EF2 /* SharedAlarmSettingsEditor.swift */; };
 		C66E7E158C86C510683DEAB7 /* AlarmSoundLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F23ABC24B2EFA33EBE57548 /* AlarmSoundLiveActivityAttributes.swift */; };
 		C6E89EE4F2C9E834C6F4E5F4 /* NapEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 896CD183713535DB742DC78B /* NapEditorView.swift */; };
-		CC0661500827A48BB936EC81 /* ringtone_classic_placeholder.caf in Resources */ = {isa = PBXBuildFile; fileRef = 2D2AF77985B09BD6C9FC48B3 /* ringtone_classic_placeholder.caf */; };
+		CA8A4D48C5F1FBC1B5E824B4 /* ringtone_energetic_newerwave.caf in Resources */ = {isa = PBXBuildFile; fileRef = 25C3A257CD23B71437B78E87 /* ringtone_energetic_newerwave.caf */; };
+		CB566F983A1F69B844AB6D99 /* ringtone_dawn_magicscout.caf in Resources */ = {isa = PBXBuildFile; fileRef = F549476BCB2B8DF8CA9FA439 /* ringtone_dawn_magicscout.caf */; };
+		CBB4559A4C44811D1BB6133D /* ringtone_energetic_hearwhattheysay.caf in Resources */ = {isa = PBXBuildFile; fileRef = DB7226230FB508F1F44AC1C7 /* ringtone_energetic_hearwhattheysay.caf */; };
+		CCD3D4D1DA95D41773BA482B /* ringtone_nature_foreststream.caf in Resources */ = {isa = PBXBuildFile; fileRef = 0D26DBA100AF04CCEB84FECB /* ringtone_nature_foreststream.caf */; };
 		CCE2ADCE5F3E2FF2889AF43B /* NapCountdownLiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDB2A8D48318B1F111F45CB8 /* NapCountdownLiveActivityManager.swift */; };
 		CEEB02817569AB0C4EDD35C2 /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 033BCA435537486554426903 /* AppRootView.swift */; };
 		CF554590636629F370F85DE7 /* StepsTaskView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8898AEB724F91549B8C9D621 /* StepsTaskView.swift */; };
 		D103B10F135185661E92DB3A /* NapCountdownLiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDB2A8D48318B1F111F45CB8 /* NapCountdownLiveActivityManager.swift */; };
-		D114253003C24D57E26721C1 /* ringtone_nature_placeholder.caf in Resources */ = {isa = PBXBuildFile; fileRef = 8CBC03DF78AACA3851B9A832 /* ringtone_nature_placeholder.caf */; };
-		D8CA1BC650DF6BFE2D96BD50 /* ringtone_dawn_placeholder.caf in Resources */ = {isa = PBXBuildFile; fileRef = D091FCCF48F6A15AB8E04E42 /* ringtone_dawn_placeholder.caf */; };
+		D1C61ACF0B21323B34CD376F /* ringtone_energetic_avemarimba_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 98C384CAAF45F80462446E52 /* ringtone_energetic_avemarimba_full.m4a */; };
+		D49705DD3A3207EFCCD09343 /* ringtone_energetic_ravingenergy.caf in Resources */ = {isa = PBXBuildFile; fileRef = FBEBADE083B2A5AEB4973E85 /* ringtone_energetic_ravingenergy.caf */; };
+		D4A18E5AE979E432B0C56496 /* ringtone_energetic_glitterblast.caf in Resources */ = {isa = PBXBuildFile; fileRef = 84EC93E32D54DC4BAD6F0C6E /* ringtone_energetic_glitterblast.caf */; };
+		D897F3522BE8349352BC07F4 /* ringtone_nature_oceanwaves_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 42231F998340B715FE14D554 /* ringtone_nature_oceanwaves_full.m4a */; };
 		D9009973D51AFD5C5273001E /* SnoozeIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = F96F41FC3F5238CCFA070204 /* SnoozeIntent.swift */; };
 		D9432E52F3D120C62E8C328D /* ScanConfigurator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2DFE585309AE1B8B5476296 /* ScanConfigurator.swift */; };
+		D988D3621CDFEFF9C76A54F7 /* ringtone_classic_churchbells.caf in Resources */ = {isa = PBXBuildFile; fileRef = 64C8D5520C1CB729C8109A1E /* ringtone_classic_churchbells.caf */; };
+		DABE7181FC62BB5829931584 /* ringtone_energetic_voxelrevolution.caf in Resources */ = {isa = PBXBuildFile; fileRef = F41086C8E7E964C70B596FAD /* ringtone_energetic_voxelrevolution.caf */; };
 		DAF5A47BFCC2345F0622347C /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BEA79BA987079BEC109687B /* OnboardingFlowView.swift */; };
 		DB6DB8D3439F8BA4226A4B06 /* NapCountdownLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BE9CED8F972B49B4D5AB764 /* NapCountdownLiveActivityAttributes.swift */; };
 		DC04B939E9EDCEF1209B715B /* ShakeEnergyModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8746634DEC601C7330B580D3 /* ShakeEnergyModel.swift */; };
 		DEB0E205CFE5E0F1AA8A3999 /* RingtonePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 053B03829D0840DD3595F583 /* RingtonePickerView.swift */; };
 		E06F85C41B84AB0FDEF84EB8 /* ringtone_classical_valkyries.caf in Resources */ = {isa = PBXBuildFile; fileRef = 54FCA00AAE46C39B52756877 /* ringtone_classical_valkyries.caf */; };
+		E07FB914442C06F9D23D5F6D /* ringtone_dawn_dreamer_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 009CE897647B76D7D2A63580 /* ringtone_dawn_dreamer_full.m4a */; };
+		E1DD799DB67168921D91E2DB /* ringtone_energetic_clouddancer.caf in Resources */ = {isa = PBXBuildFile; fileRef = 80BB4F971C6190B9BF30EF02 /* ringtone_energetic_clouddancer.caf */; };
+		E299EFF54A513CF9B09B5142 /* ringtone_classic_bedsideclock.caf in Resources */ = {isa = PBXBuildFile; fileRef = 4FC2F16B5F5A09820714276E /* ringtone_classic_bedsideclock.caf */; };
+		E45E94D5E4298D02B5DB315B /* ringtone_nature_foreststream_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 253BBA6A45878A85C2E60A33 /* ringtone_nature_foreststream_full.m4a */; };
 		E4F43EFDCFA8515D85D466A0 /* AlarmSettingsCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D34BA5EB8874EFC8335CB2CF /* AlarmSettingsCore.swift */; };
-		E6EA89B2FB29F3F991C183AA /* ringtone_energetic_placeholder.caf in Resources */ = {isa = PBXBuildFile; fileRef = 5E223B725D4B026EC13D84B0 /* ringtone_energetic_placeholder.caf */; };
+		E96A136E7CA9F3F90A62D336 /* ringtone_nature_rooster.caf in Resources */ = {isa = PBXBuildFile; fileRef = DEAF587CF26925D6930FCF21 /* ringtone_nature_rooster.caf */; };
 		ED54C150FC3EEAF957B21B37 /* AlarmConfigurationBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6555600F045507A0C7E2B9A0 /* AlarmConfigurationBuilder.swift */; };
+		EDF232D6E405E14FB4EF79BD /* ringtone_dawn_wisdominthesun.caf in Resources */ = {isa = PBXBuildFile; fileRef = 04BD1E4800B533745C7EB218 /* ringtone_dawn_wisdominthesun.caf */; };
 		EEEB563DC3AFF69901849156 /* OpenAlarmLiveActivities.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 70170ACB8DF8F857D13F0713 /* OpenAlarmLiveActivities.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		F5B4C2B17273A67C4F399882 /* ShakeConfigurator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9668E7AF9A16407772B1C8D9 /* ShakeConfigurator.swift */; };
 		F7682DE307E3D1A4C0AC4614 /* NapCountdownLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BE9CED8F972B49B4D5AB764 /* NapCountdownLiveActivityAttributes.swift */; };
 		F875FA6D25EEE9E11D494D99 /* MotionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D13DC66D00A9A730B9474C9D /* MotionService.swift */; };
+		FAC8E334D05B550D4DFF7648 /* ringtone_nature_rain.caf in Resources */ = {isa = PBXBuildFile; fileRef = 3FC06967B9E53769922877C8 /* ringtone_nature_rain.caf */; };
+		FD84846A086E7DBF8D55DF50 /* ringtone_energetic_newerwave_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 000E4C49B6C701A2348582B1 /* ringtone_energetic_newerwave_full.m4a */; };
+		FF6DBB89E41D222CFA739566 /* ringtone_classic_churchbells.caf in Resources */ = {isa = PBXBuildFile; fileRef = 64C8D5520C1CB729C8109A1E /* ringtone_classic_churchbells.caf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -167,47 +232,67 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		000E4C49B6C701A2348582B1 /* ringtone_energetic_newerwave_full.m4a */ = {isa = PBXFileReference; path = ringtone_energetic_newerwave_full.m4a; sourceTree = "<group>"; };
+		009CE897647B76D7D2A63580 /* ringtone_dawn_dreamer_full.m4a */ = {isa = PBXFileReference; path = ringtone_dawn_dreamer_full.m4a; sourceTree = "<group>"; };
 		033BCA435537486554426903 /* AppRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRootView.swift; sourceTree = "<group>"; };
+		04BD1E4800B533745C7EB218 /* ringtone_dawn_wisdominthesun.caf */ = {isa = PBXFileReference; path = ringtone_dawn_wisdominthesun.caf; sourceTree = "<group>"; };
+		04CDD1DFD04ACB7DF2F22EDD /* ringtone_dawn_lightthought.caf */ = {isa = PBXFileReference; path = ringtone_dawn_lightthought.caf; sourceTree = "<group>"; };
 		053B03829D0840DD3595F583 /* RingtonePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RingtonePickerView.swift; sourceTree = "<group>"; };
 		07291350CDE6FB5A563F6EB0 /* NapBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NapBannerView.swift; sourceTree = "<group>"; };
 		08633EC56E1799D43A24AE9A /* TaskModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskModels.swift; sourceTree = "<group>"; };
 		08A54FDEF2083496C9F923CD /* AlarmSoundLiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmSoundLiveActivityManager.swift; sourceTree = "<group>"; };
+		08E1FD7D52DDF3908C5ACBEA /* ringtone_nature_rain_full.m4a */ = {isa = PBXFileReference; path = ringtone_nature_rain_full.m4a; sourceTree = "<group>"; };
 		0CC95C421FBD8CD3AEE0C50A /* PedometerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PedometerService.swift; sourceTree = "<group>"; };
 		0D166817BB079DD4546C285D /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		0D26DBA100AF04CCEB84FECB /* ringtone_nature_foreststream.caf */ = {isa = PBXFileReference; path = ringtone_nature_foreststream.caf; sourceTree = "<group>"; };
 		0F8D42FB1C4E405F01316E3D /* ShakeTaskDescriptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShakeTaskDescriptor.swift; sourceTree = "<group>"; };
+		0FB54A2E0E42CF750EFF27AB /* ringtone_classic_ghanta.caf */ = {isa = PBXFileReference; path = ringtone_classic_ghanta.caf; sourceTree = "<group>"; };
 		1026E6B6735DA2D0141B5895 /* AlarmHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmHomeView.swift; sourceTree = "<group>"; };
 		115F20ED82B803187012D8A2 /* MathTaskView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathTaskView.swift; sourceTree = "<group>"; };
 		11CB074E4958FE167D272472 /* MemoryTaskView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryTaskView.swift; sourceTree = "<group>"; };
+		126DC4FBFC9FF5BB21D7CD49 /* ringtone_dawn_morning_full.m4a */ = {isa = PBXFileReference; path = ringtone_dawn_morning_full.m4a; sourceTree = "<group>"; };
 		184B0039FCD22DB7F1E75096 /* AlarmModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmModels.swift; sourceTree = "<group>"; };
 		1905F484888DEF43ACE01077 /* MemoryConfigurator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryConfigurator.swift; sourceTree = "<group>"; };
 		1AAB5EE73D1350495BF00CA8 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		1ACB3A57D2FF9DEC7666A904 /* ringtone_dawn_lightthought_full.m4a */ = {isa = PBXFileReference; path = ringtone_dawn_lightthought_full.m4a; sourceTree = "<group>"; };
 		210FFD46966D362F6C48F4CA /* ringtone_classical_russiandance_full.m4a */ = {isa = PBXFileReference; path = ringtone_classical_russiandance_full.m4a; sourceTree = "<group>"; };
 		23065EB1E48EFC6C589D9E10 /* CreditsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreditsView.swift; sourceTree = "<group>"; };
 		240235EC641C7C41309129A9 /* ScanObjectCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanObjectCatalog.swift; sourceTree = "<group>"; };
+		24430F3795A6619F1B7C6535 /* ringtone_classic_koshichime.caf */ = {isa = PBXFileReference; path = ringtone_classic_koshichime.caf; sourceTree = "<group>"; };
+		253BBA6A45878A85C2E60A33 /* ringtone_nature_foreststream_full.m4a */ = {isa = PBXFileReference; path = ringtone_nature_foreststream_full.m4a; sourceTree = "<group>"; };
+		25C3A257CD23B71437B78E87 /* ringtone_energetic_newerwave.caf */ = {isa = PBXFileReference; path = ringtone_energetic_newerwave.caf; sourceTree = "<group>"; };
 		26CC8C5DB6E575E3E2908E15 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
+		29732BD9C653AC401F951480 /* ringtone_nature_morningbirds.caf */ = {isa = PBXFileReference; path = ringtone_nature_morningbirds.caf; sourceTree = "<group>"; };
 		2A7335668C12A3AE0B905A68 /* NotificationPermissionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPermissionService.swift; sourceTree = "<group>"; };
-		2D2AF77985B09BD6C9FC48B3 /* ringtone_classic_placeholder.caf */ = {isa = PBXFileReference; path = ringtone_classic_placeholder.caf; sourceTree = "<group>"; };
+		2B127C91E1252D6054E0E09A /* ringtone_energetic_clouddancer_full.m4a */ = {isa = PBXFileReference; path = ringtone_energetic_clouddancer_full.m4a; sourceTree = "<group>"; };
 		3044A86C6B9E2FC6A2CDB8B6 /* ringtone_classical_winter.caf */ = {isa = PBXFileReference; path = ringtone_classical_winter.caf; sourceTree = "<group>"; };
 		30A4F32DD5585DAC4885AD99 /* OpenAlarmNotificationDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAlarmNotificationDelegate.swift; sourceTree = "<group>"; };
 		338D2925467C9DAB2942FEFC /* AlarmEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmEditorView.swift; sourceTree = "<group>"; };
 		339F4E487D879956D310862D /* OpenAlarmTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAlarmTheme.swift; sourceTree = "<group>"; };
 		341FC3BCCDBBEF7993E126AF /* AlarmSoundLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmSoundLiveActivityWidget.swift; sourceTree = "<group>"; };
+		34534E3D08E0711249C61248 /* ringtone_dawn_deliberatethought.caf */ = {isa = PBXFileReference; path = ringtone_dawn_deliberatethought.caf; sourceTree = "<group>"; };
 		37024F354236CD82B68AA50F /* OpenAlarm.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = OpenAlarm.entitlements; sourceTree = "<group>"; };
 		3C782F1015010D823E642BC5 /* TaskSuccessOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSuccessOverlay.swift; sourceTree = "<group>"; };
 		3F2E456FE6128BC7BFE5532C /* ringtone_classical_cellosuite_full.m4a */ = {isa = PBXFileReference; path = ringtone_classical_cellosuite_full.m4a; sourceTree = "<group>"; };
+		3FC06967B9E53769922877C8 /* ringtone_nature_rain.caf */ = {isa = PBXFileReference; path = ringtone_nature_rain.caf; sourceTree = "<group>"; };
+		400C67317BB2CD2E9D20AFED /* ringtone_energetic_hearwhattheysay_full.m4a */ = {isa = PBXFileReference; path = ringtone_energetic_hearwhattheysay_full.m4a; sourceTree = "<group>"; };
+		42231F998340B715FE14D554 /* ringtone_nature_oceanwaves_full.m4a */ = {isa = PBXFileReference; path = ringtone_nature_oceanwaves_full.m4a; sourceTree = "<group>"; };
 		453CBBCD833D2EBEDD7AC537 /* TaskConfiguratorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskConfiguratorSheet.swift; sourceTree = "<group>"; };
 		47FED3CC874E76CAE49F2083 /* TaskPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskPickerView.swift; sourceTree = "<group>"; };
 		4A618400BCD854BA5ECB76F5 /* StepsConfigurator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepsConfigurator.swift; sourceTree = "<group>"; };
 		4F973148B1D637236F6F06CC /* OpenAlarmLiveActivities.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = OpenAlarmLiveActivities.entitlements; sourceTree = "<group>"; };
+		4FC2F16B5F5A09820714276E /* ringtone_classic_bedsideclock.caf */ = {isa = PBXFileReference; path = ringtone_classic_bedsideclock.caf; sourceTree = "<group>"; };
 		525A2ECDDC1B2BCF59BAE164 /* BridgeDateCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeDateCalculator.swift; sourceTree = "<group>"; };
 		547C10CA4E86A4E7FD9CE4C3 /* RingtoneResourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RingtoneResourceTests.swift; sourceTree = "<group>"; };
 		54FCA00AAE46C39B52756877 /* ringtone_classical_valkyries.caf */ = {isa = PBXFileReference; path = ringtone_classical_valkyries.caf; sourceTree = "<group>"; };
 		5693B78662FF6A36023A0EAA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		57F46D19A912102464C0F5BE /* ringtone_dawn_dreamculture_full.m4a */ = {isa = PBXFileReference; path = ringtone_dawn_dreamculture_full.m4a; sourceTree = "<group>"; };
 		59535AE7D6830B97391FD0E5 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Localizable.strings; sourceTree = "<group>"; };
+		5CE5FCD2600C609E90F47E0C /* ringtone_energetic_glitterblast_full.m4a */ = {isa = PBXFileReference; path = ringtone_energetic_glitterblast_full.m4a; sourceTree = "<group>"; };
 		5E0DD4B896793968D6338FC7 /* BackstopSlotStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstopSlotStore.swift; sourceTree = "<group>"; };
-		5E223B725D4B026EC13D84B0 /* ringtone_energetic_placeholder.caf */ = {isa = PBXFileReference; path = ringtone_energetic_placeholder.caf; sourceTree = "<group>"; };
 		6093C9086BF89A5DE696608D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		624997C42E3B64847820F32C /* StepsTaskDescriptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepsTaskDescriptor.swift; sourceTree = "<group>"; };
+		64C8D5520C1CB729C8109A1E /* ringtone_classic_churchbells.caf */ = {isa = PBXFileReference; path = ringtone_classic_churchbells.caf; sourceTree = "<group>"; };
 		6555600F045507A0C7E2B9A0 /* AlarmConfigurationBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmConfigurationBuilder.swift; sourceTree = "<group>"; };
 		672FBF5B1749EB576E198EF2 /* SharedAlarmSettingsEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedAlarmSettingsEditor.swift; sourceTree = "<group>"; };
 		69CD58B4B56C7061B7680177 /* TaskContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskContainerView.swift; sourceTree = "<group>"; };
@@ -216,30 +301,41 @@
 		6BEA79BA987079BEC109687B /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowView.swift; sourceTree = "<group>"; };
 		6BED047FE88B52D05152C6D1 /* ringtone_classical_russiandance.caf */ = {isa = PBXFileReference; path = ringtone_classical_russiandance.caf; sourceTree = "<group>"; };
 		70170ACB8DF8F857D13F0713 /* OpenAlarmLiveActivities.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = OpenAlarmLiveActivities.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		75A5D1D8C9DD07A56B85E396 /* SOURCES.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SOURCES.md; sourceTree = "<group>"; };
 		79B6CE9DEB0B98BEACCA5515 /* DawnTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DawnTheme.swift; sourceTree = "<group>"; };
+		7A00021038013BDB91FA529E /* ringtone_energetic_voxelrevolution_full.m4a */ = {isa = PBXFileReference; path = ringtone_energetic_voxelrevolution_full.m4a; sourceTree = "<group>"; };
+		7C958FB0FDDB99A00E181149 /* ringtone_dawn_dreamculture.caf */ = {isa = PBXFileReference; path = ringtone_dawn_dreamculture.caf; sourceTree = "<group>"; };
 		7F23ABC24B2EFA33EBE57548 /* AlarmSoundLiveActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmSoundLiveActivityAttributes.swift; sourceTree = "<group>"; };
 		804446594677F10342CA095A /* SettingsHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsHomeView.swift; sourceTree = "<group>"; };
+		80BB4F971C6190B9BF30EF02 /* ringtone_energetic_clouddancer.caf */ = {isa = PBXFileReference; path = ringtone_energetic_clouddancer.caf; sourceTree = "<group>"; };
 		8261AEDC3C7E2357DBDAE53F /* ObjectScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectScanner.swift; sourceTree = "<group>"; };
+		84EC93E32D54DC4BAD6F0C6E /* ringtone_energetic_glitterblast.caf */ = {isa = PBXFileReference; path = ringtone_energetic_glitterblast.caf; sourceTree = "<group>"; };
 		85E2DD94D51593407FD3EE4D /* ForceCloseAlarmManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForceCloseAlarmManager.swift; sourceTree = "<group>"; };
 		8746634DEC601C7330B580D3 /* ShakeEnergyModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShakeEnergyModel.swift; sourceTree = "<group>"; };
 		8806D09A2BB84C05748859AD /* OpenAlarmSharedDefaults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAlarmSharedDefaults.swift; sourceTree = "<group>"; };
 		8898AEB724F91549B8C9D621 /* StepsTaskView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepsTaskView.swift; sourceTree = "<group>"; };
 		896CD183713535DB742DC78B /* NapEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NapEditorView.swift; sourceTree = "<group>"; };
 		898DF33D0BF7DC6AAF8F16B6 /* RingtoneCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RingtoneCatalog.swift; sourceTree = "<group>"; };
+		8ADAA63CCA6193B5AB895229 /* ringtone_dawn_morning.caf */ = {isa = PBXFileReference; path = ringtone_dawn_morning.caf; sourceTree = "<group>"; };
 		8C78E3ECE947AFD666044F7A /* MathConfigurator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathConfigurator.swift; sourceTree = "<group>"; };
-		8CBC03DF78AACA3851B9A832 /* ringtone_nature_placeholder.caf */ = {isa = PBXFileReference; path = ringtone_nature_placeholder.caf; sourceTree = "<group>"; };
+		8D7598A660D85986751CB75E /* ringtone_dawn_magicscout_full.m4a */ = {isa = PBXFileReference; path = ringtone_dawn_magicscout_full.m4a; sourceTree = "<group>"; };
 		8DC8A38B09C5A65762413EB5 /* MemoryTaskDescriptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryTaskDescriptor.swift; sourceTree = "<group>"; };
+		8EBA82957F11C4956D275DB7 /* ringtone_nature_morningbirds_full.m4a */ = {isa = PBXFileReference; path = ringtone_nature_morningbirds_full.m4a; sourceTree = "<group>"; };
 		9668E7AF9A16407772B1C8D9 /* ShakeConfigurator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShakeConfigurator.swift; sourceTree = "<group>"; };
+		98C384CAAF45F80462446E52 /* ringtone_energetic_avemarimba_full.m4a */ = {isa = PBXFileReference; path = ringtone_energetic_avemarimba_full.m4a; sourceTree = "<group>"; };
 		9A5A2891C11E40725EB86AA0 /* ScanTaskDescriptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanTaskDescriptor.swift; sourceTree = "<group>"; };
+		9C4FA4CB216FBA69A0950667 /* ringtone_dawn_wisdominthesun_full.m4a */ = {isa = PBXFileReference; path = ringtone_dawn_wisdominthesun_full.m4a; sourceTree = "<group>"; };
 		A06DA178A073176D55E9CDD1 /* NapDurationPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NapDurationPicker.swift; sourceTree = "<group>"; };
 		A0A332FB8767D07D2F81AAFA /* ConfiguratorControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfiguratorControls.swift; sourceTree = "<group>"; };
 		A33ABC03E5073EF42843F709 /* TaskSoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSoundManager.swift; sourceTree = "<group>"; };
 		A68254B37ED88B2B332295B2 /* AlertReferenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertReferenceStore.swift; sourceTree = "<group>"; };
 		AAC4F90011CEA2952C0DEC7A /* StopIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StopIntent.swift; sourceTree = "<group>"; };
+		AD764FDE354C6942E01916C4 /* ringtone_dawn_motions.caf */ = {isa = PBXFileReference; path = ringtone_dawn_motions.caf; sourceTree = "<group>"; };
 		AE222D66729DAB174BBE549D /* AlarmPermissionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmPermissionService.swift; sourceTree = "<group>"; };
 		B01A0C795DA6BC983D2B110B /* ringtone_classical_cellosuite.caf */ = {isa = PBXFileReference; path = ringtone_classical_cellosuite.caf; sourceTree = "<group>"; };
 		B0511AEB1608CC1DFD19C495 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		B186AAD75B89CF765141943F /* OnboardingEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingEngine.swift; sourceTree = "<group>"; };
+		B3FE74A81BB42ADDB910AEFA /* ringtone_dawn_dreamer.caf */ = {isa = PBXFileReference; path = ringtone_dawn_dreamer.caf; sourceTree = "<group>"; };
 		B5B9304B4982E495CBDABF6C /* OpenAlarmTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OpenAlarmTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B69D30D8FB6982C26A6AE32D /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		B70862277833BF001ABA7BBE /* AlarmStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmStore.swift; sourceTree = "<group>"; };
@@ -247,40 +343,57 @@
 		BAF6D629EFE2BA2F7985E10A /* ringtone_classical_winter_full.m4a */ = {isa = PBXFileReference; path = ringtone_classical_winter_full.m4a; sourceTree = "<group>"; };
 		BB4C5C435B210F4CC25B113F /* ringtone_classical_bluedanube_full.m4a */ = {isa = PBXFileReference; path = ringtone_classical_bluedanube_full.m4a; sourceTree = "<group>"; };
 		BCE731BCCB1CA21F5D24555B /* HapticRamp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticRamp.swift; sourceTree = "<group>"; };
+		BE9CD91C19940E2632E08FF4 /* ringtone_energetic_avemarimba.caf */ = {isa = PBXFileReference; path = ringtone_energetic_avemarimba.caf; sourceTree = "<group>"; };
+		BFC8D7E592B56E0FCDE3D9A1 /* ringtone_classic_twinbell.caf */ = {isa = PBXFileReference; path = ringtone_classic_twinbell.caf; sourceTree = "<group>"; };
 		C31159CD06DFA85A7F28AB7E /* AlarmRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmRowView.swift; sourceTree = "<group>"; };
+		C6130A93EBD9A673908EAD59 /* ringtone_dawn_motions_full.m4a */ = {isa = PBXFileReference; path = ringtone_dawn_motions_full.m4a; sourceTree = "<group>"; };
 		C9D3621D849ED9FED9ACF9C3 /* ScanTaskView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanTaskView.swift; sourceTree = "<group>"; };
 		C9F24A86427E96596EA65FC0 /* NapLiveActivityIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NapLiveActivityIntents.swift; sourceTree = "<group>"; };
 		CFE2D4CDA835E9DD606528A0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D063C3267CB009AC3D00E6D2 /* AlarmStateMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmStateMachine.swift; sourceTree = "<group>"; };
-		D091FCCF48F6A15AB8E04E42 /* ringtone_dawn_placeholder.caf */ = {isa = PBXFileReference; path = ringtone_dawn_placeholder.caf; sourceTree = "<group>"; };
 		D13DC66D00A9A730B9474C9D /* MotionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionService.swift; sourceTree = "<group>"; };
 		D2DFE585309AE1B8B5476296 /* ScanConfigurator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanConfigurator.swift; sourceTree = "<group>"; };
 		D34BA5EB8874EFC8335CB2CF /* AlarmSettingsCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmSettingsCore.swift; sourceTree = "<group>"; };
+		D464C3AF2C96731316E09872 /* ringtone_classic_digitalalarm.caf */ = {isa = PBXFileReference; path = ringtone_classic_digitalalarm.caf; sourceTree = "<group>"; };
 		D46FEF8EFF4DA652027BB024 /* MathProblemGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathProblemGenerator.swift; sourceTree = "<group>"; };
 		D4C65D29F82E70C88900C16A /* WakeUpCheckConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeUpCheckConfirmationView.swift; sourceTree = "<group>"; };
 		DA110F30C0C8E9D50303CDA8 /* OpenAlarmApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAlarmApp.swift; sourceTree = "<group>"; };
 		DAD33FEE543D66DEBCB7E592 /* NapCountdownLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NapCountdownLiveActivityWidget.swift; sourceTree = "<group>"; };
+		DB7226230FB508F1F44AC1C7 /* ringtone_energetic_hearwhattheysay.caf */ = {isa = PBXFileReference; path = ringtone_energetic_hearwhattheysay.caf; sourceTree = "<group>"; };
 		DDB2A8D48318B1F111F45CB8 /* NapCountdownLiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NapCountdownLiveActivityManager.swift; sourceTree = "<group>"; };
+		DEAF587CF26925D6930FCF21 /* ringtone_nature_rooster.caf */ = {isa = PBXFileReference; path = ringtone_nature_rooster.caf; sourceTree = "<group>"; };
+		E01F3A1A20E48E06D14E90C6 /* ringtone_energetic_ravingenergy_full.m4a */ = {isa = PBXFileReference; path = ringtone_energetic_ravingenergy_full.m4a; sourceTree = "<group>"; };
 		E43A03F552339F3CF4DBCF2C /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		E55FA0C55C164FE917B01D27 /* ringtone_nature_rooster_full.m4a */ = {isa = PBXFileReference; path = ringtone_nature_rooster_full.m4a; sourceTree = "<group>"; };
 		E69BE263B8EB27F471F84921 /* DummyTaskView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DummyTaskView.swift; sourceTree = "<group>"; };
 		E8857F7CD62651E1F7B1E992 /* TaskRegistryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRegistryTests.swift; sourceTree = "<group>"; };
 		E9ACF85F89CF9D011BF26A5E /* OpenAlarm.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OpenAlarm.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E9F25B8B78A0594DE5563131 /* AlarmDefinition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmDefinition.swift; sourceTree = "<group>"; };
 		EC5DAE7B4013A69C5A044889 /* ringtone_classical_bluedanube.caf */ = {isa = PBXFileReference; path = ringtone_classical_bluedanube.caf; sourceTree = "<group>"; };
 		EC867FDDFA2E5A20B689C098 /* ringtone_classical_valkyries_full.m4a */ = {isa = PBXFileReference; path = ringtone_classical_valkyries_full.m4a; sourceTree = "<group>"; };
+		EE2C8CF871CAFC34471270A1 /* ringtone_nature_oceanwaves.caf */ = {isa = PBXFileReference; path = ringtone_nature_oceanwaves.caf; sourceTree = "<group>"; };
 		EF31DE975F3205E7AB2835DB /* MemoryPatternGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryPatternGenerator.swift; sourceTree = "<group>"; };
+		EFE0FE93EE69CDC902F19F54 /* ringtone_dawn_deliberatethought_full.m4a */ = {isa = PBXFileReference; path = ringtone_dawn_deliberatethought_full.m4a; sourceTree = "<group>"; };
+		F41086C8E7E964C70B596FAD /* ringtone_energetic_voxelrevolution.caf */ = {isa = PBXFileReference; path = ringtone_energetic_voxelrevolution.caf; sourceTree = "<group>"; };
 		F52C8F1CE7608625F167AE21 /* TaskDescriptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDescriptor.swift; sourceTree = "<group>"; };
+		F549476BCB2B8DF8CA9FA439 /* ringtone_dawn_magicscout.caf */ = {isa = PBXFileReference; path = ringtone_dawn_magicscout.caf; sourceTree = "<group>"; };
 		F56204943EF2EB414FECD3E8 /* TaskPermissionFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskPermissionFlow.swift; sourceTree = "<group>"; };
 		F68BF27EA97B5D8C42193398 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		F6A5DA3C14440E7AD45FD911 /* AlarmPersistenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmPersistenceStore.swift; sourceTree = "<group>"; };
 		F96F41FC3F5238CCFA070204 /* SnoozeIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnoozeIntent.swift; sourceTree = "<group>"; };
+		FBEBADE083B2A5AEB4973E85 /* ringtone_energetic_ravingenergy.caf */ = {isa = PBXFileReference; path = ringtone_energetic_ravingenergy.caf; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
 		05173B6F3901DA91DF1969C6 /* Ringtones */ = {
 			isa = PBXGroup;
 			children = (
-				2D2AF77985B09BD6C9FC48B3 /* ringtone_classic_placeholder.caf */,
+				4FC2F16B5F5A09820714276E /* ringtone_classic_bedsideclock.caf */,
+				64C8D5520C1CB729C8109A1E /* ringtone_classic_churchbells.caf */,
+				D464C3AF2C96731316E09872 /* ringtone_classic_digitalalarm.caf */,
+				0FB54A2E0E42CF750EFF27AB /* ringtone_classic_ghanta.caf */,
+				24430F3795A6619F1B7C6535 /* ringtone_classic_koshichime.caf */,
+				BFC8D7E592B56E0FCDE3D9A1 /* ringtone_classic_twinbell.caf */,
 				BB4C5C435B210F4CC25B113F /* ringtone_classical_bluedanube_full.m4a */,
 				EC5DAE7B4013A69C5A044889 /* ringtone_classical_bluedanube.caf */,
 				3F2E456FE6128BC7BFE5532C /* ringtone_classical_cellosuite_full.m4a */,
@@ -291,9 +404,47 @@
 				54FCA00AAE46C39B52756877 /* ringtone_classical_valkyries.caf */,
 				BAF6D629EFE2BA2F7985E10A /* ringtone_classical_winter_full.m4a */,
 				3044A86C6B9E2FC6A2CDB8B6 /* ringtone_classical_winter.caf */,
-				D091FCCF48F6A15AB8E04E42 /* ringtone_dawn_placeholder.caf */,
-				5E223B725D4B026EC13D84B0 /* ringtone_energetic_placeholder.caf */,
-				8CBC03DF78AACA3851B9A832 /* ringtone_nature_placeholder.caf */,
+				EFE0FE93EE69CDC902F19F54 /* ringtone_dawn_deliberatethought_full.m4a */,
+				34534E3D08E0711249C61248 /* ringtone_dawn_deliberatethought.caf */,
+				57F46D19A912102464C0F5BE /* ringtone_dawn_dreamculture_full.m4a */,
+				7C958FB0FDDB99A00E181149 /* ringtone_dawn_dreamculture.caf */,
+				009CE897647B76D7D2A63580 /* ringtone_dawn_dreamer_full.m4a */,
+				B3FE74A81BB42ADDB910AEFA /* ringtone_dawn_dreamer.caf */,
+				1ACB3A57D2FF9DEC7666A904 /* ringtone_dawn_lightthought_full.m4a */,
+				04CDD1DFD04ACB7DF2F22EDD /* ringtone_dawn_lightthought.caf */,
+				8D7598A660D85986751CB75E /* ringtone_dawn_magicscout_full.m4a */,
+				F549476BCB2B8DF8CA9FA439 /* ringtone_dawn_magicscout.caf */,
+				126DC4FBFC9FF5BB21D7CD49 /* ringtone_dawn_morning_full.m4a */,
+				8ADAA63CCA6193B5AB895229 /* ringtone_dawn_morning.caf */,
+				C6130A93EBD9A673908EAD59 /* ringtone_dawn_motions_full.m4a */,
+				AD764FDE354C6942E01916C4 /* ringtone_dawn_motions.caf */,
+				9C4FA4CB216FBA69A0950667 /* ringtone_dawn_wisdominthesun_full.m4a */,
+				04BD1E4800B533745C7EB218 /* ringtone_dawn_wisdominthesun.caf */,
+				98C384CAAF45F80462446E52 /* ringtone_energetic_avemarimba_full.m4a */,
+				BE9CD91C19940E2632E08FF4 /* ringtone_energetic_avemarimba.caf */,
+				2B127C91E1252D6054E0E09A /* ringtone_energetic_clouddancer_full.m4a */,
+				80BB4F971C6190B9BF30EF02 /* ringtone_energetic_clouddancer.caf */,
+				5CE5FCD2600C609E90F47E0C /* ringtone_energetic_glitterblast_full.m4a */,
+				84EC93E32D54DC4BAD6F0C6E /* ringtone_energetic_glitterblast.caf */,
+				400C67317BB2CD2E9D20AFED /* ringtone_energetic_hearwhattheysay_full.m4a */,
+				DB7226230FB508F1F44AC1C7 /* ringtone_energetic_hearwhattheysay.caf */,
+				000E4C49B6C701A2348582B1 /* ringtone_energetic_newerwave_full.m4a */,
+				25C3A257CD23B71437B78E87 /* ringtone_energetic_newerwave.caf */,
+				E01F3A1A20E48E06D14E90C6 /* ringtone_energetic_ravingenergy_full.m4a */,
+				FBEBADE083B2A5AEB4973E85 /* ringtone_energetic_ravingenergy.caf */,
+				7A00021038013BDB91FA529E /* ringtone_energetic_voxelrevolution_full.m4a */,
+				F41086C8E7E964C70B596FAD /* ringtone_energetic_voxelrevolution.caf */,
+				253BBA6A45878A85C2E60A33 /* ringtone_nature_foreststream_full.m4a */,
+				0D26DBA100AF04CCEB84FECB /* ringtone_nature_foreststream.caf */,
+				8EBA82957F11C4956D275DB7 /* ringtone_nature_morningbirds_full.m4a */,
+				29732BD9C653AC401F951480 /* ringtone_nature_morningbirds.caf */,
+				42231F998340B715FE14D554 /* ringtone_nature_oceanwaves_full.m4a */,
+				EE2C8CF871CAFC34471270A1 /* ringtone_nature_oceanwaves.caf */,
+				08E1FD7D52DDF3908C5ACBEA /* ringtone_nature_rain_full.m4a */,
+				3FC06967B9E53769922877C8 /* ringtone_nature_rain.caf */,
+				E55FA0C55C164FE917B01D27 /* ringtone_nature_rooster_full.m4a */,
+				DEAF587CF26925D6930FCF21 /* ringtone_nature_rooster.caf */,
+				75A5D1D8C9DD07A56B85E396 /* SOURCES.md */,
 			);
 			path = Ringtones;
 			sourceTree = "<group>";
@@ -734,15 +885,37 @@
 			buildActionMask = 2147483647;
 			files = (
 				7FCBEB09DE152F5B6367A121 /* Localizable.strings in Resources */,
-				B7277B24DB8807ACAED86974 /* ringtone_classic_placeholder.caf in Resources */,
+				8F899C393AB24399C4E97325 /* ringtone_classic_bedsideclock.caf in Resources */,
+				FF6DBB89E41D222CFA739566 /* ringtone_classic_churchbells.caf in Resources */,
+				BCD18D8FE0EECE24602E08BB /* ringtone_classic_digitalalarm.caf in Resources */,
+				08EDCBF40E0AA06D78A70739 /* ringtone_classic_ghanta.caf in Resources */,
+				A80DBE56307100F99C7A0F42 /* ringtone_classic_koshichime.caf in Resources */,
+				C0C5DB3CA3295C5FD262F398 /* ringtone_classic_twinbell.caf in Resources */,
 				5F5E130D6ACFEC78B1067CD6 /* ringtone_classical_bluedanube.caf in Resources */,
 				92E5406230CE3E8E32FDFD05 /* ringtone_classical_cellosuite.caf in Resources */,
 				5E3C229E99A0DFC15864E5B8 /* ringtone_classical_russiandance.caf in Resources */,
 				1D799E25C9B080CBF25C6806 /* ringtone_classical_valkyries.caf in Resources */,
 				793E59030B69242504D49336 /* ringtone_classical_winter.caf in Resources */,
-				6347274BB4FB56CFFBA5E37F /* ringtone_dawn_placeholder.caf in Resources */,
-				E6EA89B2FB29F3F991C183AA /* ringtone_energetic_placeholder.caf in Resources */,
-				487BDE85E7E24EC2A3AC9F62 /* ringtone_nature_placeholder.caf in Resources */,
+				02529DC9C50598BED02C197A /* ringtone_dawn_deliberatethought.caf in Resources */,
+				B30D5F78AD1548EFDE655011 /* ringtone_dawn_dreamculture.caf in Resources */,
+				245313C773278943D871E8A1 /* ringtone_dawn_dreamer.caf in Resources */,
+				499BB43B7A5BBEEC1483EA86 /* ringtone_dawn_lightthought.caf in Resources */,
+				82EF2F8DD5E5EC8CA0D49720 /* ringtone_dawn_magicscout.caf in Resources */,
+				894F11CF10274973A2EE90DB /* ringtone_dawn_morning.caf in Resources */,
+				179076F9484760F252E62DB5 /* ringtone_dawn_motions.caf in Resources */,
+				0CC44EAD17B6C567E818C0E7 /* ringtone_dawn_wisdominthesun.caf in Resources */,
+				0AD49C36AACCEFD1F5F11087 /* ringtone_energetic_avemarimba.caf in Resources */,
+				E1DD799DB67168921D91E2DB /* ringtone_energetic_clouddancer.caf in Resources */,
+				338900F15D36A6C4604901FE /* ringtone_energetic_glitterblast.caf in Resources */,
+				CBB4559A4C44811D1BB6133D /* ringtone_energetic_hearwhattheysay.caf in Resources */,
+				CA8A4D48C5F1FBC1B5E824B4 /* ringtone_energetic_newerwave.caf in Resources */,
+				D49705DD3A3207EFCCD09343 /* ringtone_energetic_ravingenergy.caf in Resources */,
+				DABE7181FC62BB5829931584 /* ringtone_energetic_voxelrevolution.caf in Resources */,
+				CCD3D4D1DA95D41773BA482B /* ringtone_nature_foreststream.caf in Resources */,
+				43DC4B2DEEECA13F590C115A /* ringtone_nature_morningbirds.caf in Resources */,
+				4DFD36D70E988606CCF620A9 /* ringtone_nature_oceanwaves.caf in Resources */,
+				FAC8E334D05B550D4DFF7648 /* ringtone_nature_rain.caf in Resources */,
+				E96A136E7CA9F3F90A62D336 /* ringtone_nature_rooster.caf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -754,7 +927,13 @@
 				BDD2C5EBBA247FBB4FD16F4D /* InfoPlist.strings in Resources */,
 				A07CAFA80E4CC40C1C53496B /* LaunchScreen.storyboard in Resources */,
 				4796FE34E7D27B854FB78CB6 /* Localizable.strings in Resources */,
-				CC0661500827A48BB936EC81 /* ringtone_classic_placeholder.caf in Resources */,
+				1A1A6059CD55125E0841776D /* SOURCES.md in Resources */,
+				E299EFF54A513CF9B09B5142 /* ringtone_classic_bedsideclock.caf in Resources */,
+				D988D3621CDFEFF9C76A54F7 /* ringtone_classic_churchbells.caf in Resources */,
+				7758D967D9631AF7DFADE809 /* ringtone_classic_digitalalarm.caf in Resources */,
+				868808A84D6E00F11385A35D /* ringtone_classic_ghanta.caf in Resources */,
+				2C7D6AEB4216BD889FABE163 /* ringtone_classic_koshichime.caf in Resources */,
+				AE8C4A61D3C065FD31237D0B /* ringtone_classic_twinbell.caf in Resources */,
 				212B68FCAA26D5F29A216BD8 /* ringtone_classical_bluedanube.caf in Resources */,
 				6F8608FE3E1CBFCB1C29F1D2 /* ringtone_classical_bluedanube_full.m4a in Resources */,
 				253590E5F646B6E2B8AA92C8 /* ringtone_classical_cellosuite.caf in Resources */,
@@ -765,9 +944,46 @@
 				B3EDF8101A0D47C0B429C865 /* ringtone_classical_valkyries_full.m4a in Resources */,
 				C07AF6525014A17A24016F3E /* ringtone_classical_winter.caf in Resources */,
 				A30825462BC21CE518A70565 /* ringtone_classical_winter_full.m4a in Resources */,
-				D8CA1BC650DF6BFE2D96BD50 /* ringtone_dawn_placeholder.caf in Resources */,
-				67F2D6BC75C3CAA7D9B08059 /* ringtone_energetic_placeholder.caf in Resources */,
-				D114253003C24D57E26721C1 /* ringtone_nature_placeholder.caf in Resources */,
+				840F15AD0A9E727FE2ECBA31 /* ringtone_dawn_deliberatethought.caf in Resources */,
+				0661D2BC0EEF16771BA13F05 /* ringtone_dawn_deliberatethought_full.m4a in Resources */,
+				6D35962B5AACAEA4A956A88B /* ringtone_dawn_dreamculture.caf in Resources */,
+				A8B1D092650C662BFC03D7C8 /* ringtone_dawn_dreamculture_full.m4a in Resources */,
+				0D117227001B284416C4087C /* ringtone_dawn_dreamer.caf in Resources */,
+				E07FB914442C06F9D23D5F6D /* ringtone_dawn_dreamer_full.m4a in Resources */,
+				49D36A74399751EC923AD2B3 /* ringtone_dawn_lightthought.caf in Resources */,
+				BC7C4FF99D1FD9CDB952EDF0 /* ringtone_dawn_lightthought_full.m4a in Resources */,
+				CB566F983A1F69B844AB6D99 /* ringtone_dawn_magicscout.caf in Resources */,
+				6429A95441DC74DB8E221ADC /* ringtone_dawn_magicscout_full.m4a in Resources */,
+				2BC9E78B7D697DBB5C11E1CB /* ringtone_dawn_morning.caf in Resources */,
+				4495811125A68D5301DA360D /* ringtone_dawn_morning_full.m4a in Resources */,
+				469DABE1AAB58E7A03430824 /* ringtone_dawn_motions.caf in Resources */,
+				2A327BBB966BE06591B6F9CC /* ringtone_dawn_motions_full.m4a in Resources */,
+				EDF232D6E405E14FB4EF79BD /* ringtone_dawn_wisdominthesun.caf in Resources */,
+				2AFBE3E478A729AE45198600 /* ringtone_dawn_wisdominthesun_full.m4a in Resources */,
+				2E0A39885142DA247BA7A536 /* ringtone_energetic_avemarimba.caf in Resources */,
+				D1C61ACF0B21323B34CD376F /* ringtone_energetic_avemarimba_full.m4a in Resources */,
+				4F55392D51EE38AC4F159AB9 /* ringtone_energetic_clouddancer.caf in Resources */,
+				B0989C000AE6B7312D94112B /* ringtone_energetic_clouddancer_full.m4a in Resources */,
+				D4A18E5AE979E432B0C56496 /* ringtone_energetic_glitterblast.caf in Resources */,
+				0A39F0AB2C10B4CD2F005BAB /* ringtone_energetic_glitterblast_full.m4a in Resources */,
+				B0BDAF773EBCD409839F2123 /* ringtone_energetic_hearwhattheysay.caf in Resources */,
+				3662A49E79C19B6636E5642A /* ringtone_energetic_hearwhattheysay_full.m4a in Resources */,
+				3B00FA41D3E3E4FEB7E4A841 /* ringtone_energetic_newerwave.caf in Resources */,
+				FD84846A086E7DBF8D55DF50 /* ringtone_energetic_newerwave_full.m4a in Resources */,
+				BD1B427024E80410E01371DB /* ringtone_energetic_ravingenergy.caf in Resources */,
+				1EF604C81233C0A79B94813B /* ringtone_energetic_ravingenergy_full.m4a in Resources */,
+				952BF2E2F869EA7A2821FB5B /* ringtone_energetic_voxelrevolution.caf in Resources */,
+				86E3D62B1EEE7C6C21012BDC /* ringtone_energetic_voxelrevolution_full.m4a in Resources */,
+				602DF81A8613197E0704BFBA /* ringtone_nature_foreststream.caf in Resources */,
+				E45E94D5E4298D02B5DB315B /* ringtone_nature_foreststream_full.m4a in Resources */,
+				575D9A628BCF8AF186AC67D0 /* ringtone_nature_morningbirds.caf in Resources */,
+				4973B8E78F522DD6341790A7 /* ringtone_nature_morningbirds_full.m4a in Resources */,
+				0A5C064A6B365225CCCFE1E9 /* ringtone_nature_oceanwaves.caf in Resources */,
+				D897F3522BE8349352BC07F4 /* ringtone_nature_oceanwaves_full.m4a in Resources */,
+				A4AC1B44CA4EC0052000DEC8 /* ringtone_nature_rain.caf in Resources */,
+				2FEA63FCBCA8A3401299FF88 /* ringtone_nature_rain_full.m4a in Resources */,
+				B5088D8FEEB86FC15B714CD6 /* ringtone_nature_rooster.caf in Resources */,
+				409F11BA8BA61ED78DFF9812 /* ringtone_nature_rooster_full.m4a in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
