@@ -10,11 +10,12 @@ struct ShakeTaskView: View {
     @State private var token: MotionService.Token?
     @State private var ramp: HapticRamp
     @State private var displayedProgress = 0.0
-    @State private var receivedSample = false
     @State private var showingFallback = false
     @State private var didComplete = false
     @State private var lastPublishTime: TimeInterval?
-    @State private var noSampleTask: Task<Void, Never>?
+    @State private var lastSampleTime: TimeInterval?
+    @State private var resubscribeAttempts = 0
+    @State private var watchdogTask: Task<Void, Never>?
 
     @ScaledMetric(relativeTo: .largeTitle) private var percentageFontSize: CGFloat = 96
 
@@ -83,8 +84,7 @@ struct ShakeTaskView: View {
 
         guard token != nil else {
             if mode == .wake {
-                showingFallback = true
-                ramp.stop()
+                showFallback(reason: "subscribe returned nil")
             }
             return
         }
@@ -93,20 +93,53 @@ struct ShakeTaskView: View {
             return
         }
 
-        noSampleTask = Task { @MainActor in
-            do {
-                try await Task.sleep(for: .seconds(2))
-            } catch {
-                return
-            }
+        startWatchdog()
+    }
 
-            guard !Task.isCancelled, !receivedSample, !didComplete else {
-                return
-            }
+    /// Liveness watchdog (wake mode only): covers both startup silence and a
+    /// stream that dies after delivering samples. One resubscribe attempt
+    /// before failing open keeps the escape path under ~5 seconds.
+    private func startWatchdog() {
+        watchdogTask?.cancel()
+        watchdogTask = Task { @MainActor in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(2.5))
+                guard !Task.isCancelled, !didComplete, !showingFallback else {
+                    return
+                }
 
-            showingFallback = true
-            stopEverything()
+                let now = Date.timeIntervalSinceReferenceDate
+                let isStalled = lastSampleTime.map { now - $0 >= 2.5 } ?? true
+                guard isStalled else {
+                    continue
+                }
+
+                if resubscribeAttempts < 1 {
+                    resubscribeAttempts += 1
+                    IntentDiagnostics.log("ShakeTask motion stalled; resubscribing (attempt \(resubscribeAttempts))")
+                    if let token {
+                        MotionService.shared.cancel(token)
+                        self.token = nil
+                    }
+                    token = MotionService.shared.subscribe { magnitude, dt in
+                        receiveSample(magnitude: magnitude, dt: dt)
+                    }
+                    if token == nil {
+                        showFallback(reason: "resubscribe returned nil")
+                        return
+                    }
+                } else {
+                    showFallback(reason: "motion stalled after resubscribe")
+                    return
+                }
+            }
         }
+    }
+
+    private func showFallback(reason: String) {
+        IntentDiagnostics.log("ShakeTask fallback shown reason=\(reason)")
+        showingFallback = true
+        stopEverything()
     }
 
     private func receiveSample(magnitude: Double, dt: Double) {
@@ -114,9 +147,7 @@ struct ShakeTaskView: View {
             return
         }
 
-        receivedSample = true
-        noSampleTask?.cancel()
-        noSampleTask = nil
+        lastSampleTime = Date.timeIntervalSinceReferenceDate
 
         model.ingest(magnitude: magnitude, dt: dt)
         publishProgressIfNeeded()
@@ -157,8 +188,8 @@ struct ShakeTaskView: View {
             MotionService.shared.cancel(token)
             self.token = nil
         }
-        noSampleTask?.cancel()
-        noSampleTask = nil
+        watchdogTask?.cancel()
+        watchdogTask = nil
         ramp.stop()
     }
 }
