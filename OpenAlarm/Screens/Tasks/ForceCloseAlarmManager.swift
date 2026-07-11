@@ -52,6 +52,15 @@ final class ForceCloseAlarmManager {
         Task { @MainActor [weak self] in
             guard let self else { return }
             do {
+                // Keyed by the PARENT id: the backstop's StopIntent carries the parent
+                // UUID, so that's the pending-disarm id the reference lookup uses.
+                AlertReferenceStore().record(
+                    AlertReference(
+                        expectedFireDate: fireDate,
+                        ringtoneID: RingtoneCatalog.resolve(resolvedSettings.ringtoneID).id
+                    ),
+                    alarmKitID: mainAlarm.id
+                )
                 _ = try await alarmManager.schedule(id: newID, configuration: config)
             } catch {
                 Self.logger.error("Force-close schedule failed for \(newID): \(error.localizedDescription)")

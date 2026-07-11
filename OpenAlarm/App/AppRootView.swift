@@ -46,6 +46,8 @@ struct AppRootView: View {
                 alarm: presentation.alarm,
                 tasks: presentation.tasks,
                 resolvedSettings: presentation.resolvedSettings,
+                ringtone: presentation.ringtone,
+                alertStartedAt: presentation.alertStartedAt,
                 pinSystemVolume: alarmStore.pinAlarmVolumeEnabled
             ) {
                 Task {

@@ -71,6 +71,13 @@ struct NapExtendIntent: LiveActivityIntent {
 
         try? AlarmManager.shared.stop(id: id)
         try? AlarmManager.shared.cancel(id: id)
+        AlertReferenceStore().record(
+            AlertReference(
+                expectedFireDate: updatedTarget,
+                ringtoneID: RingtoneCatalog.resolve(nap.resolvedSharedSettings(defaults: effectiveDefaults).ringtoneID).id
+            ),
+            alarmKitID: id
+        )
         _ = try? await AlarmManager.shared.schedule(id: id, configuration: config)
 
         let updatedNap = nap
@@ -195,6 +202,13 @@ struct NapResumeIntent: LiveActivityIntent {
 
         try? AlarmManager.shared.stop(id: id)
         try? AlarmManager.shared.cancel(id: id)
+        AlertReferenceStore().record(
+            AlertReference(
+                expectedFireDate: newTarget,
+                ringtoneID: RingtoneCatalog.resolve(nap.resolvedSharedSettings(defaults: effectiveDefaults).ringtoneID).id
+            ),
+            alarmKitID: id
+        )
         _ = try? await AlarmManager.shared.schedule(id: id, configuration: config)
 
         let updatedNap = nap

@@ -84,6 +84,13 @@ struct SnoozeIntent: LiveActivityIntent {
         // Stop first, cancel, then schedule fresh
         try? AlarmManager.shared.stop(id: id)
         try? AlarmManager.shared.cancel(id: id)
+        AlertReferenceStore().record(
+            AlertReference(
+                expectedFireDate: snoozeDate,
+                ringtoneID: RingtoneCatalog.resolve(settings.ringtoneID).id
+            ),
+            alarmKitID: id
+        )
         _ = try? await AlarmManager.shared.schedule(id: id, configuration: config)
 
         if alarm.isNap {

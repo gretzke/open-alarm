@@ -272,6 +272,7 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
     var tasksEnabled: Bool
     var tasks: [AlarmTask]
     var volume: AlarmVolumeSettings
+    var ringtoneID: String
 
     static let featureDefaults = SharedAlarmSettings(
         snoozeEnabled: false,
@@ -282,7 +283,8 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         wakeUpCheckResponseTimeoutMinutes: WakeUpCheckTimingPolicy.defaultResponseTimeoutMinutes,
         tasksEnabled: true,
         tasks: [],
-        volume: .default
+        volume: .default,
+        ringtoneID: RingtoneCatalog.defaultToneID
     )
 
     func canSnoozeAgain(currentCount: Int) -> Bool {
@@ -321,6 +323,7 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         case tasksEnabled
         case tasks
         case volume
+        case ringtoneID
     }
 
     init(
@@ -332,7 +335,8 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         wakeUpCheckResponseTimeoutMinutes: Int,
         tasksEnabled: Bool = true,
         tasks: [AlarmTask] = [],
-        volume: AlarmVolumeSettings = .default
+        volume: AlarmVolumeSettings = .default,
+        ringtoneID: String = RingtoneCatalog.defaultToneID
     ) {
         self.snoozeEnabled = snoozeEnabled
         self.snoozeDurationMinutes = snoozeDurationMinutes
@@ -343,6 +347,7 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         self.tasksEnabled = tasksEnabled
         self.tasks = tasks
         self.volume = volume
+        self.ringtoneID = ringtoneID
     }
 
     init(from decoder: Decoder) throws {
@@ -360,6 +365,21 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         tasksEnabled = try container.decodeIfPresent(Bool.self, forKey: .tasksEnabled) ?? true
         tasks = try container.decodeIfPresent([AlarmTask].self, forKey: .tasks) ?? []
         volume = try container.decodeIfPresent(AlarmVolumeSettings.self, forKey: .volume) ?? .default
+        ringtoneID = try container.decodeIfPresent(String.self, forKey: .ringtoneID) ?? RingtoneCatalog.defaultToneID
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(snoozeEnabled, forKey: .snoozeEnabled)
+        try container.encode(snoozeDurationMinutes, forKey: .snoozeDurationMinutes)
+        try container.encodeIfPresent(maxSnoozes, forKey: .maxSnoozes)
+        try container.encode(wakeUpCheckEnabled, forKey: .wakeUpCheckEnabled)
+        try container.encode(wakeUpCheckDelayMinutes, forKey: .wakeUpCheckDelayMinutes)
+        try container.encode(wakeUpCheckResponseTimeoutMinutes, forKey: .wakeUpCheckResponseTimeoutMinutes)
+        try container.encode(tasksEnabled, forKey: .tasksEnabled)
+        try container.encode(tasks, forKey: .tasks)
+        try container.encode(volume, forKey: .volume)
+        try container.encode(ringtoneID, forKey: .ringtoneID)
     }
 }
 

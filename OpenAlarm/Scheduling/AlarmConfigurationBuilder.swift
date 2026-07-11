@@ -172,11 +172,16 @@ enum AlarmConfigurationBuilder {
     // MARK: - Helpers
 
     private static func alarmKitSound(for settings: SharedAlarmSettings) -> AlertConfiguration.AlertSound {
-        // AlarmKit exposes sound selection but not numeric volume control.
-        // The configured task alarm volume is applied by TaskSoundManager once the app opens.
-        // Keep this settings-aware seam so future .named(...) sound assets can honor custom overrides.
-        _ = settings
-        return .default
+        let ringtone = RingtoneCatalog.resolve(settings.ringtoneID)
+        guard !ringtone.isDefault else { return .default }
+
+        let fileURL = URL(fileURLWithPath: ringtone.excerptFileName)
+        let resourceName = fileURL.deletingPathExtension().lastPathComponent
+        let fileExtension = fileURL.pathExtension
+        guard Bundle.main.url(forResource: resourceName, withExtension: fileExtension) != nil else {
+            return .default
+        }
+        return .named(ringtone.excerptFileName)
     }
 
     static func resolvedTitle(for alarm: AlarmDefinition) -> String {

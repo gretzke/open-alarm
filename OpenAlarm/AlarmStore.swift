@@ -15,6 +15,8 @@ struct DisarmPresentation: Identifiable {
     let alarm: AlarmDefinition
     let tasks: [AlarmTask]
     let resolvedSettings: SharedAlarmSettings
+    let alertStartedAt: Date
+    let ringtone: Ringtone
 }
 
 struct AlarmListPresentation: Identifiable {
@@ -105,6 +107,7 @@ final class AlarmStore: ObservableObject {
     private let permissionService: AlarmPermissionService
     private let notificationPermissionService: NotificationPermissionService
     private let persistence: AlarmPersistence
+    private let alertReferenceStore: AlertReferenceStore
     private let wakeCheckNotificationService: WakeUpCheckNotificationService
     private var alarmUpdatesTask: Task<Void, Never>?
     private var settingsRescheduleTask: Task<Void, Never>?
@@ -133,6 +136,7 @@ final class AlarmStore: ObservableObject {
         self.permissionService = permissionService ?? AlarmPermissionService(manager: alarmManager)
         self.notificationPermissionService = notificationPermissionService ?? NotificationPermissionService()
         self.persistence = AlarmPersistence(defaults: resolvedDefaults)
+        self.alertReferenceStore = AlertReferenceStore(defaults: resolvedDefaults)
         self.wakeCheckNotificationService = WakeUpCheckNotificationService()
         self.defaultSharedSettings = persistence.loadDefaultSharedSettings()
         self.napDefaultSharedSettings = persistence.loadNapDefaultSharedSettings()
@@ -898,6 +902,7 @@ final class AlarmStore: ObservableObject {
                     )
                     try? alarmManager.stop(id: alarmID)
                     try? alarmManager.cancel(id: alarmID)
+                    recordAlertReference(alarmKitID: alarmID, expectedFireDate: newDeadline, settings: settings)
                     _ = try? await alarmManager.schedule(id: alarmID, configuration: config)
                 }
 
@@ -975,11 +980,21 @@ final class AlarmStore: ObservableObject {
 
         let alarm = alarms[index]
         let settings = resolvedSettingsForAlarm(alarm)
+        let reference = alertReferenceStore.reference(alarmKitID: alarmKitID)
+        let alertStartedAt = AlertReferenceResolver.alertStartedAt(
+            recorded: reference,
+            alarmHour: alarm.hour,
+            alarmMinute: alarm.minute,
+            now: .now,
+            calendar: .autoupdatingCurrent
+        )
         disarmPresentation = DisarmPresentation(
             id: alarms[index].id,
             alarm: alarm,
             tasks: persistence.effectiveTasks(from: settings),
-            resolvedSettings: settings
+            resolvedSettings: settings,
+            alertStartedAt: alertStartedAt,
+            ringtone: RingtoneCatalog.resolve(reference?.ringtoneID ?? settings.ringtoneID)
         )
         IntentDiagnostics.log("AlarmStore disarm presentation shown alarm=\(alarm.id.uuidString)")
     }
@@ -1003,6 +1018,7 @@ final class AlarmStore: ObservableObject {
             }
         }
         persistence.savePendingDisarmAlarmIDs(pendingIDs)
+        alertReferenceStore.clear(alarmKitID: completedAlarmKitID)
 
         // Dismiss the UI
         if disarmPresentation?.id == alarmID {
@@ -1104,6 +1120,7 @@ final class AlarmStore: ObservableObject {
             deadlineAt: deadlineAt,
             resolvedSettings: settings
         )
+        recordAlertReference(alarmKitID: alarmID, expectedFireDate: deadlineAt, settings: settings)
         _ = try? await alarmManager.schedule(id: alarmID, configuration: config)
     }
 
@@ -1209,6 +1226,7 @@ final class AlarmStore: ObservableObject {
             let runtimeSchedule = AlarmScheduleResolver.runtimeSchedule(for: alarm)
             let config = makeConfiguration(for: alarm, schedule: runtimeSchedule)
             do {
+                recordAlertReference(alarmKitID: alarm.id, for: alarm)
                 _ = try await alarmManager.schedule(id: alarm.id, configuration: config)
             } catch {
                 Self.logger.error("Force reschedule failed for \(alarm.id): \(error.localizedDescription)")
@@ -1226,12 +1244,14 @@ final class AlarmStore: ObservableObject {
         let config = makeConfiguration(for: alarm, schedule: runtimeSchedule)
 
         do {
+            recordAlertReference(alarmKitID: alarm.id, for: alarm)
             _ = try await alarmManager.schedule(id: alarm.id, configuration: config)
         } catch {
             Self.logger.warning("Schedule failed for \(alarm.id), retrying: \(error.localizedDescription)")
             try? alarmManager.stop(id: alarm.id)
             try? alarmManager.cancel(id: alarm.id)
             do {
+                recordAlertReference(alarmKitID: alarm.id, for: alarm)
                 _ = try await alarmManager.schedule(id: alarm.id, configuration: config)
             } catch {
                 Self.logger.error("Retry schedule failed for \(alarm.id): \(error.localizedDescription)")
@@ -1317,12 +1337,22 @@ final class AlarmStore: ObservableObject {
         )
 
         do {
+            recordAlertReference(
+                alarmKitID: bridgeID,
+                expectedFireDate: date,
+                settings: resolvedSettingsForAlarm(parentAlarm)
+            )
             _ = try await alarmManager.schedule(id: bridgeID, configuration: config)
         } catch {
             Self.logger.warning("Bridge schedule failed for \(bridgeID), retrying: \(error.localizedDescription)")
             try? alarmManager.stop(id: bridgeID)
             try? alarmManager.cancel(id: bridgeID)
             do {
+                recordAlertReference(
+                    alarmKitID: bridgeID,
+                    expectedFireDate: date,
+                    settings: resolvedSettingsForAlarm(parentAlarm)
+                )
                 _ = try await alarmManager.schedule(id: bridgeID, configuration: config)
             } catch {
                 Self.logger.error("Bridge retry failed for \(bridgeID): \(error.localizedDescription)")
@@ -1350,6 +1380,63 @@ final class AlarmStore: ObservableObject {
     /// Returns the fully resolved settings for the given alarm (custom or cascaded defaults).
     private func resolvedSettingsForAlarm(_ alarm: UserAlarm) -> SharedAlarmSettings {
         alarm.resolvedSharedSettings(defaults: resolvedDefaultsForAlarm(alarm))
+    }
+
+    private func recordAlertReference(
+        alarmKitID: UUID,
+        expectedFireDate: Date,
+        settings: SharedAlarmSettings
+    ) {
+        alertReferenceStore.record(
+            AlertReference(
+                expectedFireDate: expectedFireDate,
+                ringtoneID: RingtoneCatalog.resolve(settings.ringtoneID).id
+            ),
+            alarmKitID: alarmKitID
+        )
+    }
+
+    private func recordAlertReference(alarmKitID: UUID, for alarm: UserAlarm) {
+        guard let expectedFireDate = nextExpectedFireDate(for: alarm) else { return }
+        recordAlertReference(
+            alarmKitID: alarmKitID,
+            expectedFireDate: expectedFireDate,
+            settings: resolvedSettingsForAlarm(alarm)
+        )
+    }
+
+    private func nextExpectedFireDate(for alarm: UserAlarm) -> Date? {
+        if case .fixed(let date) = alarm.trigger {
+            return date
+        }
+
+        let calendar = Calendar.autoupdatingCurrent
+        var components = DateComponents()
+        components.hour = alarm.hour
+        components.minute = alarm.minute
+        components.second = 0
+
+        if alarm.repeatDays.isEmpty {
+            return calendar.nextDate(
+                after: .now,
+                matching: components,
+                matchingPolicy: .nextTime,
+                repeatedTimePolicy: .first,
+                direction: .forward
+            )
+        }
+
+        return alarm.repeatDays.compactMap { day in
+            var weekdayComponents = components
+            weekdayComponents.weekday = day.rawValue
+            return calendar.nextDate(
+                after: .now,
+                matching: weekdayComponents,
+                matchingPolicy: .nextTime,
+                repeatedTimePolicy: .first,
+                direction: .forward
+            )
+        }.min()
     }
 
     // MARK: - Bridge Alarm Resolution
@@ -1605,6 +1692,11 @@ final class AlarmStore: ObservableObject {
             }
             IntentDiagnostics.log("AlarmStore backstop swept parent=\(parentID.uuidString) id=\(backstopID.uuidString)")
         }
+
+        let activeIDs = Set(alarms.map(\.id))
+            .union(alarms.flatMap { $0.activeOverride?.bridgeAlarmIDs ?? [] })
+            .union(BackstopSlotStore.allSlots().values)
+        alertReferenceStore.sweep(keeping: activeIDs)
     }
 
     // MARK: - Wake-Up Check Helpers

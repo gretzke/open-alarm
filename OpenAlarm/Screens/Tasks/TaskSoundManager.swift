@@ -21,6 +21,8 @@ final class TaskSoundManager: ObservableObject {
     private var alarmSoundURL: URL?
     private let volumeSettings: AlarmVolumeSettings
     private let pinSystemVolume: Bool
+    private let ringtone: Ringtone
+    private let alertStartedAt: Date
     private let normalPlayerVolume: Float = 1.0
     private let temporaryMuteDurationSeconds = 30
     private let temporaryMuteFadeDuration: TimeInterval = 2.5
@@ -29,9 +31,16 @@ final class TaskSoundManager: ObservableObject {
         temporaryMuteRemainingSeconds > 0 || isTemporaryMuteRestoring
     }
 
-    init(volumeSettings: AlarmVolumeSettings = .default, pinSystemVolume: Bool = true) {
+    init(
+        volumeSettings: AlarmVolumeSettings = .default,
+        pinSystemVolume: Bool = true,
+        ringtone: Ringtone,
+        alertStartedAt: Date
+    ) {
         self.volumeSettings = volumeSettings
         self.pinSystemVolume = pinSystemVolume
+        self.ringtone = ringtone
+        self.alertStartedAt = alertStartedAt
     }
 
     func startPlaying() {
@@ -91,7 +100,16 @@ final class TaskSoundManager: ObservableObject {
     }
 
     private func resolveAlarmSoundURL() -> URL {
-        Bundle.main.url(forResource: "alarm_sound", withExtension: "caf")
+        if !ringtone.isDefault {
+            let fileURL = URL(fileURLWithPath: ringtone.fullTrackFileName)
+            let resourceName = fileURL.deletingPathExtension().lastPathComponent
+            let fileExtension = fileURL.pathExtension
+            if let resourceURL = Bundle.main.url(forResource: resourceName, withExtension: fileExtension) {
+                return resourceURL
+            }
+        }
+
+        return Bundle.main.url(forResource: "alarm_sound", withExtension: "caf")
             ?? Bundle.main.url(forResource: "alarm_sound", withExtension: "mp3")
             ?? URL(fileURLWithPath: "/System/Library/Audio/UISounds/alarm.caf")
     }
@@ -101,12 +119,14 @@ final class TaskSoundManager: ObservableObject {
 
         configureAudioSession()
 
+        if let player = audioPlayer, !forceRestart, player.isPlaying {
+            return
+        }
+
         if let player = audioPlayer, !forceRestart {
             applyCurrentMuteState(to: player)
-            if !player.isPlaying {
-                player.play()
-            }
-            if player.isPlaying {
+            seekToCurrentOffset(in: player)
+            if player.play() {
                 return
             }
         }
@@ -119,6 +139,7 @@ final class TaskSoundManager: ObservableObject {
         guard let player = try? AVAudioPlayer(contentsOf: url) else { return }
         player.numberOfLoops = -1
         applyCurrentMuteState(to: player)
+        seekToCurrentOffset(in: player)
         player.prepareToPlay()
         guard player.play() else {
             if retriesLeft > 0 {
@@ -306,9 +327,21 @@ final class TaskSoundManager: ObservableObject {
         } else if isTemporaryMuteRestoring {
             player.volume = 0
             player.setVolume(normalPlayerVolume, fadeDuration: temporaryMuteFadeDuration)
-        } else {
+        } else if ringtone.isDefault {
             player.volume = normalPlayerVolume
+        } else {
+            player.volume = 0
+            player.setVolume(normalPlayerVolume, fadeDuration: 0.5)
         }
+    }
+
+    private func seekToCurrentOffset(in player: AVAudioPlayer) {
+        guard !ringtone.isDefault else { return }
+        player.currentTime = RingtonePlayback.offset(
+            alertStartedAt: alertStartedAt,
+            now: .now,
+            excerptDuration: ringtone.excerptDuration
+        )
     }
 
     private func cancelTemporaryMute() {

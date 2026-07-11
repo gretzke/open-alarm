@@ -5,6 +5,8 @@ struct TaskContainerView: View {
     let alarm: AlarmDefinition
     let tasks: [AlarmTask]
     let resolvedSettings: SharedAlarmSettings
+    let ringtone: Ringtone
+    let alertStartedAt: Date
     var onCompleted: () -> Void
 
     @StateObject private var soundManager: TaskSoundManager
@@ -22,17 +24,23 @@ struct TaskContainerView: View {
         alarm: AlarmDefinition,
         tasks: [AlarmTask],
         resolvedSettings: SharedAlarmSettings,
+        ringtone: Ringtone,
+        alertStartedAt: Date,
         pinSystemVolume: Bool = true,
         onCompleted: @escaping () -> Void
     ) {
         self.alarm = alarm
         self.tasks = tasks
         self.resolvedSettings = resolvedSettings
+        self.ringtone = ringtone
+        self.alertStartedAt = alertStartedAt
         self.onCompleted = onCompleted
         _soundManager = StateObject(
             wrappedValue: TaskSoundManager(
                 volumeSettings: resolvedSettings.volume,
-                pinSystemVolume: pinSystemVolume
+                pinSystemVolume: pinSystemVolume,
+                ringtone: ringtone,
+                alertStartedAt: alertStartedAt
             )
         )
     }

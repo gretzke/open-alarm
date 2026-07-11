@@ -28,12 +28,14 @@ struct SharedAlarmSettingsEditor: View {
 
     var allowFiveSecondSnoozeOption: Bool = false
     var openSnoozeDurationOnAppearFromLaunchArg: Bool = false
+    var showsRingtonePicker: Bool = true
 
     @State private var selectionSheet: SharedSettingsSelectionSheet?
     @State private var isSchedulingTryOut = false
     @State private var showTryOutToast = false
     @State private var tryOutError: LocalizedStringKey?
     @State private var wakeCheckPermissionFlowStep: WakeCheckPermissionFlowStep?
+    @State private var isRingtonePickerPresented = false
 
     private var snoozeDurationOptions: [Int] {
         if allowFiveSecondSnoozeOption {
@@ -95,6 +97,10 @@ struct SharedAlarmSettingsEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            if showsRingtonePicker {
+                ringtoneSelectionRow
+            }
+
             volumeSection
 
             HStack {
@@ -273,6 +279,12 @@ struct SharedAlarmSettingsEditor: View {
             .presentationBackground(.clear)
             .presentationBackgroundInteraction(.enabled)
         }
+        .sheet(isPresented: $isRingtonePickerPresented) {
+            NavigationStack {
+                RingtonePickerView(selection: $settings.ringtoneID)
+            }
+            .preferredColorScheme(.dark)
+        }
         .overlay(alignment: .top) {
             if showTryOutToast {
                 Text(L10n.alarmEditorTryOutStartsIn5Seconds)
@@ -317,6 +329,34 @@ struct SharedAlarmSettingsEditor: View {
                 )
             }
         }
+    }
+
+    private var ringtoneSelectionRow: some View {
+        Button {
+            isRingtonePickerPresented = true
+        } label: {
+            HStack(spacing: 12) {
+                Text(L10n.ringtonePickerRowTitle)
+                    .font(.body)
+                    .foregroundStyle(OAColor.textPrimary)
+
+                Spacer(minLength: 0)
+
+                Text(LocalizedStringKey(RingtoneCatalog.resolve(settings.ringtoneID).displayNameKey))
+                    .font(OAType.rowValue)
+                    .foregroundStyle(OAColor.textSecondary)
+
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(OAColor.textSecondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .oaGlassPanel()
     }
 
     private func selectionTitle(for item: SharedSettingsSelectionSheet) -> LocalizedStringKey {

@@ -86,6 +86,8 @@ enum L10n {
     static let settingsLiveActivitiesPromptTitle: LocalizedStringKey = "settings_live_activities_prompt_title"
     static let settingsLiveActivitiesPromptBody: LocalizedStringKey = "settings_live_activities_prompt_body"
     static let settingsAlarmSoundTitle: LocalizedStringKey = "settings_alarm_sound_title"
+    static let ringtonePickerTitle: LocalizedStringKey = "ringtone_picker_title"
+    static let ringtonePickerRowTitle: LocalizedStringKey = "ringtone_picker_row_title"
     static let settingsPinAlarmVolumeToggle: LocalizedStringKey = "settings_pin_alarm_volume_toggle"
     static let settingsPinAlarmVolumeFootnote: LocalizedStringKey = "settings_pin_alarm_volume_footnote"
     static let settingsTemporaryMuteFootnote: LocalizedStringKey = "settings_temporary_mute_footnote"

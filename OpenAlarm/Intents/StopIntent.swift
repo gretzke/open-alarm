@@ -131,12 +131,28 @@ struct StopIntent: LiveActivityIntent {
 
         IntentDiagnostics.log("StopIntent backstop schedule attempt id=\(newID.uuidString) parent=\(alarm.id.uuidString)")
         do {
+            // Keyed by the PARENT id: the backstop's StopIntent carries the parent
+            // UUID, so that's the pending-disarm id the reference lookup uses.
+            AlertReferenceStore().record(
+                AlertReference(
+                    expectedFireDate: fireDate,
+                    ringtoneID: RingtoneCatalog.resolve(settings.ringtoneID).id
+                ),
+                alarmKitID: alarm.id
+            )
             _ = try await AlarmManager.shared.schedule(id: newID, configuration: config)
         } catch {
             IntentDiagnostics.log("StopIntent backstop schedule retry id=\(newID.uuidString) parent=\(alarm.id.uuidString) error=\(error.localizedDescription)")
             try? AlarmManager.shared.stop(id: newID)
             try? AlarmManager.shared.cancel(id: newID)
             do {
+                AlertReferenceStore().record(
+                    AlertReference(
+                        expectedFireDate: fireDate,
+                        ringtoneID: RingtoneCatalog.resolve(settings.ringtoneID).id
+                    ),
+                    alarmKitID: alarm.id
+                )
                 _ = try await AlarmManager.shared.schedule(id: newID, configuration: config)
             } catch {
                 IntentDiagnostics.log("StopIntent backstop schedule failed id=\(newID.uuidString) parent=\(alarm.id.uuidString) error=\(error.localizedDescription)")

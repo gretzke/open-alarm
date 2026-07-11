@@ -13,6 +13,7 @@ enum OpenAlarmSharedDefaults {
         static let wakeCheckGraceAppliedIDs = "OPENALARM_WAKE_CHECK_GRACE_APPLIED_IDS"
         static let legacyBackstopAlarmID = "OPENALARM_FORCE_CLOSE_ALARM_ID"
         static let legacyBackstopParentAlarmID = "OPENALARM_FORCE_CLOSE_PARENT_ALARM_ID"
+        static let alertReferencePrefix = "OPENALARM_ALERT_REFERENCE_V1_"
     }
 
     // UserDefaults is documented thread-safe; Swift 6 can't see that.
