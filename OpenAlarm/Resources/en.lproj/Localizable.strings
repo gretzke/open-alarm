@@ -283,7 +283,7 @@
 "task_steps_motion_permission_denied_title" = "Motion access is off";
 "task_steps_motion_permission_denied_body" = "Allow Motion & Fitness access in Settings to use step tasks.";
 "task_steps_counter_format" = "%d / %d";
-"task_scan_name" = "Scan object";
+"task_scan_name" = "Scan";
 "task_scan_title" = "Find it";
 "task_scan_object_title" = "Object to scan";
 "task_scan_unavailable_fallback" = "Dismiss";

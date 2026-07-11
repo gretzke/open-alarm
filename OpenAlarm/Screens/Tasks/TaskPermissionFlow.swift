@@ -15,6 +15,19 @@ enum TaskPermissionFlowStep: String, Identifiable {
     var id: String { rawValue }
 }
 
+/// Cover item that carries the permission WITH the step. Driving the cover off the
+/// step alone while reading the permission from a second @State can render the wrong
+/// permission's screen on first presentation (seen as a camera prompt for the steps
+/// task); a single item makes that desync impossible.
+struct TaskPermissionFlowPresentation: Identifiable, Equatable {
+    var step: TaskPermissionFlowStep
+    let permission: TaskPermission
+
+    // Identity follows the step so prePrompt -> denied re-presents the cover,
+    // matching the previous item-per-step behavior.
+    var id: String { step.rawValue }
+}
+
 @MainActor
 enum TaskPermissionAuthorizer {
     static func status(for permission: TaskPermission) -> TaskPermissionStatus {

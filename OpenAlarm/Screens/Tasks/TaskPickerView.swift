@@ -9,8 +9,7 @@ struct TaskPickerView: View {
 
     @State private var route: ConfiguratorRoute?
     @State private var draggingIndex: Int?
-    @State private var permissionFlowStep: TaskPermissionFlowStep?
-    @State private var pendingPermission: TaskPermission?
+    @State private var permissionFlow: TaskPermissionFlowPresentation?
     @State private var pendingRoute: ConfiguratorRoute?
     @State private var openRouteAfterPermissionCoverDismisses = false
 
@@ -36,19 +35,19 @@ struct TaskPickerView: View {
             configuratorSheet(for: route)
         }
         .fullScreenCover(
-            item: $permissionFlowStep,
+            item: $permissionFlow,
             onDismiss: handlePermissionCoverDismissed
-        ) { step in
-            switch step {
+        ) { presentation in
+            switch presentation.step {
             case .prePrompt:
                 TaskPermissionPrePromptView(
-                    permission: pendingPermission ?? .camera,
+                    permission: presentation.permission,
                     onRequestPermission: requestPermission,
                     onCancel: cancelPermissionFlow
                 )
             case .denied:
                 TaskPermissionDeniedView(
-                    permission: pendingPermission ?? .camera,
+                    permission: presentation.permission,
                     onOpenSettings: alarmStore.openSettings,
                     onCancel: cancelPermissionFlow
                 )
@@ -122,50 +121,47 @@ struct TaskPickerView: View {
             return
         }
 
-        pendingPermission = permission
         pendingRoute = requestedRoute
         switch TaskPermissionAuthorizer.status(for: permission) {
         case .authorized:
             route = requestedRoute
-            pendingPermission = nil
             pendingRoute = nil
         case .notDetermined:
-            permissionFlowStep = .prePrompt
+            permissionFlow = TaskPermissionFlowPresentation(step: .prePrompt, permission: permission)
         case .denied:
-            permissionFlowStep = .denied
+            permissionFlow = TaskPermissionFlowPresentation(step: .denied, permission: permission)
         }
     }
 
     private func requestPermission() {
-        guard let pendingPermission else { return }
-        TaskPermissionAuthorizer.request(pendingPermission) { granted in
+        guard let permission = permissionFlow?.permission else { return }
+        TaskPermissionAuthorizer.request(permission) { granted in
             if granted {
                 openRouteAfterPermissionCoverDismisses = true
-                permissionFlowStep = nil
+                permissionFlow = nil
             } else {
                 // Keep the pending route: granting later in Settings reopens it.
-                permissionFlowStep = .denied
+                permissionFlow?.step = .denied
             }
         }
     }
 
     private func cancelPermissionFlow() {
-        permissionFlowStep = nil
-        pendingPermission = nil
+        permissionFlow = nil
         pendingRoute = nil
         openRouteAfterPermissionCoverDismisses = false
     }
 
     private func handlePermissionAuthorizationChange(_ phase: ScenePhase) {
         guard phase == .active,
-              permissionFlowStep == .denied,
-              let pendingPermission,
-              TaskPermissionAuthorizer.status(for: pendingPermission) == .authorized else {
+              let presentation = permissionFlow,
+              presentation.step == .denied,
+              TaskPermissionAuthorizer.status(for: presentation.permission) == .authorized else {
             return
         }
 
         openRouteAfterPermissionCoverDismisses = true
-        permissionFlowStep = nil
+        permissionFlow = nil
     }
 
     private func handlePermissionCoverDismissed() {
@@ -175,7 +171,6 @@ struct TaskPickerView: View {
         }
 
         openRouteAfterPermissionCoverDismisses = false
-        pendingPermission = nil
         self.pendingRoute = nil
         route = pendingRoute
     }
@@ -237,8 +232,7 @@ private struct TaskTypeListContent: View {
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var alarmStore: AlarmStore
     @State private var path: [String] = []
-    @State private var permissionFlowStep: TaskPermissionFlowStep?
-    @State private var pendingPermission: TaskPermission?
+    @State private var permissionFlow: TaskPermissionFlowPresentation?
     @State private var pendingTypeID: String?
     @State private var openTypeAfterPermissionCoverDismisses = false
 
@@ -272,19 +266,19 @@ private struct TaskTypeListContent: View {
             }
         }
         .fullScreenCover(
-            item: $permissionFlowStep,
+            item: $permissionFlow,
             onDismiss: handlePermissionCoverDismissed
-        ) { step in
-            switch step {
+        ) { presentation in
+            switch presentation.step {
             case .prePrompt:
                 TaskPermissionPrePromptView(
-                    permission: pendingPermission ?? .camera,
+                    permission: presentation.permission,
                     onRequestPermission: requestPermission,
                     onCancel: cancelPermissionFlow
                 )
             case .denied:
                 TaskPermissionDeniedView(
-                    permission: pendingPermission ?? .camera,
+                    permission: presentation.permission,
                     onOpenSettings: alarmStore.openSettings,
                     onCancel: cancelPermissionFlow
                 )
@@ -301,50 +295,47 @@ private struct TaskTypeListContent: View {
             return
         }
 
-        pendingPermission = permission
         pendingTypeID = descriptor.typeID
         switch TaskPermissionAuthorizer.status(for: permission) {
         case .authorized:
             path.append(descriptor.typeID)
-            pendingPermission = nil
             pendingTypeID = nil
         case .notDetermined:
-            permissionFlowStep = .prePrompt
+            permissionFlow = TaskPermissionFlowPresentation(step: .prePrompt, permission: permission)
         case .denied:
-            permissionFlowStep = .denied
+            permissionFlow = TaskPermissionFlowPresentation(step: .denied, permission: permission)
         }
     }
 
     private func requestPermission() {
-        guard let pendingPermission else { return }
-        TaskPermissionAuthorizer.request(pendingPermission) { granted in
+        guard let permission = permissionFlow?.permission else { return }
+        TaskPermissionAuthorizer.request(permission) { granted in
             if granted {
                 openTypeAfterPermissionCoverDismisses = true
-                permissionFlowStep = nil
+                permissionFlow = nil
             } else {
                 // Keep the pending type: granting later in Settings reopens it.
-                permissionFlowStep = .denied
+                permissionFlow?.step = .denied
             }
         }
     }
 
     private func cancelPermissionFlow() {
-        permissionFlowStep = nil
-        pendingPermission = nil
+        permissionFlow = nil
         pendingTypeID = nil
         openTypeAfterPermissionCoverDismisses = false
     }
 
     private func handlePermissionAuthorizationChange(_ phase: ScenePhase) {
         guard phase == .active,
-              permissionFlowStep == .denied,
-              let pendingPermission,
-              TaskPermissionAuthorizer.status(for: pendingPermission) == .authorized else {
+              let presentation = permissionFlow,
+              presentation.step == .denied,
+              TaskPermissionAuthorizer.status(for: presentation.permission) == .authorized else {
             return
         }
 
         openTypeAfterPermissionCoverDismisses = true
-        permissionFlowStep = nil
+        permissionFlow = nil
     }
 
     private func handlePermissionCoverDismissed() {
@@ -354,7 +345,6 @@ private struct TaskTypeListContent: View {
         }
 
         openTypeAfterPermissionCoverDismisses = false
-        pendingPermission = nil
         self.pendingTypeID = nil
         path.append(pendingTypeID)
     }

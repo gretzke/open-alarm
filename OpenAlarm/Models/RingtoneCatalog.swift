@@ -1,10 +1,11 @@
 import Foundation
 
+// Case order defines the picker's section order.
 enum RingtoneSection: String, CaseIterable, Codable, Sendable {
-    case classical
     case classicAlarms
-    case dawn
     case nature
+    case classical
+    case dawn
     case energetic
 
     var displayNameKey: String {

@@ -283,7 +283,7 @@
 "task_steps_motion_permission_denied_title" = "Bewegungszugriff ist deaktiviert";
 "task_steps_motion_permission_denied_body" = "Erlaube den Zugriff auf Bewegung & Fitness in den Einstellungen, um Schritt-Aufgaben zu verwenden.";
 "task_steps_counter_format" = "%d / %d";
-"task_scan_name" = "Objekt scannen";
+"task_scan_name" = "Scannen";
 "task_scan_title" = "Finde es";
 "task_scan_object_title" = "Zu scannendes Objekt";
 "task_scan_unavailable_fallback" = "Schließen";

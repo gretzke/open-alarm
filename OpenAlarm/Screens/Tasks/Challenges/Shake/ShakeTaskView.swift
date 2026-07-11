@@ -135,7 +135,11 @@ struct ShakeTaskView: View {
         lastPublishTime = now
         displayedProgress = model.progress
         onEvent(.progress(displayedProgress))
-        ramp.update(progress: displayedProgress)
+        // Haptics only during the real challenge: in the configurator preview the
+        // ramp reacts to incidental desk movement and reads as broken feedback.
+        if mode == .wake {
+            ramp.update(progress: displayedProgress)
+        }
     }
 
     private func completeTask() {
