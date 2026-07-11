@@ -18,6 +18,7 @@ struct ShakeTaskView: View {
     @State private var watchdogTask: Task<Void, Never>?
 
     @ScaledMetric(relativeTo: .largeTitle) private var percentageFontSize: CGFloat = 96
+    @ScaledMetric(relativeTo: .title2) private var instructionFontSize: CGFloat = 28
 
     init(intensity: Int, mode: TaskMode, onEvent: @escaping (TaskEvent) -> Void) {
         let clampedIntensity = min(max(intensity, 1), 5)
@@ -47,16 +48,16 @@ struct ShakeTaskView: View {
 
     private var shakeContent: some View {
         VStack(spacing: OASpacing.l) {
-            Text(L10n.taskShakeInstruction)
-                .font(OADawnType.chip)
-                .foregroundStyle(.white)
-
             Text(displayedProgress, format: .percent.precision(.fractionLength(0)))
                 .font(OADawnType.display(percentageFontSize))
                 .foregroundStyle(.white)
                 .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
+
+            Text(L10n.taskShakeInstruction)
+                .font(OADawnType.display(instructionFontSize))
+                .foregroundStyle(.white)
         }
     }
 
