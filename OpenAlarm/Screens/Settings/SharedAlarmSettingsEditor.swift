@@ -28,7 +28,6 @@ struct SharedAlarmSettingsEditor: View {
 
     var allowFiveSecondSnoozeOption: Bool = false
     var openSnoozeDurationOnAppearFromLaunchArg: Bool = false
-    var showsRingtonePicker: Bool = true
 
     @State private var selectionSheet: SharedSettingsSelectionSheet?
     @State private var isSchedulingTryOut = false
@@ -97,9 +96,7 @@ struct SharedAlarmSettingsEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            if showsRingtonePicker {
-                ringtoneSelectionRow
-            }
+            ringtoneSelectionRow
 
             volumeSection
 

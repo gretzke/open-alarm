@@ -110,37 +110,6 @@ struct SettingsHomeView: View {
                             .font(.headline)
                             .foregroundStyle(OAColor.textPrimary)
 
-                        NavigationLink {
-                            RingtonePickerView(selection: Binding(
-                                get: { alarmStore.defaultSharedSettings.ringtoneID },
-                                set: { ringtoneID in
-                                    var settings = alarmStore.defaultSharedSettings
-                                    settings.ringtoneID = ringtoneID
-                                    alarmStore.updateDefaultSharedSettings(settings)
-                                }
-                            ))
-                        } label: {
-                            HStack(spacing: 10) {
-                                Text(L10n.ringtonePickerRowTitle)
-                                    .font(.body.weight(.semibold))
-                                    .foregroundStyle(OAColor.textPrimary)
-
-                                Spacer(minLength: 0)
-
-                                Text(LocalizedStringKey(RingtoneCatalog.resolve(alarmStore.defaultSharedSettings.ringtoneID).displayNameKey))
-                                    .font(OAType.rowValue)
-                                    .foregroundStyle(OAColor.textSecondary)
-
-                                Image(systemName: "chevron.right")
-                                    .font(.footnote.weight(.semibold))
-                                    .foregroundStyle(OAColor.textSecondary)
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(maxWidth: .infinity, minHeight: OASize.rowHeight)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.glass)
-
                         Toggle(isOn: Binding(
                             get: { alarmStore.pinAlarmVolumeEnabled },
                             set: { alarmStore.updatePinAlarmVolumeEnabled($0) }
@@ -346,8 +315,7 @@ private struct DefaultSharedSettingsView: View {
                         get: { alarmStore.defaultSharedSettings },
                         set: { alarmStore.updateDefaultSharedSettings($0) }
                     ),
-                    allowFiveSecondSnoozeOption: alarmStore.testingModeEnabled,
-                    showsRingtonePicker: false
+                    allowFiveSecondSnoozeOption: alarmStore.testingModeEnabled
                 )
             }
             .padding(OASpacing.cardPadding)
