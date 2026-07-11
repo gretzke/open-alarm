@@ -44,12 +44,44 @@ enum RingtoneCatalog {
             excerptDuration: 0
         ),
         Ringtone(
-            id: "classical.placeholder",
-            displayNameKey: "ringtone_classical_placeholder",
+            id: "classical.valkyries",
+            displayNameKey: "ringtone_classical_valkyries",
             section: .classical,
-            excerptFileName: "ringtone_classical_placeholder.caf",
-            fullTrackFileName: "ringtone_classical_placeholder_full.m4a",
-            excerptDuration: 20
+            excerptFileName: "ringtone_classical_valkyries.caf",
+            fullTrackFileName: "ringtone_classical_valkyries_full.m4a",
+            excerptDuration: 28.993
+        ),
+        Ringtone(
+            id: "classical.winter",
+            displayNameKey: "ringtone_classical_winter",
+            section: .classical,
+            excerptFileName: "ringtone_classical_winter.caf",
+            fullTrackFileName: "ringtone_classical_winter_full.m4a",
+            excerptDuration: 28.993
+        ),
+        Ringtone(
+            id: "classical.bluedanube",
+            displayNameKey: "ringtone_classical_bluedanube",
+            section: .classical,
+            excerptFileName: "ringtone_classical_bluedanube.caf",
+            fullTrackFileName: "ringtone_classical_bluedanube_full.m4a",
+            excerptDuration: 28.993
+        ),
+        Ringtone(
+            id: "classical.cellosuite",
+            displayNameKey: "ringtone_classical_cellosuite",
+            section: .classical,
+            excerptFileName: "ringtone_classical_cellosuite.caf",
+            fullTrackFileName: "ringtone_classical_cellosuite_full.m4a",
+            excerptDuration: 28.993
+        ),
+        Ringtone(
+            id: "classical.russiandance",
+            displayNameKey: "ringtone_classical_russiandance",
+            section: .classical,
+            excerptFileName: "ringtone_classical_russiandance.caf",
+            fullTrackFileName: "ringtone_classical_russiandance_full.m4a",
+            excerptDuration: 28.993
         ),
         Ringtone(
             id: "classic.placeholder",

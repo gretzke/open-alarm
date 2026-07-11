@@ -259,6 +259,27 @@ struct SettingsHomeView: View {
                     }
                     .padding(OASpacing.cardPadding)
                     .oaGlassCard()
+
+                    NavigationLink {
+                        CreditsView()
+                    } label: {
+                        HStack(spacing: 10) {
+                            Text(L10n.settingsCreditsTitle)
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(OAColor.textPrimary)
+
+                            Spacer(minLength: 0)
+
+                            Image(systemName: "chevron.right")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(OAColor.textSecondary)
+                        }
+                        .padding(.horizontal, 16)
+                        .frame(maxWidth: .infinity, minHeight: OASize.rowHeight)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.glass)
+                    .accessibilityIdentifier("settings_credits")
                 }
                 .padding(OASpacing.screenMargin)
             }

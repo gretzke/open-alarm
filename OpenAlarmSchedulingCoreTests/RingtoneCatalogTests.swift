@@ -19,6 +19,21 @@ final class RingtoneCatalogTests: XCTestCase {
         XCTAssertEqual(ids.filter { $0 == RingtoneCatalog.defaultToneID }.count, 1)
     }
 
+    func testClassicalSectionContainsExpectedRingtones() {
+        let classicalIDs = RingtoneCatalog.sections
+            .first { $0.0 == .classical }?
+            .1
+            .map(\.id)
+
+        XCTAssertEqual(classicalIDs, [
+            "classical.valkyries",
+            "classical.winter",
+            "classical.bluedanube",
+            "classical.cellosuite",
+            "classical.russiandance"
+        ])
+    }
+
     func testNonDefaultEntriesHaveValidResourcesAndDurations() {
         for ringtone in RingtoneCatalog.all where !ringtone.isDefault {
             XCTAssertFalse(ringtone.excerptFileName.isEmpty)
