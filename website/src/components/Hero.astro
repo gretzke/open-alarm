@@ -12,13 +12,8 @@ import PhoneFrame from './PhoneFrame.astro';
     <a class="btn" href="https://github.com/gretzke/open-alarm">View on GitHub</a>
   </div>
   <div class="phone-wrap">
-    <PhoneFrame simNote="simulated · real screenshot goes here">
-      <div class="list">
-        <h2>Alarms</h2>
-        <div class="alarm"><div><div class="t">06:00</div><div class="d">Weekdays · Math + Steps</div></div><div class="mini-toggle"></div></div>
-        <div class="alarm"><div><div class="t">06:30</div><div class="d">Backup · Shake</div></div><div class="mini-toggle"></div></div>
-        <div class="alarm"><div><div class="t">08:15</div><div class="d">Weekend</div></div><div class="mini-toggle off"></div></div>
-      </div>
+    <PhoneFrame island={false}>
+      <img class="app-shot" src="/screenshots/alarm-list.png" alt="OpenAlarm showing three configured alarms" />
     </PhoneFrame>
   </div>
 </header>
@@ -29,13 +24,5 @@ import PhoneFrame from './PhoneFrame.astro';
   .hero .sub { max-width: 54ch; margin: 22px auto 34px; color: var(--ink-2); font-size: 1.1875rem; }
   .hero .phone-wrap { margin-top: 60px; margin-bottom: -18vh; }
 
-  .list { padding: 46px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
-  .list h2 { font-weight: 900; font-size: 1.4rem; margin: 0 4px 6px; }
-  .alarm { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-radius: 18px; background: var(--glass-fill); border: 1px solid var(--glass-stroke); }
-  .alarm .t { font-weight: 900; font-size: 1.35rem; font-variant-numeric: tabular-nums; line-height: 1.1; }
-  .alarm .d { font-size: 0.66rem; color: var(--ink-2); }
-  .mini-toggle { width: 34px; height: 21px; border-radius: 11px; background: var(--cyan-action); position: relative; flex-shrink: 0; }
-  .mini-toggle::after { content: ""; position: absolute; top: 1.5px; right: 1.5px; width: 18px; height: 18px; border-radius: 50%; background: #fff; }
-  .mini-toggle.off { background: rgba(255,255,255,0.18); }
-  .mini-toggle.off::after { right: auto; left: 1.5px; }
+  .app-shot { width: 100%; height: 100%; object-fit: cover; display: block; }
 </style>
