@@ -1,7 +1,7 @@
 {
   // Static site as a Worker with assets — no server code.
   // Name must match the Cloudflare dashboard project.
-  "name": "openalarm-website",
+  "name": "open-alarm",
   "compatibility_date": "2026-07-01",
   "assets": {
     "directory": "./dist",
