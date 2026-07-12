@@ -33,13 +33,19 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* iOS Safari's translucent toolbars and overscroll show the html/body canvas,
+   not the fixed sky layer. Painting both with the live sky variables keeps
+   those zones in sync with the gradient: html covers top overscroll, body
+   covers the bottom-bar sampling zone. Fallback is the night color. */
+html { background: var(--sky-top, var(--night)); }
+
 body {
   font-family: var(--font);
   font-weight: 400;
   font-size: 17px;
   line-height: 1.6;
   color: var(--ink);
-  background: var(--night);
+  background: var(--sky-bottom, var(--night));
   -webkit-font-smoothing: antialiased;
 }
 

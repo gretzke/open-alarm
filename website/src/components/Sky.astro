@@ -2,9 +2,11 @@
 
 <style>
   .sky {
-    /* 100lvh = large viewport: still covers the screen while iOS Safari's
-       toolbar collapses; inset:0 tracks the small viewport and leaves a gap. */
-    position: fixed; top: 0; left: 0; right: 0; height: 100vh; height: 100lvh; z-index: -1;
+    /* 100dvh tracks iOS Safari's toolbar collapse. The zones the fixed layer
+       can never reach (behind the translucent bottom bar, overscroll) are
+       painted by the html/body backgrounds in global.css, driven by the same
+       --sky-top/--sky-bottom variables. */
+    position: fixed; top: 0; left: 0; right: 0; height: 100vh; height: 100dvh; z-index: -1;
     background: linear-gradient(to bottom, var(--sky-top, #000), var(--sky-bottom, #000));
   }
   .sun {
@@ -57,13 +59,15 @@ function applyDawn(el, progress) {
 if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
   /* static skies via CSS */
 } else {
-  const sky = document.getElementById('sky');
+  // Variables live on <html> so the html/body canvas backgrounds (which iOS
+  // Safari's translucent bottom bar samples) get the same colors as the sky.
+  const root = document.documentElement;
   let ticking = false;
   function update() {
     ticking = false;
-    const max = document.documentElement.scrollHeight - innerHeight;
+    const max = root.scrollHeight - innerHeight;
     const p = max > 0 ? scrollY / max : 0;
-    applyDawn(sky, p);
+    applyDawn(root, p);
   }
   function schedule() {
     if (!ticking) { ticking = true; requestAnimationFrame(update); }
