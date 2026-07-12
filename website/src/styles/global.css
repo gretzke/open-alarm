@@ -71,8 +71,14 @@ body {
   color: var(--cyan);
 }
 .eyebrow .time {
+  display: inline-flex;
+  align-items: center;
   font-variant-numeric: tabular-nums;
-  padding: 0.25em 0.7em;
+  line-height: 1;
+  height: 2.1em;
+  /* trailing letter-spacing after the last digit adds invisible width on the
+     right — trim right padding by the same 0.14em so the digits sit centered */
+  padding: 0 0.56em 0 0.7em;
   border: 1px solid var(--glass-stroke);
   border-radius: var(--r-chip);
   background: var(--glass-fill);
