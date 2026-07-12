@@ -3,7 +3,13 @@ import '@fontsource/nunito/latin-400.css';
 import '@fontsource/nunito/latin-700.css';
 import '@fontsource/nunito/latin-800.css';
 import '@fontsource/nunito/latin-900.css';
+import nunito400 from '@fontsource/nunito/files/nunito-latin-400-normal.woff2?url';
+import nunito700 from '@fontsource/nunito/files/nunito-latin-700-normal.woff2?url';
+import nunito800 from '@fontsource/nunito/files/nunito-latin-800-normal.woff2?url';
+import nunito900 from '@fontsource/nunito/files/nunito-latin-900-normal.woff2?url';
 import '../styles/global.css';
+
+const fontPreloads = [nunito400, nunito700, nunito800, nunito900];
 
 interface Props { title: string; description: string; }
 const { title, description } = Astro.props;
@@ -17,6 +23,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
+    {fontPreloads.map((href) => <link rel="preload" as="font" type="font/woff2" href={href} crossorigin />)}
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <meta property="og:type" content="website" />
