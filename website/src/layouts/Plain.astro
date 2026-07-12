@@ -1,0 +1,20 @@
+---
+import Base from './Base.astro';
+interface Props { title: string; description: string; heading: string; }
+const { title, description, heading } = Astro.props;
+---
+<Base title={title} description={description}>
+  <main class="container">
+    <a class="home" href="/">← OpenAlarm</a>
+    <h1>{heading}</h1>
+    <slot />
+  </main>
+</Base>
+<style>
+  main { padding: 96px 0 120px; max-width: 720px; }
+  .home { display: inline-block; margin-bottom: 40px; font-weight: 800; color: var(--cyan); text-decoration: none; }
+  h1 { font-weight: 900; font-size: 2.5rem; margin-bottom: 28px; letter-spacing: -0.01em; }
+  main :global(h2) { font-weight: 800; font-size: 1.25rem; margin: 36px 0 10px; }
+  main :global(p), main :global(li) { color: var(--ink-2); line-height: 1.7; margin-bottom: 12px; }
+  main :global(a) { color: var(--cyan); }
+</style>

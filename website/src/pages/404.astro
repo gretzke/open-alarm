@@ -1,0 +1,16 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base title="Page not found — OpenAlarm" description="This page never woke up.">
+  <main class="not-found container">
+    <h1 class="display">04:04</h1>
+    <p>This page never woke up.</p>
+    <a class="btn" href="/">Back to OpenAlarm</a>
+  </main>
+</Base>
+
+<style>
+  .not-found { min-height: 100svh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  h1 { font-size: clamp(5rem, 18vw, 12rem); }
+  p { margin: 14px 0 30px; color: var(--ink-2); font-size: 1.1875rem; }
+</style>
