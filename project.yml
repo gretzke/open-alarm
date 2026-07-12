@@ -23,8 +23,8 @@ targets:
         DEVELOPMENT_TEAM: 7P7CKKPH5L
         CODE_SIGN_STYLE: Automatic
         SWIFT_VERSION: 5.0
-        CURRENT_PROJECT_VERSION: 98
-        MARKETING_VERSION: 0.1.0
+        CURRENT_PROJECT_VERSION: 99
+        MARKETING_VERSION: 1.0
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: OpenAlarm/Info.plist
         CODE_SIGN_ENTITLEMENTS: OpenAlarm/OpenAlarm.entitlements
@@ -86,8 +86,8 @@ targets:
         DEVELOPMENT_TEAM: 7P7CKKPH5L
         CODE_SIGN_STYLE: Automatic
         SWIFT_VERSION: 5.0
-        CURRENT_PROJECT_VERSION: 98
-        MARKETING_VERSION: 0.1.0
+        CURRENT_PROJECT_VERSION: 99
+        MARKETING_VERSION: 1.0
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: OpenAlarmLiveActivities/Info.plist
         CODE_SIGN_ENTITLEMENTS: OpenAlarmLiveActivities/OpenAlarmLiveActivities.entitlements
