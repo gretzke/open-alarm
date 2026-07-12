@@ -203,7 +203,7 @@
 "action_clear" = "Clear";
 
 "wake_check_confirm_title" = "Are you awake?";
-"wake_check_confirm_subtitle" = "Backup alarm rings in";
+"wake_check_confirm_subtitle" = "Alarm rings again in";
 "wake_check_confirm_action" = "I'm awake";
 "live_activity_alarm_ringing_title" = "Alarm Ringing";
 "live_activity_alarm_ringing_return_hint" = "Tap to return to OpenAlarm";
