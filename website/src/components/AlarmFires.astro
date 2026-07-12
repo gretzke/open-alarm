@@ -1,0 +1,35 @@
+---
+import PhoneFrame from './PhoneFrame.astro';
+---
+<section id="s-alarmfires" class="feature on-night">
+  <div class="container split">
+    <div>
+      <span class="eyebrow"><span class="time">06:00</span> The alarm fires</span>
+      <h2 class="h2">It rings. And keeps ringing.</h2>
+      <p class="lead">Most alarms surrender to a thumb on the volume rocker. This one doesn't negotiate.</p>
+      <ul class="points">
+        <li><b>Pinned volume.</b> Turn it down and it turns itself right back up.</li>
+        <li><b>Force-close proof.</b> Kill the app and a backstop alarm rings anyway.</li>
+        <li><b>A snooze budget.</b> You decide how many snoozes exist. When they're spent, the button is gone.</li>
+      </ul>
+    </div>
+    <div>
+      <PhoneFrame simNote="simulated · real screenshot goes here">
+        <div class="ringing">
+          <div class="lbl">Monday</div>
+          <div class="now">06:00</div>
+          <div class="stop">Stop</div>
+          <div class="hint">2 challenges to disarm</div>
+        </div>
+      </PhoneFrame>
+    </div>
+  </div>
+</section>
+
+<style>
+  .ringing { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 20px 16px; background: linear-gradient(to bottom, #1c0b38, #3d1430); }
+  .ringing .now { font-weight: 900; font-size: 2.8rem; font-variant-numeric: tabular-nums; line-height: 1; }
+  .ringing .lbl { font-size: 0.8rem; color: rgba(255,255,255,0.7); }
+  .ringing .stop { margin-top: 22px; width: 80%; padding: 12px 0; text-align: center; border-radius: 18px; font-weight: 800; font-size: 0.95rem; background: rgba(100,210,255,0.28); border: 1px solid rgba(133,217,231,0.5); }
+  .ringing .hint { font-size: 0.66rem; color: rgba(255,255,255,0.5); }
+</style>

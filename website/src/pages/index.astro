@@ -1,0 +1,60 @@
+---
+import Base from '../layouts/Base.astro';
+import Sky from '../components/Sky.astro';
+import Nav from '../components/Nav.astro';
+import Hero from '../components/Hero.astro';
+import AlarmFires from '../components/AlarmFires.astro';
+import Challenges from '../components/Challenges.astro';
+import WakeUpCheck from '../components/WakeUpCheck.astro';
+import Daylight from '../components/Daylight.astro';
+import MorningCta from '../components/MorningCta.astro';
+---
+<Base
+  title="OpenAlarm — the alarm that makes sure you're actually up"
+  description="Disarm challenges, wake-up checks, and a snooze budget that runs out. An open-source alarm for iOS built on AlarmKit."
+>
+  <Sky />
+  <Nav />
+  <Hero />
+  <AlarmFires />
+  <Challenges />
+  <WakeUpCheck />
+  <Daylight />
+  <MorningCta />
+</Base>
+
+<style is:global>
+  section { position: relative; }
+  .eyebrow { margin-bottom: 18px; }
+
+  .feature { padding: 12vh 0; }
+  .split { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 56px; align-items: center; }
+  @media (max-width: 800px) { .split { grid-template-columns: 1fr; } }
+  .feature h2 { margin-bottom: 18px; }
+  .feature .lead { font-size: 1.1875rem; max-width: 50ch; margin-bottom: 26px; }
+  .points { list-style: none; display: flex; flex-direction: column; gap: 14px; max-width: 52ch; }
+  .points li { padding-left: 26px; position: relative; }
+  .points li::before { content: ""; position: absolute; left: 0; top: 0.55em; width: 10px; height: 10px; border-radius: 50%; background: var(--cyan-action); box-shadow: 0 0 10px var(--cyan-action); }
+  .points li b { font-weight: 800; }
+
+  /* Night-ink sections */
+  .on-night { color: var(--ink); }
+  .on-night .lead { color: rgba(255,255,255,0.82); }
+
+  /* Dawn-ink sections (past the gold stop) */
+  .on-dawn { color: var(--ink-dark); }
+  .on-dawn .eyebrow { color: rgba(32,16,5,0.75); }
+  .on-dawn .eyebrow .time { border-color: rgba(32,16,5,0.25); background: rgba(255,255,255,0.25); }
+  .on-dawn .lead { color: rgba(32,16,5,0.85); }
+  .on-dawn .points li::before { background: var(--ink-dark); box-shadow: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sky { display: none; }
+    .hero { background: #000; }
+    #s-alarmfires { background: linear-gradient(to bottom, #1c0b38, #b41f1f); }
+    #s-challenges { background: linear-gradient(to bottom, #b41f1f, #ff9e1f); }
+    #s-wakeupcheck { background: linear-gradient(to bottom, #ff9e1f, #ffd84d); }
+    #s-daylight { background: linear-gradient(to bottom, #ffd84d, #fff3cf); }
+    #s-morning { background: #fff3cf; }
+  }
+</style>

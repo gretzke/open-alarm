@@ -1,0 +1,17 @@
+---
+interface Props { simNote?: string; island?: boolean; }
+const { simNote, island = true } = Astro.props;
+---
+<figure class="phone-fig">
+  <div class="phone"><div class="screen">{island && <div class="island"></div>}<slot /></div></div>
+  {simNote && <figcaption class="sim-note">{simNote}</figcaption>}
+</figure>
+
+<style>
+  figure { margin: 0; text-align: center; }
+  .phone { width: 270px; aspect-ratio: 260/536; border-radius: 42px; padding: 8px; background: #1a1a1e;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.08), 0 12px 30px var(--glass-glow); margin: 0 auto; }
+  .screen { position: relative; width: 100%; height: 100%; border-radius: 34px; overflow: hidden; background: #000; display: flex; flex-direction: column; }
+  .island { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 76px; height: 20px; border-radius: 10px; background: #000; z-index: 2; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06); }
+  .sim-note { display: block; margin-top: 12px; text-align: center; font-size: 0.6875rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.35); }
+</style>

@@ -1,0 +1,16 @@
+<nav>
+  <a class="wordmark" href="/">OpenAlarm</a>
+  <a class="gh" href="https://github.com/gretzke/open-alarm">GitHub ↗</a>
+</nav>
+
+<style>
+  nav {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 24px; z-index: 5;
+  }
+  .wordmark { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 1.25rem; color: var(--ink); text-decoration: none; }
+  .wordmark::before { content: ""; width: 14px; height: 14px; border-radius: 50%; background: var(--cyan-action); box-shadow: 0 0 14px var(--cyan-action); }
+  nav .gh { font-weight: 800; font-size: 0.9375rem; color: var(--ink); text-decoration: none; opacity: 0.85; }
+  nav .gh:hover { opacity: 1; }
+</style>

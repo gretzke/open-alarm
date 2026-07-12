@@ -1,0 +1,37 @@
+<section id="s-morning" class="morning on-dawn">
+  <div class="container morning-inner">
+    <span class="eyebrow"><span class="time">06:12</span> Morning</span>
+    <h2 class="display">Wake up for real.</h2>
+    <p class="lead">Free, open source, no account. Just a sunrise you'll actually see.</p>
+    <div class="cta-row">
+      <a class="appstore" href="#" data-appstore-todo aria-label="Download on the App Store">
+        <img class="badge-img" src="/badges/app-store-badge.svg" alt="Download on the App Store" width="200" height="56" />
+      </a>
+      <a class="btn btn-dark" href="https://github.com/gretzke/open-alarm">View on GitHub</a>
+    </div>
+  </div>
+  <footer>
+    <div class="container">
+      <span>© 2026 OpenAlarm</span>
+      <span>
+        <a href="/privacy">Privacy</a>
+        <a href="/support">Support</a>
+        <a href="/impressum">Impressum</a>
+      </span>
+    </div>
+  </footer>
+</section>
+
+<style>
+  .morning { min-height: 90svh; display: flex; flex-direction: column; }
+  .morning-inner { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .morning h2 { font-size: clamp(2.6rem, 6vw, 4.5rem); margin-bottom: 16px; }
+  .morning .lead { margin: 0 auto 34px; }
+  .morning .appstore { box-shadow: 0 14px 34px rgba(32,16,5,0.2); }
+  .btn-dark { border-color: rgba(32,16,5,0.3); background: rgba(255,255,255,0.3); color: var(--ink-dark); }
+  .btn-dark:hover { background: rgba(255,255,255,0.5); }
+  footer { padding: 26px 0; }
+  footer .container { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 0.875rem; color: rgba(32,16,5,0.7); }
+  footer a { color: inherit; font-weight: 700; text-decoration: none; margin-left: 18px; }
+  footer a:hover { text-decoration: underline; }
+</style>

@@ -1,0 +1,75 @@
+<div class="sky" id="sky"><div class="sun"></div></div>
+
+<style>
+  .sky {
+    position: fixed; inset: 0; z-index: -1;
+    background: linear-gradient(to bottom, var(--sky-top, #000), var(--sky-bottom, #000));
+  }
+  .sun {
+    position: absolute; left: 50%;
+    width: calc(140px + 42vmin * var(--sun-p, 0));
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    top: calc(100% * (1.15 - 0.82 * var(--sun-p, 0)));
+    background: radial-gradient(circle,
+      rgba(255,255,255, calc(0.45 + 0.55 * var(--sun-p, 0))) 0%,
+      rgba(255,214,77,  calc(0.9  * (0.45 + 0.55 * var(--sun-p, 0)))) 34%,
+      rgba(255,158,31,  calc(0.25 * (0.45 + 0.55 * var(--sun-p, 0)))) 62%,
+      transparent 70%);
+    filter: blur(3px);
+  }
+</style>
+
+<script is:inline>
+/* Port of DawnPalette (DawnTheme.swift) with one extra leading stop:
+   the site starts at night black (the app's resting UI), then enters the
+   app's 5-stop dawn ramp. progress is 0..1 over the whole sunrise. */
+const DAWN_STOPS = [
+  [0x00, 0x00, 0x00],       // night (site-only stop)
+  [0x1c, 0x0b, 0x38],
+  [0xb4, 0x1f, 0x1f],
+  [0xff, 0x9e, 0x1f],
+  [0xff, 0xd8, 0x4d],
+  [0xff, 0xf3, 0xcf],
+];
+
+function dawnColor(progress) {
+  const p = Math.min(Math.max(progress, 0), 1);
+  const seg = p * (DAWN_STOPS.length - 1);
+  const i = Math.min(Math.floor(seg), DAWN_STOPS.length - 2);
+  const f = seg - i;
+  const [a, b] = [DAWN_STOPS[i], DAWN_STOPS[i + 1]];
+  const c = a.map((v, k) => Math.round(v + (b[k] - v) * f));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+/* App mapping: top of sky trails the horizon so upper text stays dark longer.
+   sky top = progress * 0.55, sky bottom = progress + 0.25 (clamped). */
+function applyDawn(el, progress) {
+  const p = Math.min(Math.max(progress, 0), 1);
+  el.style.setProperty('--sky-top', dawnColor(p * 0.55));
+  el.style.setProperty('--sky-bottom', dawnColor(Math.min(p + 0.25, 1)));
+  el.style.setProperty('--sun-p', p);
+}
+
+if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  /* static skies via CSS */
+} else {
+  const sky = document.getElementById('sky');
+  let ticking = false;
+  function update() {
+    ticking = false;
+    const max = document.documentElement.scrollHeight - innerHeight;
+    const p = max > 0 ? scrollY / max : 0;
+    applyDawn(sky, p);
+  }
+  function schedule() {
+    if (!ticking) { ticking = true; requestAnimationFrame(update); }
+  }
+  addEventListener('scroll', schedule, { passive: true });
+  addEventListener('resize', schedule);
+  addEventListener('load', schedule);
+  addEventListener('pageshow', schedule);
+  update();
+}
+</script>

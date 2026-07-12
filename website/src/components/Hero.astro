@@ -1,0 +1,41 @@
+---
+import PhoneFrame from './PhoneFrame.astro';
+---
+<header class="hero on-night container">
+  <span class="eyebrow"><span class="time">05:58</span> Still dark</span>
+  <h1 class="display">The alarm that makes sure you're actually up.</h1>
+  <p class="sub">Disarm challenges you can't sleep through, a wake-up check that catches you dozing off again, and a snooze budget that runs out. Open source, built on AlarmKit for iOS&nbsp;26.</p>
+  <div class="cta-row">
+    <a class="appstore" href="#" data-appstore-todo aria-label="Download on the App Store">
+      <img class="badge-img" src="/badges/app-store-badge.svg" alt="Download on the App Store" width="200" height="56" />
+    </a>
+    <a class="btn" href="https://github.com/gretzke/open-alarm">View on GitHub</a>
+  </div>
+  <div class="phone-wrap">
+    <PhoneFrame simNote="simulated · real screenshot goes here">
+      <div class="list">
+        <h2>Alarms</h2>
+        <div class="alarm"><div><div class="t">06:00</div><div class="d">Weekdays · Math + Steps</div></div><div class="mini-toggle"></div></div>
+        <div class="alarm"><div><div class="t">06:30</div><div class="d">Backup · Shake</div></div><div class="mini-toggle"></div></div>
+        <div class="alarm"><div><div class="t">08:15</div><div class="d">Weekend</div></div><div class="mini-toggle off"></div></div>
+      </div>
+    </PhoneFrame>
+  </div>
+</header>
+
+<style>
+  .hero { min-height: 100svh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 96px 0 0; }
+  .hero h1 { font-size: clamp(2.6rem, 6.5vw, 5rem); max-width: 17ch; }
+  .hero .sub { max-width: 54ch; margin: 22px auto 34px; color: var(--ink-2); font-size: 1.1875rem; }
+  .hero .phone-wrap { margin-top: 60px; margin-bottom: -18vh; }
+
+  .list { padding: 46px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .list h2 { font-weight: 900; font-size: 1.4rem; margin: 0 4px 6px; }
+  .alarm { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-radius: 18px; background: var(--glass-fill); border: 1px solid var(--glass-stroke); }
+  .alarm .t { font-weight: 900; font-size: 1.35rem; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .alarm .d { font-size: 0.66rem; color: var(--ink-2); }
+  .mini-toggle { width: 34px; height: 21px; border-radius: 11px; background: var(--cyan-action); position: relative; flex-shrink: 0; }
+  .mini-toggle::after { content: ""; position: absolute; top: 1.5px; right: 1.5px; width: 18px; height: 18px; border-radius: 50%; background: #fff; }
+  .mini-toggle.off { background: rgba(255,255,255,0.18); }
+  .mini-toggle.off::after { right: auto; left: 1.5px; }
+</style>
