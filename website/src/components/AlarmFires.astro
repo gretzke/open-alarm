@@ -1,5 +1,7 @@
 ---
+import { Image } from 'astro:assets';
 import PhoneFrame from './PhoneFrame.astro';
+import ringing from '../assets/screenshots/ringing.png';
 ---
 <section id="s-alarmfires" class="feature on-night">
   <div class="container split">
@@ -15,7 +17,7 @@ import PhoneFrame from './PhoneFrame.astro';
     </div>
     <div>
       <PhoneFrame island={false}>
-        <img class="app-shot" src="/screenshots/ringing.png" alt="OpenAlarm ringing at 06:00 with two disarm tasks" />
+        <Image class="app-shot" src={ringing} alt="OpenAlarm ringing at 06:00 with two disarm tasks" width={254} densities={[1, 2, 3]} format="webp" quality={90} loading="lazy" />
       </PhoneFrame>
     </div>
   </div>

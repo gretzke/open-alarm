@@ -1,5 +1,7 @@
 ---
+import { Image } from 'astro:assets';
 import PhoneFrame from './PhoneFrame.astro';
+import mathChallenge from '../assets/screenshots/math-challenge.png';
 ---
 <section id="s-challenges" class="feature on-night">
   <div class="container">
@@ -11,7 +13,7 @@ import PhoneFrame from './PhoneFrame.astro';
       </div>
       <div>
         <PhoneFrame island={false}>
-          <img class="app-shot" src="/screenshots/math-challenge.png" alt="OpenAlarm math challenge asking 2 + 9 during task 1 of 2" loading="lazy" />
+          <Image class="app-shot" src={mathChallenge} alt="OpenAlarm math challenge asking 2 + 9 during task 1 of 2" width={254} densities={[1, 2, 3]} format="webp" quality={90} loading="lazy" />
         </PhoneFrame>
       </div>
     </div>

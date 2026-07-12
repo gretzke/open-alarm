@@ -1,28 +1,56 @@
 ---
+import { Image } from 'astro:assets';
 import PhoneFrame from './PhoneFrame.astro';
+import alarmList from '../assets/screenshots/alarm-list.png';
 ---
 <header class="hero on-night container">
-  <span class="eyebrow"><span class="time">05:58</span> Still dark</span>
-  <h1 class="display">The alarm that makes sure you're actually up.</h1>
-  <p class="sub">Disarm challenges you can't sleep through, a wake-up check that catches you dozing off again, and a snooze budget that runs out. Open source, built on AlarmKit for iOS&nbsp;26.</p>
-  <div class="cta-row">
-    <a class="appstore" href="#" data-appstore-todo aria-label="Download on the App Store">
-      <img class="badge-img" src="/badges/app-store-badge.svg" alt="Download on the App Store" width="200" height="56" />
-    </a>
-    <a class="btn" href="https://github.com/gretzke/open-alarm">View on GitHub</a>
-  </div>
-  <div class="phone-wrap">
-    <PhoneFrame island={false}>
-      <img class="app-shot" src="/screenshots/alarm-list.png" alt="OpenAlarm showing weekday and weekend alarms" />
-    </PhoneFrame>
+  <div class="hero-split">
+    <div class="hero-copy">
+      <span class="eyebrow"><span class="time">05:58</span> Still dark</span>
+      <h1 class="display">The alarm that makes sure you're actually up.</h1>
+      <p class="sub">Disarm challenges you can't sleep through, a wake-up check that catches you dozing off again, and a snooze budget that runs out.</p>
+      <div class="cta-row">
+        <a class="appstore" href="#" data-appstore-todo aria-label="Download on the App Store">
+          <img class="badge-img" src="/badges/app-store-badge.svg" alt="Download on the App Store" width="200" height="56" />
+        </a>
+        <a class="btn" href="https://github.com/gretzke/open-alarm">View on GitHub</a>
+      </div>
+      <ul class="promise">
+        <li>No subscriptions</li>
+        <li>No ads</li>
+        <li>No tracking</li>
+        <li>Open source</li>
+        <li>Forever</li>
+      </ul>
+    </div>
+    <div class="hero-phone">
+      <PhoneFrame island={false}>
+        <Image class="app-shot" src={alarmList} alt="OpenAlarm showing weekday and weekend alarms" width={254} densities={[1, 2, 3]} format="webp" quality={90} loading="eager" />
+      </PhoneFrame>
+    </div>
   </div>
 </header>
 
 <style>
-  .hero { min-height: 100svh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 96px 0 0; }
-  .hero h1 { font-size: clamp(2.6rem, 6.5vw, 5rem); max-width: 17ch; }
-  .hero .sub { max-width: 54ch; margin: 22px auto 34px; color: var(--ink-2); font-size: 1.1875rem; }
-  .hero .phone-wrap { margin-top: 60px; margin-bottom: -18vh; }
-
+  .hero { min-height: 100svh; display: flex; align-items: center; padding: 120px 0 40px; }
+  .hero-split { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 48px; align-items: center; width: 100%; }
+  .hero-copy { text-align: left; }
+  .hero h1 { font-size: clamp(2.4rem, 4.6vw, 4.1rem); max-width: 17ch; }
+  .hero .sub { max-width: 46ch; margin: 22px 0 30px; color: var(--ink-2); font-size: 1.1875rem; }
+  .hero .cta-row { justify-content: flex-start; }
+  /* the app's onboarding promise, verbatim */
+  .promise { list-style: none; display: flex; flex-wrap: wrap; gap: 8px 0; margin-top: 26px; padding: 0; }
+  .promise li { font-size: 0.8125rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cyan); white-space: nowrap; }
+  .promise li + li::before { content: "·"; margin: 0 10px; color: var(--ink-2); }
   .app-shot { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  @media (max-width: 800px) {
+    .hero { padding-top: 96px; }
+    .hero-split { grid-template-columns: 1fr; gap: 44px; }
+    .hero-copy { text-align: center; }
+    .hero h1 { margin-inline: auto; }
+    .hero .sub { margin-inline: auto; }
+    .hero .cta-row { justify-content: center; }
+    .promise { justify-content: center; }
+  }
 </style>

@@ -1,5 +1,7 @@
 ---
+import { Image } from 'astro:assets';
 import PhoneFrame from './PhoneFrame.astro';
+import wakeUpCheck from '../assets/screenshots/wake-up-check.png';
 ---
 <section id="s-wakeupcheck" class="feature on-night">
   <div class="container split">
@@ -10,7 +12,7 @@ import PhoneFrame from './PhoneFrame.astro';
     </div>
     <div>
       <PhoneFrame island={false}>
-        <img class="app-shot" src="/screenshots/wake-up-check.png" alt="OpenAlarm wake-up check asking for confirmation at 06:04" loading="lazy" />
+        <Image class="app-shot" src={wakeUpCheck} alt="OpenAlarm wake-up check asking for confirmation at 06:04" width={254} densities={[1, 2, 3]} format="webp" quality={90} loading="lazy" />
       </PhoneFrame>
     </div>
   </div>

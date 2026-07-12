@@ -1,5 +1,7 @@
 ---
+import { Image } from 'astro:assets';
 import PhoneFrame from './PhoneFrame.astro';
+import activeNap from '../assets/screenshots/active-nap.png';
 ---
 <section id="s-daylight" class="feature on-dawn">
   <div class="container split">
@@ -16,7 +18,7 @@ import PhoneFrame from './PhoneFrame.astro';
     </div>
     <div>
       <PhoneFrame island={false}>
-        <img class="app-shot" src="/screenshots/active-nap.png" alt="An active OpenAlarm nap countdown at 13:43" loading="lazy" />
+        <Image class="app-shot" src={activeNap} alt="An active OpenAlarm nap countdown at 13:43" width={254} densities={[1, 2, 3]} format="webp" quality={90} loading="lazy" />
       </PhoneFrame>
     </div>
   </div>
