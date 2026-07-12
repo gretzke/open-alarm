@@ -2,7 +2,9 @@
 
 <style>
   .sky {
-    position: fixed; inset: 0; z-index: -1;
+    /* 100lvh = large viewport: still covers the screen while iOS Safari's
+       toolbar collapses; inset:0 tracks the small viewport and leaves a gap. */
+    position: fixed; top: 0; left: 0; right: 0; height: 100vh; height: 100lvh; z-index: -1;
     background: linear-gradient(to bottom, var(--sky-top, #000), var(--sky-bottom, #000));
   }
   .sun {
