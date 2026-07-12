@@ -1,3 +1,6 @@
+---
+import PhoneFrame from './PhoneFrame.astro';
+---
 <section id="s-wakeupcheck" class="feature on-night">
   <div class="container split">
     <div>
@@ -5,21 +8,23 @@
       <h2 class="h2">Still awake?</h2>
       <p class="lead">The most dangerous moment of the morning is the one right after the alarm stops. A few minutes later, OpenAlarm checks back. No answer — the whole thing starts again.</p>
     </div>
-    <div style="display:flex; justify-content:center;">
-      <div class="check-card">
-        <div class="q">Are you awake?</div>
-        <div class="cd">0:42</div>
-        <div class="cta">I'm up</div>
-        <div class="warn">No confirmation → the alarm fires again</div>
-      </div>
+    <div>
+      <PhoneFrame simNote="simulated · real screenshot goes here">
+        <div class="sim-check">
+          <div class="q">Are you awake?</div>
+          <div class="cd">0:42</div>
+          <div class="cta">I'm up</div>
+          <div class="warn">No confirmation → the alarm fires again</div>
+        </div>
+      </PhoneFrame>
     </div>
   </div>
 </section>
 
 <style>
-  .check-card { max-width: 380px; padding: 34px 30px; border-radius: var(--r-card); text-align: center; color: var(--ink-dark); background: rgba(255,244,214,0.82); border: 1px solid rgba(32,16,5,0.18); box-shadow: 0 14px 34px rgba(32,16,5,0.25); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
-  .check-card .q { font-weight: 900; font-size: 1.6rem; margin-bottom: 8px; }
-  .check-card .cd { font-weight: 900; font-size: 2.6rem; font-variant-numeric: tabular-nums; }
-  .check-card .cta { margin-top: 18px; padding: 13px 0; border-radius: var(--r-button); font-weight: 800; background: var(--ink-dark); color: #fff; }
-  .check-card .warn { margin-top: 12px; font-size: 0.8125rem; color: rgba(32,16,5,0.7); }
+  .sim-check { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px 18px; text-align: center; color: var(--ink-dark); background: linear-gradient(to bottom, #ffd84d, #fff3cf); }
+  .sim-check .q { font-weight: 900; font-size: 1.45rem; }
+  .sim-check .cd { font-weight: 900; font-size: 2.4rem; font-variant-numeric: tabular-nums; }
+  .sim-check .cta { margin-top: 12px; width: 80%; padding: 11px 0; border-radius: 16px; font-weight: 800; font-size: 0.95rem; background: var(--ink-dark); color: #fff; }
+  .sim-check .warn { font-size: 0.7rem; color: rgba(32,16,5,0.7); }
 </style>

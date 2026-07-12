@@ -1,8 +1,27 @@
+---
+import PhoneFrame from './PhoneFrame.astro';
+---
 <section id="s-challenges" class="feature on-night">
   <div class="container">
-    <span class="eyebrow"><span class="time">06:01</span> Earn the silence</span>
-    <h2 class="h2">Silence is earned.</h2>
-    <p class="lead">Stopping the alarm means finishing a challenge — with your brain, your legs, or both. The sun keeps rising while you work on it.</p>
+    <div class="split intro-split">
+      <div>
+        <span class="eyebrow"><span class="time">06:01</span> Earn the silence</span>
+        <h2 class="h2">Silence is earned.</h2>
+        <p class="lead">Stopping the alarm means finishing a challenge — with your brain, your legs, or both. The sun keeps rising while you work on it.</p>
+      </div>
+      <div>
+        <PhoneFrame simNote="simulated · real screenshot goes here">
+          <div class="sim-math">
+            <div class="progress">Problem 1 of 3</div>
+            <div class="expr">17 + 24</div>
+            <div class="answer">4</div>
+            <div class="keypad">
+              {['1','2','3','4','5','6','7','8','9','⌫','0','Go'].map((k) => <span class="key">{k}</span>)}
+            </div>
+          </div>
+        </PhoneFrame>
+      </div>
+    </div>
     <div class="challenge-grid">
       <div class="challenge">
         <svg class="icon" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M8 14h12M14 8v12M24 12h12M24 30h12M24 36h12M8 26l12 12M20 26L8 38"/></svg>
@@ -39,6 +58,12 @@
 </section>
 
 <style>
+  .sim-math { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px 18px; background: linear-gradient(to bottom, #3d1430, #8e1d22); }
+  .sim-math .progress { font-size: 0.75rem; color: rgba(255,255,255,0.7); }
+  .sim-math .expr { font-weight: 900; font-size: 2.2rem; font-variant-numeric: tabular-nums; }
+  .sim-math .answer { width: 70%; padding: 8px 0; text-align: center; font-weight: 800; font-size: 1.2rem; border-radius: 14px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); }
+  .sim-math .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; width: 80%; margin-top: 6px; }
+  .sim-math .key { padding: 7px 0; text-align: center; font-weight: 800; font-size: 0.85rem; border-radius: 12px; background: rgba(255,255,255,0.10); }
   .challenge-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 40px; }
   @media (max-width: 900px) { .challenge-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (max-width: 580px) { .challenge-grid { grid-template-columns: 1fr; } }

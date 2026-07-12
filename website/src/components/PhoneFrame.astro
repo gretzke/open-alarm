@@ -14,4 +14,5 @@ const { simNote, island = true } = Astro.props;
   .screen { position: relative; width: 100%; height: 100%; border-radius: 34px; overflow: hidden; background: #000; display: flex; flex-direction: column; }
   .island { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 76px; height: 20px; border-radius: 10px; background: #000; z-index: 2; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06); }
   .sim-note { display: block; margin-top: 12px; text-align: center; font-size: 0.6875rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.35); }
+  :global(.on-dawn) .sim-note { color: rgba(32,16,5,0.45); }
 </style>
