@@ -10,15 +10,8 @@ import PhoneFrame from './PhoneFrame.astro';
         <p class="lead">Stopping the alarm means finishing a challenge — with your brain, your legs, or both. The sun keeps rising while you work on it.</p>
       </div>
       <div>
-        <PhoneFrame simNote="simulated · real screenshot goes here">
-          <div class="sim-math">
-            <div class="progress">Problem 1 of 3</div>
-            <div class="expr">17 + 24</div>
-            <div class="answer">4</div>
-            <div class="keypad">
-              {['1','2','3','4','5','6','7','8','9','⌫','0','Go'].map((k) => <span class="key">{k}</span>)}
-            </div>
-          </div>
+        <PhoneFrame island={false}>
+          <img class="app-shot" src="/screenshots/math-challenge.png" alt="OpenAlarm math challenge asking 2 + 9 during task 1 of 2" loading="lazy" />
         </PhoneFrame>
       </div>
     </div>
@@ -58,12 +51,7 @@ import PhoneFrame from './PhoneFrame.astro';
 </section>
 
 <style>
-  .sim-math { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px 18px; background: linear-gradient(to bottom, #3d1430, #8e1d22); }
-  .sim-math .progress { font-size: 0.75rem; color: rgba(255,255,255,0.7); }
-  .sim-math .expr { font-weight: 900; font-size: 2.2rem; font-variant-numeric: tabular-nums; }
-  .sim-math .answer { width: 70%; padding: 8px 0; text-align: center; font-weight: 800; font-size: 1.2rem; border-radius: 14px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); }
-  .sim-math .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; width: 80%; margin-top: 6px; }
-  .sim-math .key { padding: 7px 0; text-align: center; font-weight: 800; font-size: 0.85rem; border-radius: 12px; background: rgba(255,255,255,0.10); }
+  .app-shot { width: 100%; height: 100%; object-fit: cover; display: block; }
   .challenge-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 40px; }
   @media (max-width: 900px) { .challenge-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (max-width: 580px) { .challenge-grid { grid-template-columns: 1fr; } }
