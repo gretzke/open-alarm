@@ -44,7 +44,8 @@ import MorningCta from '../components/MorningCta.astro';
   /* Dawn-ink sections (past the gold stop) */
   .on-dawn { color: var(--ink-dark); }
   .on-dawn .eyebrow { color: rgba(32,16,5,0.75); }
-  .on-dawn .eyebrow .time { border-color: rgba(32,16,5,0.25); background: rgba(255,255,255,0.25); }
+  /* the timestamp keeps its cyan from the night — dark pill so it stays readable on bright sky */
+  .on-dawn .eyebrow .time { color: var(--cyan); border-color: rgba(133,217,231,0.35); background: rgba(12,8,20,0.6); }
   .on-dawn .lead { color: rgba(32,16,5,0.85); }
   .on-dawn .points li::before { background: var(--ink-dark); box-shadow: none; }
 
