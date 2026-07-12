@@ -1,0 +1,15 @@
+{
+  // Static site as a Worker with assets — no server code.
+  // Name must match the Cloudflare dashboard project.
+  "name": "openalarm-website",
+  "compatibility_date": "2026-07-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "404-page"
+  },
+  // Production domains — Cloudflare creates DNS records & certs on deploy.
+  "routes": [
+    { "pattern": "tryopenalarm.com", "custom_domain": true },
+    { "pattern": "www.tryopenalarm.com", "custom_domain": true }
+  ]
+}
