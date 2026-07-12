@@ -37,8 +37,8 @@ ringtone_classic_twinbell.caf:29.000000
 ringtone_classic_churchbells.caf:29.000000
 ringtone_classic_ghanta.caf:29.000000
 ringtone_classic_koshichime.caf:28.989841
-ringtone_classic_bedsideclock.caf:11.040000
-ringtone_classic_digitalalarm.caf:4.560000
+ringtone_classic_bedsideclock.caf:1.000000
+ringtone_classic_digitalalarm.caf:0.500000
 ringtone_classical_valkyries.caf:28.993129
 ringtone_classical_valkyries_full.m4a:136.945011
 ringtone_classical_winter.caf:28.993129

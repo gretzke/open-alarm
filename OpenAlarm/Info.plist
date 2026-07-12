@@ -45,7 +45,7 @@
 	<key>NSCameraUsageDescription</key>
 	<string>OpenAlarm uses the camera to verify scan-object wake-up tasks.</string>
 	<key>NSMotionUsageDescription</key>
-	<string>OpenAlarm uses motion to verify shake wake-up tasks.</string>
+	<string>OpenAlarm uses device motion for shake tasks and Motion &amp; Fitness step counts for step tasks.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSSupportsLiveActivities</key>

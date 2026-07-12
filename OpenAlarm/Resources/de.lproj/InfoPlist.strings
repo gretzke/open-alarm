@@ -1,3 +1,3 @@
 "NSAlarmKitUsageDescription" = "OpenAlarm benötigt Alarmzugriff, um deine Alarme und Timer zu planen.";
-"NSMotionUsageDescription" = "OpenAlarm verwendet Bewegung, um Schüttel-Aufgaben beim Aufwachen zu prüfen.";
+"NSMotionUsageDescription" = "OpenAlarm verwendet Gerätebewegung für Schüttel-Aufgaben und Bewegungs- & Fitness-Schrittzahlen für Schritt-Aufgaben.";
 "NSCameraUsageDescription" = "OpenAlarm verwendet die Kamera, um Scan-Aufgaben beim Aufwachen zu prüfen.";

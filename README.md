@@ -1,62 +1,66 @@
-# Open Alarm
+# OpenAlarm
 
-An iOS alarm app built on SwiftUI and **AlarmKit** (iOS 26) that makes sure you
-actually get up: alarms can require disarm challenges, re-check that you're
-awake a few minutes after you stop them, and resist being silenced or
-force-closed.
+OpenAlarm is an open-source alarm clock for iPhone, built with SwiftUI and
+AlarmKit. It is designed for mornings when dismissing a notification is too
+easy: an alarm can require a challenge, limit snoozes, and check a few minutes
+later that you are still awake.
 
-## Features
+The app targets iOS 26 and is currently in active development. Until the known
+reliability work in the scheduler inventory is complete, do not use it as your
+only safety-critical alarm.
 
-- **Alarms** — one-shot (optionally self-deleting) or repeating on weekly
-  weekdays, with per-alarm labels.
-- **Snooze** — configurable duration and maximum count; the snooze button
-  disappears when the budget is used up.
-- **Skip / change next occurrence** — one-off exceptions for repeating alarms.
-  Implemented as a rolling window of 5 one-shot "bridge" alarms so a single
-  failed restore can't lose future occurrences; the canonical schedule is
-  restored automatically once the exception has passed.
-- **Disarm challenges** — math problems (or a dummy task) required to silence
-  an alarm. During a challenge the app plays a looping alarm sound, pins the
-  system volume so it can't be turned down, and keeps a rolling backstop alarm
-  scheduled so force-closing the app just makes the alarm ring again.
-- **Wake-up check** — after disarming, the app can ask "are you awake?" a few
-  minutes later; no confirmation means the full alarm fires again.
-- **Naps** — quick countdown alarms with pause/resume/extend and a Live
-  Activity (Lock Screen + Dynamic Island) with controls.
-- **Settings cascade** — global defaults, separate nap defaults, and per-alarm
-  custom settings.
-- Localized in English and German.
+Website: [tryopenalarm.com](https://tryopenalarm.com)
 
-## Architecture
+## What it does
 
-| Piece | Where | Notes |
-| --- | --- | --- |
-| `AlarmStore` | `OpenAlarm/AlarmStore.swift` | `@MainActor` orchestrator: CRUD, permissions, nap lifecycle, wake-check sessions, disarm pipeline |
-| `AlarmStateMachine` | `OpenAlarm/Scheduling/` | Pure `(phase, event) → (phase, effects)` transitions for every app-side lifecycle change |
-| `BridgeDateCalculator` | `OpenAlarm/Scheduling/` | DST-safe occurrence math for override bridge alarms |
-| Models & persistence | `OpenAlarm/Models/` | Foundation-only model layer, backward-compatible Codable, app-group `UserDefaults` store |
-| Intents | `OpenAlarm/Intents/` | `StopIntent`/`SnoozeIntent`/nap intents are `LiveActivityIntent`s — they run in the app process (launching it in the background if needed) and write to the shared store; the app reloads and reconciles |
-| Live Activities | `OpenAlarmLiveActivities/` | Widget extension for nap countdown + ringing alarm |
+- One-shot and weekly repeating alarms
+- Configurable snooze duration and snooze budget
+- One-time skip and change-next-time overrides for repeating alarms
+- A rolling five-alarm bridge window to make overrides resilient
+- Math, memory, shake, step-counting, and object-scanning disarm challenges
+- A wake-up check that can re-trigger an alarm when it is not confirmed
+- Nap timers with pause, resume, extend, and Live Activity controls
+- Per-alarm settings layered over global alarm and nap defaults
+- English and German localization
 
-The Foundation-only core (state machine, date math, models, persistence) is
-also compiled as an SPM package (`Package.swift`) so it can be tested headless
-with `swift test` — no simulator required. The full behavior catalog lives in
+Alarm audio, challenge state, and scheduling data stay on the device. The app
+contains no advertising, analytics, tracking SDK, account system, or network
+client. Camera classification runs on-device; shake challenges use device
+motion, while step challenges use Core Motion's system-generated pedometer
+data. See the [privacy policy](https://tryopenalarm.com/privacy) for the
+permission-level explanation.
+
+## Project status
+
+OpenAlarm is usable beta software, not a finished safety product. The current
+behavior contract and known defects live in
 [`docs/scheduler-functional-inventory.md`](docs/scheduler-functional-inventory.md).
+In particular, cross-process writes from the app and its intents still need a
+versioned merge strategy.
 
-More docs: [`docs/design-spec.md`](docs/design-spec.md) (locked visual
-language), [`docs/onboarding-architecture.md`](docs/onboarding-architecture.md),
-[`docs/alarm-exception-edge-cases.md`](docs/alarm-exception-edge-cases.md).
+## Requirements
 
-## Building
+- macOS with Xcode and the iOS 26 SDK
+- [XcodeGen](https://github.com/yonaskolb/XcodeGen) 2.44.1 or newer
+- An iOS 26 simulator or device
+- Swift 6 for the headless scheduling-core tests
 
-This repo uses [xcodegen](https://github.com/yonaskolb/XcodeGen); the Xcode
-project is generated from `project.yml`:
+Install XcodeGen with Homebrew if needed:
 
 ```bash
-make generate           # regenerate OpenAlarm.xcodeproj after adding files
+brew install xcodegen
 ```
 
-Build for the simulator:
+## Build the app
+
+The checked-in Xcode project is generated from [`project.yml`](project.yml).
+Regenerate it after adding, removing, or moving project files:
+
+```bash
+make generate
+```
+
+Build for a simulator:
 
 ```bash
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
@@ -64,82 +68,109 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
 ```
 
-## Testing
+### Signing a fork
+
+The committed identifiers belong to the upstream app. To run a fork on a
+physical device, change all of the following to values owned by your Apple
+Developer account, then run `make generate`:
+
+- `DEVELOPMENT_TEAM` and the three bundle identifiers in `project.yml`
+- the app-group identifier in both `.entitlements` files
+- `appGroupSuiteName` in `OpenAlarm/Shared/OpenAlarmSharedDefaults.swift`
+
+Simulator builds and CI disable signing and do not need an Apple Developer
+account.
+
+## Tests and guardrails
+
+Run the Foundation-only scheduling suite without a simulator:
 
 ```bash
-swift test              # scheduling core: state machine, date math, models, persistence
-make check              # guardrails: no UI literals, i18n parity, glass-button migration
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
 ```
 
-CI (GitHub Actions) runs the guardrails on Ubuntu plus `swift test` and a
-device-SDK compile on macOS.
-
-## i18n guardrails
-
-- **No direct UI literals**: use `L10n.*` keys in SwiftUI instead of hardcoded strings.
-- `scripts/check_no_literals.sh` fails if someone adds things like `Text("Hello")`.
-- `scripts/check_i18n.sh` fails if `en/de/...` key sets drift.
-
-Optional local hard-stop before every commit:
+Run the app-level resource and task-registry tests:
 
 ```bash
-git config core.hooksPath .githooks
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  xcodebuild test -project OpenAlarm.xcodeproj -scheme OpenAlarm \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 ```
 
-### Add a new language
-
-1. Create a new localization folder:
-   - `OpenAlarm/Resources/<lang>.lproj/Localizable.strings`
-2. Add translated keys.
-3. Add `<lang>` to `LOCALIZATIONS` in `project.yml`.
-4. Re-run project generation and checks:
+Run repository guardrails:
 
 ```bash
-make generate
 make check
 ```
 
-## Deterministic TestFlight upload + attach
+The guardrails reject direct SwiftUI string literals, mismatched English and
+German localization keys, and regressions in the shared glass-button styles.
+GitHub Actions also runs the core suite and a no-signing device-SDK build.
 
-Use the automation script below to perform a deterministic TestFlight flow:
+## Architecture
 
-1. bump `CURRENT_PROJECT_VERSION` and commit it,
-2. archive + upload using Xcode,
-3. poll App Store Connect until the uploaded build is ready,
-4. attach the build to your beta group,
-5. when `TESTFLIGHT_DISTRIBUTION=external`, submit the attached build to Beta App Review.
+- `AlarmStore` is the `@MainActor` application orchestrator for alarm CRUD,
+  permissions, naps, wake checks, and disarm challenges.
+- `AlarmStateMachine` models lifecycle transitions as pure state and effects.
+- `BridgeDateCalculator` performs DST-safe recurring-date and override math.
+- Models and persistence are Foundation-only and are shared with App Intents
+  through an app-group `UserDefaults` suite.
+- Stop, snooze, and nap controls use `LiveActivityIntent` so the app process can
+  reconcile shared state after an interaction.
+- The scheduling core is also exposed as a local Swift package for fast,
+  simulator-free tests.
 
-Sensitive values and account/private IDs are read from environment variables at runtime only.
-Do not hardcode them in scripts or commit them to the repository.
+Useful design references:
 
-Required environment variables:
+- [`docs/scheduler-functional-inventory.md`](docs/scheduler-functional-inventory.md)
+- [`docs/design-spec.md`](docs/design-spec.md)
+- [`docs/onboarding-architecture.md`](docs/onboarding-architecture.md)
+- [`docs/alarm-exception-edge-cases.md`](docs/alarm-exception-edge-cases.md)
 
-- `ASC_KEY_ID`
-- `ASC_ISSUER_ID`
-- `APP_ID`
-- `BETA_GROUP_ID`
-- `TEAM_ID`
+## Repository layout
 
-```bash
-ASC_KEY_ID="<ASC_KEY_ID>" \
-ASC_ISSUER_ID="<ASC_ISSUER_ID_UUID>" \
-APP_ID="<ASC_APP_ID>" \
-BETA_GROUP_ID="<ASC_INTERNAL_BETA_GROUP_ID>" \
-TEAM_ID="<APPLE_DEVELOPER_TEAM_ID>" \
-./scripts/upload_and_attach_testflight.sh
+```text
+OpenAlarm/                       iOS application
+OpenAlarmLiveActivities/         Widget and Live Activity extension
+OpenAlarmSchedulingCoreTests/    Swift package tests
+OpenAlarmTests/                  App-level XCTest suite
+docs/                            Architecture and behavior documentation
+maestro/                         UI automation flows
+scripts/                         Guardrails and release automation
+website/                         Astro website for tryopenalarm.com
+project.yml                      XcodeGen source of truth
 ```
 
-Convenience option (recommended for local runs): keep these vars in a local untracked file such as `.env.testflight.local`, then `source` it before running the script (see `scripts/README.md`).
+## Website
 
-Optional overrides:
+The website is a static Astro project deployed with Cloudflare Workers:
 
-- `ASC_KEY_PATH` (default: `~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8`)
-- `BUNDLE_ID` (default: `com.gretzke.openalarm`)
-- `SCHEME` (default: `OpenAlarm`)
-- `PROJECT` (default: `OpenAlarm.xcodeproj`)
-- `ARCHIVE_PATH` (default: `build/OpenAlarm.xcarchive`)
-- `POLL_SECONDS` (default: `20`)
-- `POLL_TIMEOUT_SECONDS` (default: `1800`)
-- `TESTFLIGHT_DISTRIBUTION` (default: `internal`; set `external` to omit the internal-only upload flag and submit Beta App Review after the build is attached)
+```bash
+cd website
+npm ci
+npm run build
+```
 
-External publishing intentionally does not call the optional beta build notification endpoint; use the default TestFlight notification behavior configured in App Store Connect.
+## TestFlight automation
+
+[`scripts/upload_and_attach_testflight.sh`](scripts/upload_and_attach_testflight.sh)
+archives, uploads, polls App Store Connect, attaches a build to a beta group,
+and can submit an external build for Beta App Review. Credentials and private
+IDs are read from an ignored environment file or the process environment.
+See [`scripts/README.md`](scripts/README.md) for required variables and usage.
+
+## Contributing
+
+Bug reports and focused pull requests are welcome. Please open an issue before
+large architectural changes, keep user-visible strings localized in English
+and German, and run the relevant tests plus `make check` before submitting.
+
+## License
+
+OpenAlarm source code and project-owned assets are available under the
+[MIT License](LICENSE).
+
+Bundled third-party audio is not relicensed under MIT. Each recording retains
+the license shown in
+[`OpenAlarm/Resources/Ringtones/SOURCES.md`](OpenAlarm/Resources/Ringtones/SOURCES.md),
+which is also included in the built app and represented in its Credits screen.

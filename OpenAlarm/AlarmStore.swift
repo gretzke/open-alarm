@@ -247,25 +247,23 @@ final class AlarmStore: ObservableObject {
             return
         }
 
-        guard let minutes = Int(minutesValue) else {
+        let allowedMinutes = (
+            SchedulingConstants.minNapExtensionDeepLinkMinutes
+                ... SchedulingConstants.maxNapExtensionDeepLinkMinutes
+        )
+        guard let minutes = Int(minutesValue), allowedMinutes.contains(minutes) else {
             Self.logger.warning("Ignoring nap extension URL with invalid minutes value: \(minutesValue, privacy: .public)")
             return
         }
 
-        let clampedMinutes = min(
-            SchedulingConstants.maxNapExtensionDeepLinkMinutes,
-            max(SchedulingConstants.minNapExtensionDeepLinkMinutes, minutes)
-        )
-        if clampedMinutes != minutes {
-            Self.logger.warning("Clamped nap extension URL minutes from \(minutes) to \(clampedMinutes)")
+        guard let napIDValue = components.queryItems?
+            .first(where: { $0.name == "id" })?.value,
+              let napID = UUID(uuidString: napIDValue) else {
+            Self.logger.warning("Ignoring nap extension URL without a valid nap ID")
+            return
         }
 
-        let napID = components.queryItems?
-            .first(where: { $0.name == "id" })?
-            .value
-            .flatMap(UUID.init(uuidString:))
-
-        await extendNap(byMinutes: clampedMinutes, matchingID: napID)
+        await extendNap(byMinutes: minutes, matchingID: napID)
     }
 
     private func refreshRemoteState() async {
