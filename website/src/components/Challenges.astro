@@ -58,10 +58,12 @@ import mathChallenge from '../assets/screenshots/math-challenge.png';
   @media (max-width: 900px) { .challenge-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (max-width: 580px) { .challenge-grid { grid-template-columns: 1fr; } }
   /* Community CTA card: dashed border = the empty slot you can fill */
-  a.challenge { display: block; text-decoration: none; color: inherit; border-style: dashed; border-color: rgba(255,255,255,0.45); background: rgba(255,255,255,0.05); transition: background 0.2s, transform 0.15s; }
-  a.challenge:hover { background: rgba(255,255,255,0.14); transform: translateY(-2px); }
+  a.challenge { display: block; text-decoration: none; color: inherit; border-style: dashed; border-color: rgba(255,255,255,0.45); background: rgba(26,10,18,0.22); transition: background 0.2s, transform 0.15s; }
+  a.challenge:hover { background: rgba(26,10,18,0.5); transform: translateY(-2px); }
   a.challenge:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
-  .challenge { padding: 24px; border-radius: var(--r-card); background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.28); box-shadow: 0 10px 24px rgba(0,0,0,0.18); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+  /* dark smoked glass: the sun rises directly behind this grid — a dark fill
+     keeps white ink readable over any sky brightness */
+  .challenge { padding: 24px; border-radius: var(--r-card); background: rgba(26,10,18,0.45); border: 1px solid rgba(255,255,255,0.26); box-shadow: 0 10px 24px rgba(0,0,0,0.18); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
   .challenge .icon { width: 40px; height: 40px; margin-bottom: 12px; color: #fff; }
   .challenge h3 { font-weight: 900; font-size: 1.25rem; margin-bottom: 6px; }
   .challenge p { font-size: 0.9375rem; line-height: 1.55; color: rgba(255,255,255,0.82); }
