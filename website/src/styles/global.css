@@ -9,10 +9,13 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { scroll-behavior: smooth; background: var(--paper); }
+html { scroll-behavior: smooth; background: var(--paper); overflow-x: hidden; overflow-x: clip; }
 
 body {
   min-width: 320px;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
   font-family: var(--font);
   font-size: 17px;
   line-height: 1.5;
