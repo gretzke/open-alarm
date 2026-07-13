@@ -1,61 +1,355 @@
 ---
+import { Image } from 'astro:assets';
 import Base from '../layouts/Base.astro';
-import Sky from '../components/Sky.astro';
-import Nav from '../components/Nav.astro';
-import Hero from '../components/Hero.astro';
-import AlarmFires from '../components/AlarmFires.astro';
-import Challenges from '../components/Challenges.astro';
-import WakeUpCheck from '../components/WakeUpCheck.astro';
-import Daylight from '../components/Daylight.astro';
-import MorningCta from '../components/MorningCta.astro';
+import alarmList from '../assets/screenshots/alarm-list.png';
+import ringing from '../assets/screenshots/ringing.png';
+import mathChallenge from '../assets/screenshots/math-challenge.png';
+import wakeUpCheck from '../assets/screenshots/wake-up-check.png';
+import activeNap from '../assets/screenshots/active-nap.png';
+
+const tasks = [
+  { number: '01', name: 'Math', note: 'Solve it. Type it. No guessing your way out.', mark: '7 × 8' },
+  { number: '02', name: 'Memory', note: 'Remember the pattern while your brain comes online.', mark: '■ □ ■' },
+  { number: '03', name: 'Steps', note: 'Feet on the floor. Walk until the counter agrees.', mark: '120×' },
+  { number: '04', name: 'Shake', note: 'Fill the meter. Half-awake effort does not count.', mark: '↯↯↯' },
+  { number: '05', name: 'Scan', note: 'Go find the object you chose the night before.', mark: '⌗' },
+];
 ---
+
 <Base
-  title="OpenAlarm: the alarm that makes sure you're actually up"
-  description="Disarm challenges, wake-up checks, and a snooze budget that runs out. A free, open-source alarm app for iPhone. No ads, no tracking."
+  title="OpenAlarm — Wake up. Prove it."
+  description="An open-source iPhone alarm that makes you complete real challenges, limits snoozes, and checks that you stayed awake."
 >
-  <Sky />
-  <Nav />
-  <Hero />
-  <AlarmFires />
-  <Challenges />
-  <WakeUpCheck />
-  <Daylight />
-  <MorningCta />
+  <header class="site-head shell">
+    <a class="brand" href="/" aria-label="OpenAlarm home">
+      <img src="/favicon.png" alt="" width="32" height="32" />
+      <span>OpenAlarm</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="#how">How it works</a>
+      <a href="#tasks">Challenges</a>
+      <a href="https://github.com/gretzke/open-alarm">GitHub ↗</a>
+    </nav>
+    <a class="mini-download" href="https://apps.apple.com/app/id6759548698">Get the app</a>
+  </header>
+
+  <main>
+    <section class="hero shell" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="kicker"><span class="pulse"></span> An alarm for chronic snoozers</p>
+        <h1 id="hero-title">Wake up.<br /><em>Prove it.</em></h1>
+        <p class="hero-deck">OpenAlarm doesn’t trust sleepy you. Complete a challenge, spend a limited snooze, and pass a follow-up check—or it rings again.</p>
+        <div class="hero-actions">
+          <a class="appstore" href="https://apps.apple.com/app/id6759548698" aria-label="Download OpenAlarm on the App Store">
+            <img src="/badges/app-store-badge.svg" alt="Download on the App Store" width="180" height="51" />
+          </a>
+          <a class="text-link" href="#how">See the intervention <span>↓</span></a>
+        </div>
+        <div class="trust-line" aria-label="Product promises">
+          <span>Free</span><span>Open source</span><span>No ads</span><span>No tracking</span>
+        </div>
+      </div>
+
+      <div class="hero-stage" aria-label="OpenAlarm app preview">
+        <div class="alarm-signal" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </div>
+        <div class="time-card" aria-hidden="true">
+          <small>ALARM / MON–FRI</small>
+          <strong>06:00</strong>
+          <span>2 tasks armed</span>
+        </div>
+        <figure class="device device-hero">
+          <Image src={ringing} alt="OpenAlarm ringing at 6:00 with two tasks required" width={330} densities={[1, 2]} format="webp" quality={92} loading="eager" />
+        </figure>
+        <p class="stage-note">Designed to be harder to dismiss<br />than your morning intentions.</p>
+      </div>
+    </section>
+
+    <div class="crawl" aria-hidden="true">
+      <div>NO INFINITE SNOOZE <i>✳</i> NO VOLUME-ROCKER ESCAPE <i>✳</i> NO “FIVE MORE MINUTES” <i>✳</i> NO INFINITE SNOOZE <i>✳</i> NO VOLUME-ROCKER ESCAPE <i>✳</i></div>
+    </div>
+
+    <section id="how" class="protocol">
+      <div class="shell protocol-head">
+        <p class="section-label">The wake-up protocol</p>
+        <h2>Your alarm clock<br />has one job.</h2>
+        <p>Not to make noise. To get you out of bed.</p>
+      </div>
+
+      <div class="sequence shell">
+        <article class="sequence-step">
+          <div class="seq-meta"><b>01</b><span>06:00:00</span></div>
+          <div class="seq-copy"><h3>It starts.</h3><p>Volume stays where it belongs. Force-close the app and a backstop alarm still has your morning covered.</p></div>
+          <div class="seq-visual speaker" aria-hidden="true"><span>RING</span><span>RING</span><span>RING</span></div>
+        </article>
+
+        <article class="sequence-step">
+          <div class="seq-meta"><b>02</b><span>06:00:08</span></div>
+          <div class="seq-copy"><h3>You earn silence.</h3><p>Choose challenges for your brain, body, or camera. Stack them if one is too easy for half-asleep you.</p></div>
+          <figure class="device device-small">
+            <Image src={mathChallenge} alt="A math challenge in OpenAlarm" width={230} densities={[1, 2]} format="webp" quality={88} loading="lazy" />
+          </figure>
+        </article>
+
+        <article class="sequence-step">
+          <div class="seq-meta"><b>03</b><span>06:04:00</span></div>
+          <div class="seq-copy"><h3>It checks your work.</h3><p>Stopped the alarm and slipped back under the covers? The wake-up check returns. Miss it, and the alarm does too.</p></div>
+          <figure class="device device-small device-light">
+            <Image src={wakeUpCheck} alt="OpenAlarm checking whether the user is still awake" width={230} densities={[1, 2]} format="webp" quality={88} loading="lazy" />
+          </figure>
+        </article>
+      </div>
+    </section>
+
+    <section id="tasks" class="tasks">
+      <div class="shell tasks-intro">
+        <p class="section-label">Choose your obstacle</p>
+        <h2>Five ways out.<br />None involve rolling over.</h2>
+      </div>
+      <div class="task-list shell">
+        {tasks.map((task) => (
+          <article class="task">
+            <span class="task-no">{task.number}</span>
+            <h3>{task.name}</h3>
+            <p>{task.note}</p>
+            <strong aria-hidden="true">{task.mark}</strong>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section class="control-room">
+      <div class="shell control-grid">
+        <div class="control-copy">
+          <p class="section-label">You set the rules at night</p>
+          <h2>Build an alarm your morning self can’t renegotiate.</h2>
+          <ul>
+            <li><span>01</span><div><b>Budget the snoozes</b><p>Choose exactly how many exist. When they’re gone, they’re gone.</p></div></li>
+            <li><span>02</span><div><b>Stack the tasks</b><p>Pick the type, difficulty, count, and order.</p></div></li>
+            <li><span>03</span><div><b>Schedule exceptions</b><p>Skip or move one occurrence without breaking the repeating alarm.</p></div></li>
+          </ul>
+        </div>
+        <div class="phone-stack" aria-label="OpenAlarm schedule screens">
+          <figure class="device device-back"><Image src={alarmList} alt="OpenAlarm alarm schedule" width={270} densities={[1, 2]} format="webp" quality={90} loading="lazy" /></figure>
+          <figure class="device device-front"><Image src={activeNap} alt="An active nap countdown in OpenAlarm" width={270} densities={[1, 2]} format="webp" quality={90} loading="lazy" /></figure>
+          <span class="annotation annotation-one">Repeats restored<br />automatically ↗</span>
+          <span class="annotation annotation-two">Naps included ↙</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="manifesto shell">
+      <p class="section-label">A small piece of software with nothing to hide</p>
+      <p class="manifesto-line">NO ACCOUNT.</p>
+      <p class="manifesto-line outline">NO TRACKERS.</p>
+      <p class="manifesto-line">NO ADS. EVER.</p>
+      <div class="manifesto-foot">
+        <p>Your alarms stay on your iPhone. The source code is public. The app is free. That’s the whole business model.</p>
+        <a href="https://github.com/gretzke/open-alarm">Inspect the source on GitHub ↗</a>
+      </div>
+    </section>
+
+    <section class="final-cta">
+      <div class="shell final-inner">
+        <img class="final-icon" src="/favicon.png" alt="OpenAlarm app icon" width="88" height="88" />
+        <p>Tomorrow morning</p>
+        <h2>Get up<br />for real.</h2>
+        <a class="download-button" href="https://apps.apple.com/app/id6759548698">
+          <span>Download free on the</span><b>App Store ↗</b>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer shell">
+    <a class="brand" href="/"><img src="/favicon.png" alt="" width="28" height="28" /><span>OpenAlarm</span></a>
+    <p>Made for people who have tried everything else.</p>
+    <nav aria-label="Footer navigation">
+      <a href="/privacy">Privacy</a><a href="/support">Support</a><a href="/impressum">Impressum</a>
+    </nav>
+    <span>© 2026</span>
+  </footer>
 </Base>
 
-<style is:global>
-  section { position: relative; }
-  .eyebrow { margin-bottom: 18px; }
+<style>
+  :global(body) { background: #f3f0e8; color: #121212; overflow-x: hidden; }
+  :global(::selection) { background: #ff4d00; color: #fff; }
+  .shell { width: min(1420px, calc(100% - 64px)); margin-inline: auto; }
+  .site-head { height: 92px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; border-bottom: 1px solid #121212; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; width: fit-content; color: inherit; text-decoration: none; font-weight: 900; letter-spacing: -0.03em; }
+  .brand img { border-radius: 8px; }
+  .site-head nav { display: flex; gap: 34px; }
+  .site-head nav a, .footer a { color: inherit; text-decoration: none; font-size: .82rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+  .site-head nav a:hover, .footer a:hover { text-decoration: underline; text-underline-offset: 4px; }
+  .mini-download { justify-self: end; color: #fff; background: #121212; padding: 11px 18px; border-radius: 99px; font-weight: 900; text-decoration: none; font-size: .85rem; }
 
-  .feature { padding: 12vh 0; }
-  .split { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 56px; align-items: center; }
-  @media (max-width: 800px) { .split { grid-template-columns: 1fr; } }
-  .feature h2 { margin-bottom: 18px; }
-  .feature .lead { font-size: 1.1875rem; max-width: 50ch; margin-bottom: 26px; }
-  .points { list-style: none; display: flex; flex-direction: column; gap: 14px; max-width: 52ch; }
-  .points li { padding-left: 26px; position: relative; }
-  .points li::before { content: ""; position: absolute; left: 0; top: 0.55em; width: 10px; height: 10px; border-radius: 50%; background: var(--cyan-action); box-shadow: 0 0 10px var(--cyan-action); }
-  .points li b { font-weight: 800; }
+  .hero { min-height: calc(100svh - 92px); display: grid; grid-template-columns: minmax(0, 1fr) minmax(420px, .8fr); align-items: center; gap: 7vw; padding-block: 70px; }
+  .kicker, .section-label { font-size: .74rem; font-weight: 900; text-transform: uppercase; letter-spacing: .16em; }
+  .kicker { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
+  .pulse { width: 9px; height: 9px; border-radius: 50%; background: #ff4d00; box-shadow: 0 0 0 7px rgba(255,77,0,.12); animation: pulse 1.8s ease-out infinite; }
+  .hero h1 { font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif; font-size: clamp(5rem, 10.5vw, 10.5rem); font-weight: 900; letter-spacing: -.055em; line-height: .78; text-transform: uppercase; }
+  .hero h1 em { color: #ff4d00; font-style: normal; }
+  .hero-deck { max-width: 580px; margin: 38px 0 32px; font-size: clamp(1.1rem, 1.6vw, 1.35rem); line-height: 1.45; font-weight: 700; letter-spacing: -.02em; }
+  .hero-actions { display: flex; align-items: center; gap: 28px; }
+  .appstore img { height: 52px; width: auto; display: block; }
+  .text-link { color: inherit; font-weight: 900; text-decoration: none; border-bottom: 2px solid; padding-bottom: 3px; }
+  .text-link span { color: #ff4d00; margin-left: 8px; }
+  .trust-line { margin-top: 45px; display: flex; flex-wrap: wrap; gap: 10px 28px; font-size: .72rem; text-transform: uppercase; letter-spacing: .13em; font-weight: 900; }
+  .trust-line span { position: relative; }
+  .trust-line span + span::before { content: '•'; position: absolute; left: -17px; color: #ff4d00; }
 
-  /* Night-ink sections */
-  .on-night { color: var(--ink); }
-  .on-night .lead { color: rgba(255,255,255,0.82); }
+  .hero-stage { min-height: 670px; position: relative; display: grid; place-items: center; isolation: isolate; }
+  .hero-stage::before { content: ''; position: absolute; width: min(39vw, 560px); aspect-ratio: 1; border-radius: 50%; background: #ffcc00; z-index: -2; }
+  .hero-stage::after { content: ''; position: absolute; inset: 9% 0; z-index: -1; border: 1px solid rgba(18,18,18,.28); border-radius: 50%; transform: rotate(-12deg); }
+  .device { background: #121212; padding: 7px; border-radius: 40px; box-shadow: 0 25px 70px rgba(18,18,18,.28); overflow: hidden; margin: 0; }
+  .device img { width: 100%; height: auto; display: block; border-radius: 33px; }
+  .device-hero { width: min(320px, 68vw); transform: rotate(4deg); }
+  .time-card { position: absolute; left: 0; top: 16%; background: #fff; border: 2px solid #121212; padding: 18px 22px; z-index: 2; transform: rotate(-5deg); box-shadow: 7px 7px 0 #121212; }
+  .time-card small, .time-card span { display: block; text-transform: uppercase; font-size: .62rem; font-weight: 900; letter-spacing: .12em; }
+  .time-card strong { display: block; font-size: 2.6rem; letter-spacing: -.08em; line-height: 1.1; }
+  .alarm-signal { position: absolute; right: 1%; top: 20%; display: flex; gap: 5px; align-items: center; transform: rotate(12deg); }
+  .alarm-signal span { width: 7px; background: #ff4d00; border-radius: 6px; animation: signal 1s ease-in-out infinite alternate; }
+  .alarm-signal span:nth-child(1) { height: 34px; }
+  .alarm-signal span:nth-child(2) { height: 58px; animation-delay: -.4s; }
+  .alarm-signal span:nth-child(3) { height: 42px; animation-delay: -.7s; }
+  .stage-note { position: absolute; right: 0; bottom: 8%; font-family: Georgia, serif; font-size: .9rem; font-style: italic; line-height: 1.35; transform: rotate(-4deg); }
 
-  /* Dawn-ink sections (past the gold stop) */
-  .on-dawn { color: var(--ink-dark); }
-  .on-dawn .eyebrow { color: rgba(32,16,5,0.75); }
-  /* the timestamp keeps its cyan from the night — dark pill so it stays readable on bright sky */
-  .on-dawn .eyebrow .time { color: var(--cyan); border-color: rgba(133,217,231,0.35); background: rgba(12,8,20,0.6); }
-  .on-dawn .lead { color: rgba(32,16,5,0.85); }
-  .on-dawn .points li::before { background: var(--ink-dark); box-shadow: none; }
+  .crawl { background: #121212; color: #fff; overflow: hidden; padding: 17px 0 15px; white-space: nowrap; }
+  .crawl div { width: max-content; font-size: .8rem; font-weight: 900; letter-spacing: .17em; animation: crawl 25s linear infinite; }
+  .crawl i { color: #ff4d00; font-style: normal; padding: 0 20px; }
+
+  .protocol { background: #121212; color: #f3f0e8; padding: 150px 0 110px; }
+  .protocol-head { display: grid; grid-template-columns: .55fr 1.5fr 1fr; gap: 50px; align-items: end; padding-bottom: 80px; }
+  .protocol-head h2, .tasks h2, .control-copy h2 { font-size: clamp(3rem, 6vw, 6.5rem); letter-spacing: -.07em; line-height: .9; font-weight: 900; }
+  .protocol-head p:last-child { max-width: 300px; font-size: 1.15rem; font-weight: 700; }
+  .sequence { border-top: 1px solid #555; }
+  .sequence-step { min-height: 470px; display: grid; grid-template-columns: .55fr 1fr 1fr; gap: 50px; align-items: center; border-bottom: 1px solid #555; padding: 55px 0; }
+  .seq-meta { align-self: start; display: flex; gap: 16px; align-items: baseline; }
+  .seq-meta b { color: #ff4d00; font-size: 2rem; }
+  .seq-meta span { font-family: ui-monospace, monospace; color: #999; font-size: .72rem; }
+  .seq-copy h3 { font-size: clamp(2.4rem, 4.5vw, 5.5rem); line-height: .9; letter-spacing: -.06em; margin-bottom: 24px; }
+  .seq-copy p { max-width: 480px; color: #aaa; font-size: 1.05rem; }
+  .device-small { width: 230px; justify-self: center; box-shadow: 0 25px 70px #000; transform: rotate(3deg); }
+  .sequence-step:nth-child(3) .device-small { transform: rotate(-3deg); }
+  .speaker { justify-self: center; display: grid; transform: rotate(-8deg); }
+  .speaker span { font-family: Impact, sans-serif; font-size: clamp(4rem, 8vw, 8rem); line-height: .72; color: #ff4d00; }
+  .speaker span:nth-child(2) { color: #ffcc00; transform: translateX(20px); }
+  .speaker span:nth-child(3) { -webkit-text-stroke: 1px #fff; color: transparent; transform: translateX(-10px); }
+
+  .tasks { background: #ff4d00; color: #121212; padding: 140px 0; }
+  .tasks-intro { display: grid; grid-template-columns: .55fr 2.5fr; gap: 50px; margin-bottom: 80px; }
+  .task-list { border-top: 2px solid #121212; }
+  .task { min-height: 145px; display: grid; grid-template-columns: .5fr 1fr 1.5fr .6fr; gap: 32px; align-items: center; border-bottom: 2px solid #121212; transition: background .2s, padding .2s; }
+  .task:hover { background: #ffcc00; padding-inline: 20px; }
+  .task-no { font-family: ui-monospace, monospace; font-size: .75rem; }
+  .task h3 { font-size: clamp(2rem, 4vw, 4rem); letter-spacing: -.05em; }
+  .task p { max-width: 360px; font-weight: 700; }
+  .task strong { justify-self: end; font-family: Impact, sans-serif; font-size: 2.4rem; letter-spacing: .02em; }
+
+  .control-room { background: #d8d4ff; padding: 150px 0; overflow: hidden; }
+  .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
+  .control-copy h2 { margin: 28px 0 55px; }
+  .control-copy ul { list-style: none; border-top: 1px solid #121212; }
+  .control-copy li { display: grid; grid-template-columns: 50px 1fr; gap: 12px; padding: 22px 0; border-bottom: 1px solid #121212; }
+  .control-copy li > span { font-family: ui-monospace, monospace; font-size: .72rem; padding-top: 4px; }
+  .control-copy b { font-size: 1.1rem; }
+  .control-copy li p { margin-top: 5px; max-width: 470px; opacity: .7; }
+  .phone-stack { min-height: 720px; position: relative; }
+  .phone-stack::before { content: ''; position: absolute; width: 560px; height: 560px; border-radius: 50%; background: #ffcc00; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+  .device-back, .device-front { position: absolute; width: 270px; left: 50%; top: 50%; }
+  .device-back { transform: translate(-85%, -52%) rotate(-9deg); }
+  .device-front { transform: translate(-15%, -45%) rotate(7deg); }
+  .annotation { position: absolute; font-family: Georgia, serif; font-style: italic; font-weight: 700; z-index: 2; }
+  .annotation-one { top: 9%; right: 2%; transform: rotate(5deg); }
+  .annotation-two { bottom: 9%; left: 0; transform: rotate(-6deg); }
+
+  .manifesto { padding: 150px 0; }
+  .manifesto .section-label { margin-bottom: 65px; }
+  .manifesto-line { font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif; font-size: clamp(4.2rem, 12vw, 12rem); line-height: .8; letter-spacing: -.045em; white-space: nowrap; }
+  .manifesto-line.outline { color: transparent; -webkit-text-stroke: 2px #121212; }
+  .manifesto-foot { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 80px; border-top: 1px solid; padding-top: 25px; }
+  .manifesto-foot p { max-width: 530px; font-size: 1.1rem; font-weight: 700; }
+  .manifesto-foot a { justify-self: end; color: inherit; font-weight: 900; text-underline-offset: 4px; }
+
+  .final-cta { background: #ffcc00; text-align: center; border-block: 2px solid #121212; }
+  .final-inner { min-height: 90svh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 100px 0; }
+  .final-icon { border-radius: 22px; box-shadow: 8px 8px 0 #121212; margin-bottom: 28px; }
+  .final-inner > p { text-transform: uppercase; letter-spacing: .18em; font-weight: 900; font-size: .75rem; }
+  .final-inner h2 { font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif; font-size: clamp(6rem, 16vw, 15rem); line-height: .72; text-transform: uppercase; letter-spacing: -.04em; margin: 34px 0 55px; }
+  .download-button { display: inline-flex; flex-direction: column; align-items: flex-start; background: #121212; color: #fff; padding: 17px 34px; border-radius: 4px; text-decoration: none; transform: rotate(-2deg); transition: transform .15s; box-shadow: 8px 8px 0 #ff4d00; }
+  .download-button:hover { transform: rotate(0) translateY(-3px); }
+  .download-button span { font-size: .68rem; text-transform: uppercase; letter-spacing: .12em; }
+  .download-button b { font-size: 1.45rem; }
+
+  .footer { min-height: 170px; display: grid; grid-template-columns: 1fr 1.5fr 1fr auto; gap: 30px; align-items: center; }
+  .footer p { font-size: .85rem; opacity: .6; }
+  .footer nav { display: flex; justify-content: flex-end; gap: 22px; }
+  .footer > span { font-size: .75rem; font-weight: 800; }
+
+  @keyframes pulse { 70%, 100% { box-shadow: 0 0 0 14px rgba(255,77,0,0); } }
+  @keyframes signal { to { transform: scaleY(.55); } }
+  @keyframes crawl { to { transform: translateX(-50%); } }
+
+  @media (max-width: 980px) {
+    .site-head { grid-template-columns: 1fr auto; }
+    .site-head nav { display: none; }
+    .hero { grid-template-columns: 1fr; padding-top: 90px; }
+    .hero-copy { text-align: center; }
+    .kicker, .hero-actions, .trust-line { justify-content: center; }
+    .hero-deck { margin-inline: auto; }
+    .hero-stage { min-height: 640px; }
+    .protocol-head, .sequence-step { grid-template-columns: .35fr 1fr; }
+    .protocol-head p:last-child { grid-column: 2; }
+    .sequence-step > :last-child { grid-column: 2; }
+    .tasks-intro { grid-template-columns: 1fr; }
+    .control-grid { grid-template-columns: 1fr; }
+    .phone-stack { min-height: 760px; }
+    .footer { grid-template-columns: 1fr 1fr; padding-block: 45px; }
+    .footer nav { justify-content: flex-start; }
+  }
+
+  @media (max-width: 640px) {
+    .shell { width: min(100% - 32px, 1420px); }
+    .site-head { height: 72px; }
+    .brand { font-size: .95rem; }
+    .mini-download { font-size: .73rem; padding: 9px 13px; }
+    .hero { min-height: auto; padding: 65px 0 40px; }
+    .hero h1 { font-size: clamp(4rem, 22vw, 7rem); }
+    .hero-deck { margin-top: 28px; font-size: 1rem; }
+    .hero-actions { flex-direction: column; gap: 18px; }
+    .trust-line { gap: 8px 20px; }
+    .trust-line span + span::before { left: -12px; }
+    .hero-stage { min-height: 560px; }
+    .hero-stage::before { width: 330px; }
+    .time-card { left: -6px; top: 18%; padding: 12px 15px; }
+    .time-card strong { font-size: 2rem; }
+    .stage-note { bottom: 4%; }
+    .protocol, .tasks, .control-room, .manifesto { padding: 90px 0; }
+    .protocol-head { display: block; padding-bottom: 50px; }
+    .protocol-head h2 { margin: 25px 0; }
+    .sequence-step { display: flex; flex-direction: column; align-items: flex-start; gap: 30px; min-height: 0; padding: 45px 0; }
+    .device-small, .speaker { align-self: center; }
+    .task { grid-template-columns: 35px 1fr auto; gap: 14px; padding: 20px 0; }
+    .task h3 { font-size: 2rem; }
+    .task p { grid-column: 2 / 4; }
+    .task strong { grid-column: 3; grid-row: 1; font-size: 1.45rem; }
+    .task:hover { padding-inline: 8px; }
+    .control-copy h2 { margin-bottom: 35px; }
+    .phone-stack { min-height: 560px; }
+    .phone-stack::before { width: 360px; height: 360px; }
+    .device-back, .device-front { width: 205px; }
+    .annotation { font-size: .75rem; }
+    .manifesto-line { white-space: normal; font-size: 19vw; }
+    .manifesto-foot { grid-template-columns: 1fr; margin-top: 50px; }
+    .manifesto-foot a { justify-self: start; }
+    .final-inner { min-height: 75svh; }
+    .final-inner h2 { font-size: 26vw; }
+    .footer { grid-template-columns: 1fr; text-align: left; }
+    .footer nav { flex-wrap: wrap; }
+  }
 
   @media (prefers-reduced-motion: reduce) {
-    .sky { display: none; }
-    .hero { background: #000; }
-    #s-alarmfires { background: linear-gradient(to bottom, #1c0b38, #b41f1f); }
-    #s-challenges { background: linear-gradient(to bottom, #b41f1f, #ff9e1f); }
-    #s-wakeupcheck { background: linear-gradient(to bottom, #ff9e1f, #ffd84d); }
-    #s-daylight { background: linear-gradient(to bottom, #ffd84d, #fff3cf); }
-    #s-morning { background: #fff3cf; }
+    .pulse, .alarm-signal span, .crawl div { animation: none; }
   }
 </style>

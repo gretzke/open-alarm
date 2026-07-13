@@ -1,152 +1,48 @@
-/* ===== OpenAlarm design tokens — port of OpenAlarmTheme.swift + DawnTheme.swift ===== */
 :root {
-  /* Night (OAColor) */
-  --night: #000000;
-  --ink: #f5f5f7;
-  --ink-2: #8e8e93;
-  --cyan: #85d9e7;
-  --cyan-action: #64d2ff;
-  --cyan-active: #32c5ff;
-  --danger: #ff453a;
-
-  /* Glass recipe (OAGlassCard) */
-  --glass-fill: rgba(255, 255, 255, 0.08);
-  --glass-stroke: rgba(133, 217, 231, 0.22);
-  --glass-glow: rgba(100, 210, 255, 0.2);
-
-  /* Dawn ramp (DawnPalette.stops) */
-  --dawn-0: #1c0b38;
-  --dawn-1: #b41f1f;
-  --dawn-2: #ff9e1f;
-  --dawn-3: #ffd84d;
-  --dawn-4: #fff3cf;
-  --ink-dark: #201005;
-
-  /* Radii (OARadius) */
-  --r-card: 24px;
-  --r-button: 20px;
-  --r-chip: 14px;
-
-  /* Type */
-  --font: "Nunito", ui-rounded, -apple-system, system-ui, sans-serif;
+  --ink: #121212;
+  --paper: #f3f0e8;
+  --orange: #ff4d00;
+  --yellow: #ffcc00;
+  --violet: #d8d4ff;
+  --font: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* iOS Safari's translucent toolbars and overscroll show the html/body canvas,
-   not the fixed sky layer. Painting both with the live sky variables keeps
-   those zones in sync with the gradient: html covers top overscroll, body
-   covers the bottom-bar sampling zone. Fallback is the night color. */
-html { background: var(--sky-top, var(--night)); }
+html { scroll-behavior: smooth; background: var(--paper); }
 
 body {
+  min-width: 320px;
   font-family: var(--font);
-  font-weight: 400;
   font-size: 17px;
-  line-height: 1.6;
+  line-height: 1.5;
   color: var(--ink);
-  background: var(--sky-bottom, var(--night));
+  background: var(--paper);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* --- Type roles --- */
-.display {
-  font-weight: 900;
-  line-height: 1.04;
-  letter-spacing: -0.015em;
-}
-.h2 {
-  font-weight: 900;
-  font-size: clamp(2rem, 4.5vw, 3.25rem);
-  line-height: 1.08;
-  letter-spacing: -0.01em;
-}
-.h3 { font-weight: 800; font-size: 1.25rem; line-height: 1.25; }
-.body-lg { font-size: 1.1875rem; line-height: 1.6; }
-.muted { color: var(--ink-2); }
+img { max-width: 100%; }
+a, button { -webkit-tap-highlight-color: transparent; }
+a:focus-visible, button:focus-visible { outline: 3px solid var(--orange); outline-offset: 4px; }
 
-/* Eyebrow: the clock-time device. Encodes where you are in the morning. */
-.eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.6em;
-  font-size: 0.8125rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--cyan);
-}
-.eyebrow .time {
-  display: inline-flex;
-  align-items: center;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-  height: 2.1em;
-  /* trailing letter-spacing after the last digit adds invisible width on the
-     right — trim right padding by the same 0.14em so the digits sit centered */
-  padding: 0 0.56em 0 0.7em;
-  border: 1px solid var(--glass-stroke);
-  border-radius: var(--r-chip);
-  background: var(--glass-fill);
-}
-
-/* --- Glass components --- */
-.glass-card {
-  background: var(--glass-fill);
-  border: 1px solid var(--glass-stroke);
-  border-radius: var(--r-card);
-  box-shadow: 0 8px 14px rgba(100, 210, 255, 0.13);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-}
-
+.container { width: min(720px, calc(100% - 40px)); margin-inline: auto; }
+.display { font-weight: 900; letter-spacing: -.06em; line-height: .9; }
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5em;
-  height: 52px;
-  padding: 0 1.5em;
-  border-radius: var(--r-button);
-  border: 1px solid var(--glass-stroke);
-  background: var(--glass-fill);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  font-family: var(--font);
-  font-size: 1.0625rem;
-  font-weight: 800;
-  color: var(--ink);
+  min-height: 50px;
+  padding: 0 22px;
+  border: 2px solid currentColor;
+  border-radius: 4px;
+  color: inherit;
+  font: inherit;
+  font-weight: 900;
   text-decoration: none;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, transform 0.15s;
-}
-.btn:hover { background: rgba(255, 255, 255, 0.14); transform: translateY(-1px); }
-.btn:focus-visible { outline: 2px solid var(--cyan-action); outline-offset: 3px; }
-.btn-prominent {
-  background: rgba(100, 210, 255, 0.28);
-  border-color: rgba(133, 217, 231, 0.5);
-  box-shadow: 0 8px 14px var(--glass-glow);
-}
-.btn-prominent:hover { background: rgba(100, 210, 255, 0.4); }
-
-.chip {
-  display: inline-block;
-  padding: 0.3em 0.9em;
-  border-radius: var(--r-chip);
-  border: 1px solid var(--glass-stroke);
-  background: var(--glass-fill);
-  font-size: 0.8125rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
-
-.container { width: min(1100px, calc(100% - 48px)); margin-inline: auto; }
-html { scroll-behavior: smooth; }
-.cta-row { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
-.appstore { display: inline-flex; }
-.appstore .badge-img { height: 56px; width: auto; display: block; }

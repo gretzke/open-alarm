@@ -4,17 +4,38 @@ interface Props { title: string; description: string; heading: string; }
 const { title, description, heading } = Astro.props;
 ---
 <Base title={title} description={description}>
-  <main class="container">
-    <a class="home" href="/">← OpenAlarm</a>
+  <header>
+    <a class="brand" href="/"><img src="/favicon.png" alt="" width="30" height="30" />OpenAlarm</a>
+    <a class="back" href="/">Back home ↗</a>
+  </header>
+  <main>
+    <p class="label">Information / OpenAlarm</p>
     <h1>{heading}</h1>
-    <slot />
+    <div class="rule"></div>
+    <div class="content"><slot /></div>
   </main>
+  <footer><span>Free · Open source · No tracking</span><span>© 2026 OpenAlarm</span></footer>
 </Base>
 <style>
-  main { padding: 96px 0 120px; max-width: 720px; }
-  .home { display: inline-block; margin-bottom: 40px; font-weight: 800; color: var(--cyan); text-decoration: none; }
-  h1 { font-weight: 900; font-size: 2.5rem; margin-bottom: 28px; letter-spacing: -0.01em; }
-  main :global(h2) { font-weight: 800; font-size: 1.25rem; margin: 36px 0 10px; }
-  main :global(p), main :global(li) { color: var(--ink-2); line-height: 1.7; margin-bottom: 12px; }
-  main :global(a) { color: var(--cyan); }
+  header, main, footer { width: min(1120px, calc(100% - 48px)); margin-inline: auto; }
+  header { height: 90px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #121212; }
+  .brand { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; font-weight: 900; letter-spacing: -.03em; }
+  .brand img { border-radius: 7px; }
+  .back { color: inherit; text-decoration: none; text-transform: uppercase; letter-spacing: .1em; font-size: .72rem; font-weight: 900; }
+  main { min-height: calc(100svh - 250px); padding: 100px 0 140px; display: grid; grid-template-columns: 1fr 1.5fr; column-gap: 80px; }
+  .label { font-size: .7rem; font-weight: 900; text-transform: uppercase; letter-spacing: .16em; }
+  h1 { grid-column: 2; font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif; font-size: clamp(4rem, 9vw, 8rem); line-height: .82; text-transform: uppercase; letter-spacing: -.04em; color: #ff4d00; }
+  .rule { grid-column: 1 / -1; border-top: 2px solid #121212; margin: 55px 0; }
+  .content { grid-column: 2; max-width: 720px; }
+  .content :global(h2) { font-weight: 900; font-size: 1.35rem; margin: 40px 0 12px; letter-spacing: -.02em; }
+  .content :global(p), .content :global(li) { line-height: 1.75; margin-bottom: 18px; }
+  .content :global(a) { color: inherit; font-weight: 800; text-decoration-color: #ff4d00; text-decoration-thickness: 2px; text-underline-offset: 3px; overflow-wrap: anywhere; }
+  footer { min-height: 110px; border-top: 1px solid #121212; display: flex; justify-content: space-between; align-items: center; gap: 20px; font-size: .7rem; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; }
+  @media (max-width: 700px) {
+    header, main, footer { width: calc(100% - 32px); }
+    main { display: block; padding: 70px 0 100px; }
+    h1 { margin-top: 28px; }
+    .rule { margin: 40px 0; }
+    footer { flex-direction: column; align-items: flex-start; justify-content: center; }
+  }
 </style>

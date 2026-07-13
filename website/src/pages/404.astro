@@ -2,15 +2,18 @@
 import Base from '../layouts/Base.astro';
 ---
 <Base title="Page not found · OpenAlarm" description="This page never woke up.">
-  <main class="not-found container">
-    <h1 class="display">04:04</h1>
+  <main class="not-found">
+    <span>Error / missed alarm</span>
+    <h1>04:04</h1>
     <p>This page never woke up.</p>
-    <a class="btn" href="/">Back to OpenAlarm</a>
+    <a href="/">Return to OpenAlarm ↗</a>
   </main>
 </Base>
 
 <style>
-  .not-found { min-height: 100svh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-  h1 { font-size: clamp(5rem, 18vw, 12rem); }
-  p { margin: 14px 0 30px; color: var(--ink-2); font-size: 1.1875rem; }
+  .not-found { min-height: 100svh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: #ffcc00; padding: 30px; }
+  span { font-size: .72rem; font-weight: 900; letter-spacing: .17em; text-transform: uppercase; }
+  h1 { font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif; font-size: clamp(7rem, 25vw, 22rem); letter-spacing: -.05em; line-height: .8; margin: 30px 0; }
+  p { margin-bottom: 30px; font-size: 1.2rem; font-weight: 800; }
+  a { background: #121212; color: #fff; padding: 14px 22px; text-decoration: none; font-weight: 900; box-shadow: 6px 6px 0 #ff4d00; }
 </style>
