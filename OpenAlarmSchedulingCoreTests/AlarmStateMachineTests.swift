@@ -143,12 +143,12 @@ final class AlarmStateMachineTests: XCTestCase {
         XCTAssertEqual(result.effects, [.cancelAlarmKit(ids: [alarm.id]), .deleteAlarm(alarm.id)])
     }
 
-    func testDeleteFromIdleJustDeletes() {
+    func testDeleteFromIdleCancelsCanonicalAndDeletes() {
         let alarm = makeAlarm()
         let result = transition(.idle, .deleted, alarm: alarm)
 
         XCTAssertEqual(result.phase, .idle)
-        XCTAssertEqual(result.effects, [.deleteAlarm(alarm.id)])
+        XCTAssertEqual(result.effects, [.cancelAlarmKit(ids: [alarm.id]), .deleteAlarm(alarm.id)])
     }
 
     func testDeleteFromSnoozedCancelsAndDeletes() {
@@ -159,12 +159,31 @@ final class AlarmStateMachineTests: XCTestCase {
         XCTAssertEqual(result.effects, [.cancelAlarmKit(ids: [alarm.id]), .deleteAlarm(alarm.id)])
     }
 
-    func testDeleteFromAwaitingWakeCheckDeletes() {
+    // The wake-check backup alarm is registered under the alarm's own UUID
+    // while `.awaitingWakeCheck` holds no AlarmKit IDs, so delete must cancel
+    // the canonical ID or the backup fires as a ghost alarm at the deadline.
+    func testDeleteFromAwaitingWakeCheckCancelsBackupAndDeletes() {
         let alarm = makeAlarm()
         let result = transition(.awaitingWakeCheck, .deleted, alarm: alarm, settings: wakeCheckSettings)
 
         XCTAssertEqual(result.phase, .idle)
-        XCTAssertEqual(result.effects, [.deleteAlarm(alarm.id)])
+        XCTAssertEqual(result.effects, [.cancelAlarmKit(ids: [alarm.id]), .deleteAlarm(alarm.id)])
+    }
+
+    // Wake-check wins over the override branch after a bridge firing, so
+    // `.awaitingWakeCheck` can coexist with an active override whose remaining
+    // bridges are still registered. Delete must cancel them from the model.
+    func testDeleteFromAwaitingWakeCheckCancelsRemainingOverrideBridges() {
+        let bridgeIDs: [UUID] = [UUID(), UUID()]
+        let alarm = makeOverrideAlarm(bridgeAlarmIDs: bridgeIDs)
+
+        let result = transition(.awaitingWakeCheck, .deleted, alarm: alarm, settings: wakeCheckSettings)
+
+        XCTAssertEqual(result.phase, .idle)
+        XCTAssertEqual(result.effects, [
+            .cancelAlarmKit(ids: Set(bridgeIDs).union([alarm.id])),
+            .deleteAlarm(alarm.id),
+        ])
     }
 
     func testDeleteFromAwaitingDisarmChallengeCancelsAndDeletes() {
@@ -182,7 +201,7 @@ final class AlarmStateMachineTests: XCTestCase {
         let result = transition(.overrideActive(bridgeAlarmIDs: bridgeIDs), .deleted, alarm: alarm)
 
         XCTAssertEqual(result.phase, .idle)
-        XCTAssertEqual(result.effects, [.cancelAlarmKit(ids: bridgeIDs), .deleteAlarm(alarm.id)])
+        XCTAssertEqual(result.effects, [.cancelAlarmKit(ids: bridgeIDs.union([alarm.id])), .deleteAlarm(alarm.id)])
     }
 
     // MARK: - Updated

@@ -71,15 +71,21 @@ enum AlarmStateMachine {
         switch (current, event) {
 
         // MARK: - Delete (from any state)
+        // The canonical ID and any override bridge IDs on the model are always
+        // cancelled in addition to the phase's IDs: `.awaitingWakeCheck` holds
+        // no AlarmKit IDs but the wake-check backup alarm is registered under
+        // the alarm's own UUID, an override can survive into the wake check
+        // with bridges still registered, and a stale `.idle` (after an
+        // AlarmKit read failure) must still cancel the canonical registration.
 
         case (_, .deleted):
             let idsToCancel = alarmKitIDs(in: current)
-            var effects: [SchedulingSideEffect] = []
-            if !idsToCancel.isEmpty {
-                effects.append(.cancelAlarmKit(ids: idsToCancel))
-            }
-            effects.append(.deleteAlarm(alarm.id))
-            return TransitionResult(phase: .idle, effects: effects)
+                .union([alarm.id])
+                .union(alarm.activeOverride?.bridgeAlarmIDs ?? [])
+            return TransitionResult(
+                phase: .idle,
+                effects: [.cancelAlarmKit(ids: idsToCancel), .deleteAlarm(alarm.id)]
+            )
 
         // MARK: - Disable (from any state)
 
