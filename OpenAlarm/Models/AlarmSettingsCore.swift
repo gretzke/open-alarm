@@ -596,6 +596,37 @@ struct WakeCheckSession: Codable, Equatable, Sendable {
     var checkAt: Date
     var deadlineAt: Date
     var notificationID: String
+    var modifiedDuringSession: Bool
+
+    private enum CodingKeys: String, CodingKey {
+        case alarmID, cycle, checkAt, deadlineAt, notificationID, modifiedDuringSession
+    }
+
+    init(
+        alarmID: UUID,
+        cycle: Int,
+        checkAt: Date,
+        deadlineAt: Date,
+        notificationID: String,
+        modifiedDuringSession: Bool = false
+    ) {
+        self.alarmID = alarmID
+        self.cycle = cycle
+        self.checkAt = checkAt
+        self.deadlineAt = deadlineAt
+        self.notificationID = notificationID
+        self.modifiedDuringSession = modifiedDuringSession
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        alarmID = try container.decode(UUID.self, forKey: .alarmID)
+        cycle = try container.decode(Int.self, forKey: .cycle)
+        checkAt = try container.decode(Date.self, forKey: .checkAt)
+        deadlineAt = try container.decode(Date.self, forKey: .deadlineAt)
+        notificationID = try container.decode(String.self, forKey: .notificationID)
+        modifiedDuringSession = try container.decodeIfPresent(Bool.self, forKey: .modifiedDuringSession) ?? false
+    }
 }
 
 // MARK: - AlarmStoreError

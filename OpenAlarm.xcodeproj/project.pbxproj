@@ -34,6 +34,7 @@
 		245313C773278943D871E8A1 /* ringtone_dawn_dreamer.caf in Resources */ = {isa = PBXBuildFile; fileRef = B3FE74A81BB42ADDB910AEFA /* ringtone_dawn_dreamer.caf */; };
 		253590E5F646B6E2B8AA92C8 /* ringtone_classical_cellosuite.caf in Resources */ = {isa = PBXBuildFile; fileRef = B01A0C795DA6BC983D2B110B /* ringtone_classical_cellosuite.caf */; };
 		27435B590BF094FB2B446C34 /* StepsConfigurator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A618400BCD854BA5ECB76F5 /* StepsConfigurator.swift */; };
+		299002BABC53227D43E3F7FA /* WakeCheckMidSessionModificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0A1A6B080953265127093FE /* WakeCheckMidSessionModificationTests.swift */; };
 		2A327BBB966BE06591B6F9CC /* ringtone_dawn_motions_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = C6130A93EBD9A673908EAD59 /* ringtone_dawn_motions_full.m4a */; };
 		2A5D2E4A4D01C891C5015C30 /* OpenAlarmNotificationDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30A4F32DD5585DAC4885AD99 /* OpenAlarmNotificationDelegate.swift */; };
 		2AFBE3E478A729AE45198600 /* ringtone_dawn_wisdominthesun_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 9C4FA4CB216FBA69A0950667 /* ringtone_dawn_wisdominthesun_full.m4a */; };
@@ -326,6 +327,7 @@
 		9A5A2891C11E40725EB86AA0 /* ScanTaskDescriptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanTaskDescriptor.swift; sourceTree = "<group>"; };
 		9C4FA4CB216FBA69A0950667 /* ringtone_dawn_wisdominthesun_full.m4a */ = {isa = PBXFileReference; path = ringtone_dawn_wisdominthesun_full.m4a; sourceTree = "<group>"; };
 		A06DA178A073176D55E9CDD1 /* NapDurationPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NapDurationPicker.swift; sourceTree = "<group>"; };
+		A0A1A6B080953265127093FE /* WakeCheckMidSessionModificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeCheckMidSessionModificationTests.swift; sourceTree = "<group>"; };
 		A0A332FB8767D07D2F81AAFA /* ConfiguratorControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfiguratorControls.swift; sourceTree = "<group>"; };
 		A33ABC03E5073EF42843F709 /* TaskSoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSoundManager.swift; sourceTree = "<group>"; };
 		A68254B37ED88B2B332295B2 /* AlertReferenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertReferenceStore.swift; sourceTree = "<group>"; };
@@ -626,6 +628,7 @@
 			children = (
 				547C10CA4E86A4E7FD9CE4C3 /* RingtoneResourceTests.swift */,
 				E8857F7CD62651E1F7B1E992 /* TaskRegistryTests.swift */,
+				A0A1A6B080953265127093FE /* WakeCheckMidSessionModificationTests.swift */,
 			);
 			path = OpenAlarmTests;
 			sourceTree = "<group>";
@@ -1022,6 +1025,7 @@
 			files = (
 				9407A779AE239B3B8B48A8D3 /* RingtoneResourceTests.swift in Sources */,
 				88BE5A50C98A69D71F236893 /* TaskRegistryTests.swift in Sources */,
+				299002BABC53227D43E3F7FA /* WakeCheckMidSessionModificationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

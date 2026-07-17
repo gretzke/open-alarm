@@ -55,6 +55,25 @@ final class AlarmPersistenceTests: XCTestCase {
         XCTAssertEqual(persistence.loadWakeCheckSessions(), [session.alarmID: session])
     }
 
+    func testWakeCheckSessionWithoutModificationFlagDecodesAsUnmodified() throws {
+        let session = WakeCheckSession(
+            alarmID: UUID(),
+            cycle: 2,
+            checkAt: Date(timeIntervalSinceReferenceDate: 1_000),
+            deadlineAt: Date(timeIntervalSinceReferenceDate: 1_180),
+            notificationID: "wakecheck.test.2",
+            modifiedDuringSession: true
+        )
+        let encoded = try JSONEncoder().encode(session)
+        var legacyPayload = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        legacyPayload.removeValue(forKey: "modifiedDuringSession")
+        let legacyData = try JSONSerialization.data(withJSONObject: legacyPayload)
+
+        let decoded = try JSONDecoder().decode(WakeCheckSession.self, from: legacyData)
+
+        XCTAssertFalse(decoded.modifiedDuringSession)
+    }
+
     func testPendingDisarmIDsRoundTrip() {
         let ids: Set<UUID> = [UUID(), UUID()]
         persistence.savePendingDisarmAlarmIDs(ids)

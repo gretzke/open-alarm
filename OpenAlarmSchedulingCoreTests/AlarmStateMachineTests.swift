@@ -133,6 +133,26 @@ final class AlarmStateMachineTests: XCTestCase {
         XCTAssertEqual(result.effects, [.cancelAlarmKit(ids: bridgeIDs)])
     }
 
+    func testWakeCheckModificationEventsPreserveBackupPhase() {
+        let alarm = makeAlarm(repeatDays: [.monday], deleteAfterUse: false)
+        let bridgeIDs: Set<UUID> = [UUID(), UUID()]
+
+        for event in [AlarmEvent.disabled, .enabled, .updated, .overrideActivated(bridgeAlarmIDs: bridgeIDs)] {
+            let result = transition(.awaitingWakeCheck, event, alarm: alarm)
+            XCTAssertEqual(result.phase, .awaitingWakeCheck)
+            XCTAssertEqual(result.effects, [])
+        }
+    }
+
+    func testWakeCheckOverrideRestoreOnlyCancelsBridges() {
+        let alarm = makeAlarm(repeatDays: [.monday], deleteAfterUse: false)
+        let bridgeIDs: Set<UUID> = [UUID(), UUID()]
+        let result = transition(.awaitingWakeCheck, .overrideRestored(bridgeAlarmIDs: bridgeIDs), alarm: alarm)
+
+        XCTAssertEqual(result.phase, .awaitingWakeCheck)
+        XCTAssertEqual(result.effects, [.cancelAlarmKit(ids: bridgeIDs)])
+    }
+
     // MARK: - Delete
 
     func testDeleteFromScheduledCancelsAndDeletes() {
@@ -373,7 +393,7 @@ final class AlarmStateMachineTests: XCTestCase {
         let bridgeIDs = [UUID(), UUID()]
         let alarm = makeOverrideAlarm(bridgeAlarmIDs: bridgeIDs)
 
-        let result = transition(.awaitingWakeCheck, .wakeCheckConfirmed, alarm: alarm, settings: wakeCheckSettings)
+        let result = transition(.awaitingWakeCheck, .wakeCheckConfirmed(modifiedDuringSession: false), alarm: alarm, settings: wakeCheckSettings)
 
         XCTAssertEqual(result.phase, .overrideActive(bridgeAlarmIDs: Set(bridgeIDs)))
         XCTAssertEqual(result.effects, [.persist(bookkept(alarm, lifecycleState: .scheduled))])
@@ -381,7 +401,37 @@ final class AlarmStateMachineTests: XCTestCase {
 
     func testWakeCheckConfirmedRepeatingReschedulesAlarm() {
         let alarm = makeAlarm(repeatDays: [.monday, .friday], deleteAfterUse: false, snoozeCount: 3)
-        let result = transition(.awaitingWakeCheck, .wakeCheckConfirmed, alarm: alarm, settings: wakeCheckSettings)
+        let result = transition(.awaitingWakeCheck, .wakeCheckConfirmed(modifiedDuringSession: false), alarm: alarm, settings: wakeCheckSettings)
+
+        XCTAssertEqual(result.phase, .scheduled(alarmKitIDs: [alarm.id]))
+        XCTAssertEqual(result.effects, [
+            .persist(bookkept(alarm, lifecycleState: .scheduled)),
+            .scheduleAlarmKit(alarmID: alarm.id),
+        ])
+    }
+
+    func testWakeCheckConfirmedDisabledAlarmPersistsWithoutScheduling() {
+        var alarm = makeAlarm(repeatDays: [.monday], deleteAfterUse: false)
+        alarm.isEnabled = false
+        let result = transition(
+            .awaitingWakeCheck,
+            .wakeCheckConfirmed(modifiedDuringSession: false),
+            alarm: alarm,
+            settings: wakeCheckSettings
+        )
+
+        XCTAssertEqual(result.phase, .idle)
+        XCTAssertEqual(result.effects, [.persist(bookkept(alarm, lifecycleState: .scheduled))])
+    }
+
+    func testWakeCheckConfirmedModifiedOneShotReschedulesAlarm() {
+        let alarm = makeAlarm(deleteAfterUse: false)
+        let result = transition(
+            .awaitingWakeCheck,
+            .wakeCheckConfirmed(modifiedDuringSession: true),
+            alarm: alarm,
+            settings: wakeCheckSettings
+        )
 
         XCTAssertEqual(result.phase, .scheduled(alarmKitIDs: [alarm.id]))
         XCTAssertEqual(result.effects, [
@@ -392,7 +442,7 @@ final class AlarmStateMachineTests: XCTestCase {
 
     func testWakeCheckConfirmedOneShotDeleteAfterUseDeletes() {
         let alarm = makeAlarm(deleteAfterUse: true)
-        let result = transition(.awaitingWakeCheck, .wakeCheckConfirmed, alarm: alarm, settings: wakeCheckSettings)
+        let result = transition(.awaitingWakeCheck, .wakeCheckConfirmed(modifiedDuringSession: false), alarm: alarm, settings: wakeCheckSettings)
 
         XCTAssertEqual(result.phase, .completed)
         XCTAssertEqual(result.effects, [.deleteAlarm(alarm.id)])
@@ -400,7 +450,7 @@ final class AlarmStateMachineTests: XCTestCase {
 
     func testWakeCheckConfirmedNapDeletes() {
         let alarm = makeAlarm(type: .nap(NapConfig(durationMinutes: 30, pausedRemainingSeconds: nil)))
-        let result = transition(.awaitingWakeCheck, .wakeCheckConfirmed, alarm: alarm, settings: wakeCheckSettings)
+        let result = transition(.awaitingWakeCheck, .wakeCheckConfirmed(modifiedDuringSession: false), alarm: alarm, settings: wakeCheckSettings)
 
         XCTAssertEqual(result.phase, .completed)
         XCTAssertEqual(result.effects, [.deleteAlarm(alarm.id)])
@@ -409,7 +459,7 @@ final class AlarmStateMachineTests: XCTestCase {
     func testWakeCheckConfirmedTryOutDeletes() {
         var alarm = makeAlarm(deleteAfterUse: false, type: .tryOut)
         alarm.deleteAfterUse = false  // even without the flag, tryOut deletes
-        let result = transition(.awaitingWakeCheck, .wakeCheckConfirmed, alarm: alarm, settings: wakeCheckSettings)
+        let result = transition(.awaitingWakeCheck, .wakeCheckConfirmed(modifiedDuringSession: false), alarm: alarm, settings: wakeCheckSettings)
 
         XCTAssertEqual(result.phase, .completed)
         XCTAssertEqual(result.effects, [.deleteAlarm(alarm.id)])
@@ -417,7 +467,7 @@ final class AlarmStateMachineTests: XCTestCase {
 
     func testWakeCheckConfirmedKeptOneShotEmitsPersistDisabled() {
         let alarm = makeAlarm(deleteAfterUse: false, snoozeCount: 1)
-        let result = transition(.awaitingWakeCheck, .wakeCheckConfirmed, alarm: alarm, settings: wakeCheckSettings)
+        let result = transition(.awaitingWakeCheck, .wakeCheckConfirmed(modifiedDuringSession: false), alarm: alarm, settings: wakeCheckSettings)
 
         XCTAssertEqual(result.phase, .completed)
         XCTAssertEqual(result.effects, [

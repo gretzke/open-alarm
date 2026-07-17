@@ -8,6 +8,38 @@ import SwiftUI
 import UIKit
 import UserNotifications
 
+// MARK: - AlarmManagerScheduling
+
+@MainActor
+protocol AlarmManagerScheduling: AnyObject {
+    var alarms: [Alarm] { get throws }
+    func alarmUpdatesForStore() -> AsyncStream<[Alarm]>?
+    func schedule(
+        id: UUID,
+        configuration: AlarmManager.AlarmConfiguration<OpenAlarmMetadata>
+    ) async throws -> Alarm
+    func stop(id: UUID) throws
+    func cancel(id: UUID) throws
+}
+
+extension AlarmManager: AlarmManagerScheduling {}
+
+extension AlarmManager {
+    func alarmUpdatesForStore() -> AsyncStream<[Alarm]>? {
+        let manager = self
+        return AsyncStream { continuation in
+            let task = Task {
+                for await alarms in manager.alarmUpdates {
+                    guard !Task.isCancelled else { break }
+                    continuation.yield(alarms)
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+}
+
 // MARK: - DisarmPresentation
 
 struct DisarmPresentation: Identifiable {
@@ -103,12 +135,12 @@ final class AlarmStore: ObservableObject {
 
     // MARK: - Dependencies
 
-    private let alarmManager: AlarmManager
+    private let alarmManager: any AlarmManagerScheduling
     private let permissionService: AlarmPermissionService
     private let notificationPermissionService: NotificationPermissionService
     private let persistence: AlarmPersistence
     private let alertReferenceStore: AlertReferenceStore
-    private let wakeCheckNotificationService: WakeUpCheckNotificationService
+    private let wakeCheckNotificationService: any WakeUpCheckNotificationServicing
     private var alarmUpdatesTask: Task<Void, Never>?
     private var settingsRescheduleTask: Task<Void, Never>?
     private var wakeCheckConfirmationObserver: Any?
@@ -122,10 +154,11 @@ final class AlarmStore: ObservableObject {
     // MARK: - Init
 
     init(
-        alarmManager: AlarmManager = .shared,
+        alarmManager: any AlarmManagerScheduling = AlarmManager.shared,
         permissionService: AlarmPermissionService? = nil,
         notificationPermissionService: NotificationPermissionService? = nil,
-        userDefaults: UserDefaults? = nil
+        userDefaults: UserDefaults? = nil,
+        wakeCheckNotificationService: (any WakeUpCheckNotificationServicing)? = nil
     ) {
         let resolvedDefaults = userDefaults ?? OpenAlarmSharedDefaults.userDefaults
         if userDefaults == nil {
@@ -133,11 +166,13 @@ final class AlarmStore: ObservableObject {
         }
         BackstopSlotStore.migrateLegacySlotIfNeeded(defaults: resolvedDefaults)
         self.alarmManager = alarmManager
-        self.permissionService = permissionService ?? AlarmPermissionService(manager: alarmManager)
+        self.permissionService = permissionService ?? AlarmPermissionService(
+            manager: (alarmManager as? AlarmManager) ?? .shared
+        )
         self.notificationPermissionService = notificationPermissionService ?? NotificationPermissionService()
         self.persistence = AlarmPersistence(defaults: resolvedDefaults)
         self.alertReferenceStore = AlertReferenceStore(defaults: resolvedDefaults)
-        self.wakeCheckNotificationService = WakeUpCheckNotificationService()
+        self.wakeCheckNotificationService = wakeCheckNotificationService ?? WakeUpCheckNotificationService()
         self.defaultSharedSettings = persistence.loadDefaultSharedSettings()
         self.napDefaultSharedSettings = persistence.loadNapDefaultSharedSettings()
         self.defaultNapDurationMinutes = persistence.loadDefaultNapDurationMinutes()
@@ -152,7 +187,7 @@ final class AlarmStore: ObservableObject {
             persistence.saveLiveActivitiesEnabled(false)
         }
 
-        wakeCheckNotificationService.ensureCategoryRegistered()
+        self.wakeCheckNotificationService.ensureCategoryRegistered()
 
         load()
         loadWakeCheckSessionsFromPersistence()
@@ -308,11 +343,15 @@ final class AlarmStore: ObservableObject {
 
         guard let index = alarms.firstIndex(where: { $0.id == alarm.id }) else { return }
 
-        let updated = draft.toUserAlarm(
+        var updated = draft.toUserAlarm(
             id: alarm.id,
             existingCreatedAt: alarm.createdAt,
             defaultSharedSettings: defaultSharedSettings
         )
+
+        if wakeCheckSessions[alarm.id] != nil {
+            updated.lifecycleState = .awaitingWakeCheck
+        }
 
         alarms[index] = updated
 
@@ -330,6 +369,8 @@ final class AlarmStore: ObservableObject {
 
         alarms = sortAlarms(alarms)
         saveAlarms()
+
+        markWakeCheckSessionModified(for: alarm.id)
 
         await process(event: .updated, for: alarm.id)
     }
@@ -381,6 +422,8 @@ final class AlarmStore: ObservableObject {
         alarms[index].updatedAt = .now
         alarms = sortAlarms(alarms)
         saveAlarms()
+
+        markWakeCheckSessionModified(for: alarm.id)
 
         // Cancel canonical schedule and enter override phase via the state machine
         await process(event: .overrideActivated(bridgeAlarmIDs: Set(bridgeIDs)), for: alarm.id)
@@ -471,6 +514,7 @@ final class AlarmStore: ObservableObject {
         }
 
         guard let index = alarms.firstIndex(where: { $0.id == alarm.id }) else { return }
+        let hasWakeCheckSession = wakeCheckSessions[alarm.id] != nil
 
         // Un-skip: toggling on while skip-next is active
         if enabled, alarms[index].activeOverride?.kind == .skipNext {
@@ -490,17 +534,25 @@ final class AlarmStore: ObservableObject {
         alarms[index].updatedAt = .now
 
         // If disabling and there's an active override, clear it
-        if !enabled, alarms[index].activeOverride != nil {
+        if !enabled, let override = alarms[index].activeOverride {
+            if hasWakeCheckSession {
+                for bridgeID in override.bridgeAlarmIDs {
+                    try? alarmManager.stop(id: bridgeID)
+                    try? alarmManager.cancel(id: bridgeID)
+                }
+            }
             alarms[index].activeOverride = nil
             alarms[index].nextTriggerOverrideDate = nil
         }
 
-        if enabled {
+        if enabled, !hasWakeCheckSession {
             alarms[index].lifecycleState = .scheduled
         }
 
         alarms = sortAlarms(alarms)
         saveAlarms()
+
+        markWakeCheckSessionModified(for: alarm.id)
 
         await process(event: enabled ? .enabled : .disabled, for: alarm.id)
     }
@@ -771,7 +823,7 @@ final class AlarmStore: ObservableObject {
 
     // MARK: - Wake-Up Check
 
-    func disableWakeUpCheckFeatureGlobally() {
+    func disableWakeUpCheckFeatureGlobally() async {
         // Disable in global defaults
         var settings = defaultSharedSettings
         settings.wakeUpCheckEnabled = false
@@ -793,11 +845,26 @@ final class AlarmStore: ObservableObject {
             }
         }
 
-        // Cancel all active wake-check sessions
-        for (alarmID, session) in wakeCheckSessions {
+        // Cancel all active wake-check sessions, then restore normal lifecycle
+        // reconstruction and canonical scheduling for the affected alarms.
+        let sessions = wakeCheckSessions
+        var alarmIDsToRearm: [UUID] = []
+        for (alarmID, session) in sessions {
             wakeCheckNotificationService.cancelNotification(id: session.notificationID)
             try? alarmManager.stop(id: alarmID)
             try? alarmManager.cancel(id: alarmID)
+
+            guard let index = alarms.firstIndex(where: { $0.id == alarmID }) else { continue }
+            alarms[index].lifecycleState = .scheduled
+            if alarms[index].isEnabled, alarms[index].activeOverride == nil {
+                runtimePhases[alarmID] = .idle
+                alarmIDsToRearm.append(alarmID)
+            } else if let override = alarms[index].activeOverride {
+                runtimePhases[alarmID] = .overrideActive(bridgeAlarmIDs: Set(override.bridgeAlarmIDs))
+            } else {
+                runtimePhases[alarmID] = .idle
+            }
+            changed = true
         }
         wakeCheckSessions.removeAll()
         persistence.saveWakeCheckSessions(wakeCheckSessions)
@@ -808,6 +875,18 @@ final class AlarmStore: ObservableObject {
 
         if changed {
             saveAlarms()
+        }
+
+        // Re-arm before returning so a suspension right after this call cannot
+        // leave enabled alarms unregistered. Eligibility is re-checked per
+        // alarm: earlier iterations suspend, and a concurrent mutation may
+        // have disabled or deleted an alarm in the meantime.
+        for alarmID in alarmIDsToRearm {
+            guard let alarm = alarms.first(where: { $0.id == alarmID }),
+                  alarm.isEnabled,
+                  alarm.activeOverride == nil,
+                  wakeCheckSessions[alarmID] == nil else { continue }
+            await process(event: .enabled, for: alarmID)
         }
     }
 
@@ -845,7 +924,7 @@ final class AlarmStore: ObservableObject {
         let settings = resolvedSettingsForAlarm(alarm)
         let result = AlarmStateMachine.transition(
             current: currentPhase,
-            event: .wakeCheckConfirmed,
+            event: .wakeCheckConfirmed(modifiedDuringSession: session.modifiedDuringSession),
             alarm: alarm,
             resolvedSettings: settings
         )
@@ -1051,7 +1130,7 @@ final class AlarmStore: ObservableObject {
         await processPendingDisarmChallenges()
     }
 
-    private func startWakeCheckSession(for alarmID: UUID, alarm: AlarmDefinition, settings: SharedAlarmSettings) async {
+    func startWakeCheckSession(for alarmID: UUID, alarm: AlarmDefinition, settings: SharedAlarmSettings) async {
         let previousSession = wakeCheckSessions[alarmID]
         let existingCycle = previousSession?.cycle ?? 0
         let newCycle = existingCycle + 1
@@ -1091,22 +1170,22 @@ final class AlarmStore: ObservableObject {
         // state machine's `.persist` effect before this session starts.
 
         // Schedule notification
-        let notifCenter = UNUserNotificationCenter.current()
-        let notifSettings = await notifCenter.notificationSettings()
-        if notifSettings.authorizationStatus == .authorized {
-            let content = UNMutableNotificationContent()
-            content.title = String(localized: "wake_check_notification_title")
-            content.body = String(localized: "wake_check_notification_body")
-            content.sound = .default
-            content.categoryIdentifier = WakeUpCheckNotificationConstants.categoryID
-            content.userInfo = [
-                WakeUpCheckNotificationConstants.alarmIDUserInfoKey: alarmID.uuidString,
-                WakeUpCheckNotificationConstants.cycleUserInfoKey: newCycle,
-            ]
-
-            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, checkDelay), repeats: false)
-            let request = UNNotificationRequest(identifier: notificationID, content: content, trigger: trigger)
-            try? await notifCenter.add(request)
+        guard isCurrentWakeCheckSession(alarmID: alarmID, cycle: newCycle) else { return }
+        await wakeCheckNotificationService.scheduleWakeCheckNotification(
+            alarmID: alarmID,
+            cycle: newCycle,
+            triggerDate: checkAt,
+            shouldSchedule: { [weak self] in
+                self?.isCurrentWakeCheckSession(alarmID: alarmID, cycle: newCycle) ?? false
+            }
+        )
+        compensateWakeCheckStartupIfAlarmWasDeleted(alarmID: alarmID, notificationID: notificationID)
+        guard isCurrentWakeCheckSession(alarmID: alarmID, cycle: newCycle) else {
+            // The session moved on while the add was in flight; the pre-write
+            // check inside the service cannot see a removal that lands during
+            // the add itself, so drop the possibly-registered notification.
+            wakeCheckNotificationService.cancelNotification(id: notificationID)
+            return
         }
 
         // Schedule backup alarm at deadline. Deliberately reuses the alarm's
@@ -1118,8 +1197,45 @@ final class AlarmStore: ObservableObject {
             deadlineAt: deadlineAt,
             resolvedSettings: settings
         )
+        guard isCurrentWakeCheckSession(alarmID: alarmID, cycle: newCycle) else { return }
         recordAlertReference(alarmKitID: alarmID, expectedFireDate: deadlineAt, settings: settings)
         _ = try? await alarmManager.schedule(id: alarmID, configuration: config)
+        compensateWakeCheckStartupIfAlarmWasDeleted(alarmID: alarmID, notificationID: notificationID)
+        await reconcileLateWakeCheckBackupWrite(alarmID: alarmID, cycle: newCycle)
+    }
+
+    /// The backup write above can land AFTER the session it belongs to has
+    /// ended (confirm) or been replaced (a new cycle), because the schedule
+    /// call suspends and the pre-write cycle guard cannot see changes that
+    /// happen during the call itself. A stale write occupies the canonical
+    /// slot, so repair from the CURRENT session/model state — a blind cancel
+    /// would kill a confirmed alarm's re-armed canonical registration.
+    private func reconcileLateWakeCheckBackupWrite(alarmID: UUID, cycle: Int) async {
+        guard let alarm = alarms.first(where: { $0.id == alarmID }) else { return }
+
+        if let current = wakeCheckSessions[alarmID] {
+            guard current.cycle != cycle else { return }
+            // A newer cycle owns the canonical slot; restore its backup.
+            let settings = resolvedSettingsForAlarm(alarm)
+            let config = AlarmConfigurationBuilder.makeWakeCheckBackupConfiguration(
+                for: alarm,
+                deadlineAt: current.deadlineAt,
+                resolvedSettings: settings
+            )
+            recordAlertReference(alarmKitID: alarmID, expectedFireDate: current.deadlineAt, settings: settings)
+            _ = try? await alarmManager.schedule(id: alarmID, configuration: config)
+            return
+        }
+
+        // Session ended while the write was in flight; restore whatever the
+        // confirm branch left behind (R-7.7): a re-armed canonical schedule
+        // for an enabled, non-overridden alarm, an empty slot otherwise.
+        if alarm.isEnabled, alarm.activeOverride == nil, alarm.lifecycleState == .scheduled {
+            await scheduleAlarm(alarm)
+        } else {
+            try? alarmManager.stop(id: alarmID)
+            try? alarmManager.cancel(id: alarmID)
+        }
     }
 
     // MARK: - Error Display
@@ -1169,7 +1285,12 @@ final class AlarmStore: ObservableObject {
 
     /// Force-reschedule: stops and cancels before scheduling.
     /// Used when updating config on an already-active alarm.
-    private func forceRescheduleAlarm(_ alarm: UserAlarm) async {
+    func forceRescheduleAlarm(_ alarm: UserAlarm) async {
+        let hasWakeCheckSession = wakeCheckSessions[alarm.id] != nil
+        if hasWakeCheckSession {
+            markWakeCheckSessionModified(for: alarm.id)
+        }
+
         if let override = alarm.activeOverride {
             // Cancel all existing bridge alarms
             for bridgeID in override.bridgeAlarmIDs {
@@ -1207,7 +1328,9 @@ final class AlarmStore: ObservableObject {
                 saveAlarms()
             }
 
-            runtimePhases[alarm.id] = .overrideActive(bridgeAlarmIDs: Set(newBridgeIDs))
+            if !hasWakeCheckSession {
+                runtimePhases[alarm.id] = .overrideActive(bridgeAlarmIDs: Set(newBridgeIDs))
+            }
 
             for (i, bridgeID) in newBridgeIDs.enumerated() {
                 await scheduleBridgeAlarm(
@@ -1216,7 +1339,7 @@ final class AlarmStore: ObservableObject {
                     parentAlarm: updatedAlarm
                 )
             }
-        } else {
+        } else if !hasWakeCheckSession {
             // Normal reschedule (existing path)
             try? alarmManager.stop(id: alarm.id)
             try? alarmManager.cancel(id: alarm.id)
@@ -1291,6 +1414,8 @@ final class AlarmStore: ObservableObject {
         alarms = sortAlarms(alarms)
         saveAlarms()
 
+        markWakeCheckSessionModified(for: alarm.id)
+
         // Cancel canonical schedule and enter override phase via the state machine
         await process(event: .overrideActivated(bridgeAlarmIDs: Set(bridgeIDs)), for: alarm.id)
 
@@ -1315,10 +1440,14 @@ final class AlarmStore: ObservableObject {
         alarms[index].nextTriggerOverrideDate = nil
         alarms[index].isEnabled = true
         alarms[index].snoozeCount = 0
-        alarms[index].lifecycleState = .scheduled
+        if wakeCheckSessions[alarm.id] == nil {
+            alarms[index].lifecycleState = .scheduled
+        }
         alarms[index].updatedAt = .now
         alarms = sortAlarms(alarms)
         saveAlarms()
+
+        markWakeCheckSessionModified(for: alarm.id)
 
         // Cancels bridges and re-registers the canonical schedule.
         await process(event: .overrideRestored(bridgeAlarmIDs: bridgeIDs), for: alarm.id)
@@ -1513,7 +1642,7 @@ final class AlarmStore: ObservableObject {
         }
     }
 
-    private func rebuildRuntimePhases() {
+    func rebuildRuntimePhases() {
         let runtimeAlarms: [Alarm]
         do {
             runtimeAlarms = try alarmManager.alarms
@@ -1524,16 +1653,27 @@ final class AlarmStore: ObservableObject {
         let runtimeByID = Dictionary(uniqueKeysWithValues: runtimeAlarms.map { ($0.id, $0) })
         let pendingDisarmIDs = persistence.loadPendingDisarmAlarmIDs()
 
-        alarmLoop: for alarm in alarms {
+        var healedLifecycleState = false
+
+        alarmLoop: for index in alarms.indices {
+            var alarm = alarms[index]
             // Persisted lifecycle state takes priority for post-alerting phases.
             // AlarmKit may still report .alerting briefly after StopIntent runs.
             if alarm.lifecycleState == .awaitingDisarmChallenge {
                 runtimePhases[alarm.id] = .awaitingDisarmChallenge(
                     alarmKitID: pendingDisarmAlarmKitID(for: alarm, pendingIDs: pendingDisarmIDs)
                 )
-            } else if alarm.lifecycleState == .awaitingWakeCheck {
+            } else if alarm.lifecycleState == .awaitingWakeCheck, wakeCheckSessions[alarm.id] != nil {
                 runtimePhases[alarm.id] = .awaitingWakeCheck
-            } else if let override = alarm.activeOverride {
+                continue alarmLoop
+            } else {
+                if alarm.lifecycleState == .awaitingWakeCheck {
+                    alarm.lifecycleState = .scheduled
+                    alarms[index] = alarm
+                    healedLifecycleState = true
+                }
+
+                if let override = alarm.activeOverride {
                 // Override-active alarms: check bridge IDs in AlarmKit
                 // The canonical alarm.id is NOT in AlarmKit when an override is active —
                 // only bridge IDs are registered.
@@ -1558,7 +1698,7 @@ final class AlarmStore: ObservableObject {
                 let liveBridgeIDs = Set(override.bridgeAlarmIDs.filter { runtimeByID[$0] != nil })
                 runtimePhases[alarm.id] = .overrideActive(bridgeAlarmIDs: liveBridgeIDs)
                 continue alarmLoop
-            } else if let runtime = runtimeByID[alarm.id] {
+                } else if let runtime = runtimeByID[alarm.id] {
                 switch runtime.state {
                 case .alerting:
                     runtimePhases[alarm.id] = .alerting(alarmKitID: alarm.id)
@@ -1573,20 +1713,26 @@ final class AlarmStore: ObservableObject {
                 @unknown default:
                     runtimePhases[alarm.id] = .idle
                 }
-            } else if alarm.isEnabled {
-                runtimePhases[alarm.id] = .idle
-            } else {
-                runtimePhases[alarm.id] = .idle
+                } else if alarm.isEnabled {
+                    runtimePhases[alarm.id] = .idle
+                } else {
+                    runtimePhases[alarm.id] = .idle
+                }
             }
+        }
+
+        if healedLifecycleState {
+            saveAlarms()
         }
     }
 
     // MARK: - Observe AlarmKit Updates
 
     private func observeAlarmUpdates() {
+        guard let alarmUpdates = alarmManager.alarmUpdatesForStore() else { return }
         alarmUpdatesTask = Task { [weak self] in
             guard let self else { return }
-            for await incoming in alarmManager.alarmUpdates {
+            for await incoming in alarmUpdates {
                 guard !Task.isCancelled else { return }
                 await self.applyRemoteAlarms(incoming)
             }
@@ -1698,6 +1844,25 @@ final class AlarmStore: ObservableObject {
     }
 
     // MARK: - Wake-Up Check Helpers
+
+    private func markWakeCheckSessionModified(for alarmID: UUID) {
+        guard var session = wakeCheckSessions[alarmID], !session.modifiedDuringSession else { return }
+        session.modifiedDuringSession = true
+        wakeCheckSessions[alarmID] = session
+        persistence.saveWakeCheckSessions(wakeCheckSessions)
+    }
+
+    private func isCurrentWakeCheckSession(alarmID: UUID, cycle: Int) -> Bool {
+        wakeCheckSessions[alarmID]?.cycle == cycle
+    }
+
+    private func compensateWakeCheckStartupIfAlarmWasDeleted(alarmID: UUID, notificationID: String) {
+        guard !alarms.contains(where: { $0.id == alarmID }) else { return }
+        wakeCheckNotificationService.cancelNotification(id: notificationID)
+        try? alarmManager.stop(id: alarmID)
+        try? alarmManager.cancel(id: alarmID)
+        alertReferenceStore.clear(alarmKitID: alarmID)
+    }
 
     private func loadWakeCheckSessionsFromPersistence() {
         wakeCheckSessions = persistence.loadWakeCheckSessions()

@@ -114,7 +114,19 @@ extension Notification.Name {
 // MARK: - WakeUpCheckNotificationService
 
 @MainActor
-final class WakeUpCheckNotificationService {
+protocol WakeUpCheckNotificationServicing: AnyObject {
+    func scheduleWakeCheckNotification(
+        alarmID: UUID,
+        cycle: Int,
+        triggerDate: Date,
+        shouldSchedule: @escaping @MainActor () -> Bool
+    ) async
+    func cancelNotification(id: String)
+    func ensureCategoryRegistered()
+}
+
+@MainActor
+final class WakeUpCheckNotificationService: WakeUpCheckNotificationServicing {
     private let center: UNUserNotificationCenter
 
     init(center: UNUserNotificationCenter = .current()) {
@@ -124,8 +136,12 @@ final class WakeUpCheckNotificationService {
     func scheduleWakeCheckNotification(
         alarmID: UUID,
         cycle: Int,
-        triggerDate: Date
+        triggerDate: Date,
+        shouldSchedule: @escaping @MainActor () -> Bool
     ) async {
+        let settings = await center.notificationSettings()
+        guard settings.authorizationStatus == .authorized, shouldSchedule() else { return }
+
         let notificationID = WakeUpCheckNotificationConstants.notificationID(alarmID: alarmID, cycle: cycle)
         let content = UNMutableNotificationContent()
         content.title = String(localized: "wake_check_notification_title")

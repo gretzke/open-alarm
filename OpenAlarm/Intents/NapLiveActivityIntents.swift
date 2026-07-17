@@ -30,6 +30,9 @@ struct NapExtendIntent: LiveActivityIntent {
         }
 
         let persistence = AlarmPersistence(defaults: OpenAlarmSharedDefaults.userDefaults)
+        guard persistence.loadWakeCheckSessions()[id] == nil else {
+            return .result()
+        }
         var alarms = persistence.loadUserAlarms()
         guard let index = alarms.firstIndex(where: { $0.id == id && $0.isNap }) else {
             await MainActor.run {
@@ -110,6 +113,9 @@ struct NapPauseIntent: LiveActivityIntent {
         }
 
         let persistence = AlarmPersistence(defaults: OpenAlarmSharedDefaults.userDefaults)
+        guard persistence.loadWakeCheckSessions()[id] == nil else {
+            return .result()
+        }
         var alarms = persistence.loadUserAlarms()
         guard let index = alarms.firstIndex(where: { $0.id == id && $0.isNap }) else {
             await MainActor.run {
@@ -166,6 +172,9 @@ struct NapResumeIntent: LiveActivityIntent {
         }
 
         let persistence = AlarmPersistence(defaults: OpenAlarmSharedDefaults.userDefaults)
+        guard persistence.loadWakeCheckSessions()[id] == nil else {
+            return .result()
+        }
         var alarms = persistence.loadUserAlarms()
         guard let index = alarms.firstIndex(where: { $0.id == id && $0.isNap }) else {
             await MainActor.run {

@@ -62,7 +62,7 @@ struct AppRootView: View {
                     alarmStore.openSettings()
                 },
                 onDisableFeature: {
-                    alarmStore.disableWakeUpCheckFeatureGlobally()
+                    Task { await alarmStore.disableWakeUpCheckFeatureGlobally() }
                     showWakeCheckPermissionDeniedPrompt = false
                 }
             )

@@ -30,7 +30,7 @@ enum AlarmEvent: Equatable, Sendable {
     /// disarm challenge is being presented. `alarmKitID` may be a bridge UUID.
     case disarmRequested(alarmKitID: UUID)
     case challengeCompleted(alarmKitID: UUID)
-    case wakeCheckConfirmed
+    case wakeCheckConfirmed(modifiedDuringSession: Bool)
     /// Bridge alarms were computed and are about to be scheduled by the store.
     case overrideActivated(bridgeAlarmIDs: Set<UUID>)
     /// The override lifecycle finished (anchor passed or user un-skipped);
@@ -86,6 +86,15 @@ enum AlarmStateMachine {
                 phase: .idle,
                 effects: [.cancelAlarmKit(ids: idsToCancel), .deleteAlarm(alarm.id)]
             )
+
+        // MARK: - Wake-check session modifications (R-7.9)
+
+        case (.awaitingWakeCheck, .disabled), (.awaitingWakeCheck, .enabled), (.awaitingWakeCheck, .updated), (.awaitingWakeCheck, .overrideActivated):
+            return TransitionResult(phase: .awaitingWakeCheck, effects: [])
+
+        case (.awaitingWakeCheck, .overrideRestored(let bridgeIDs)):
+            let effects: [SchedulingSideEffect] = bridgeIDs.isEmpty ? [] : [.cancelAlarmKit(ids: bridgeIDs)]
+            return TransitionResult(phase: .awaitingWakeCheck, effects: effects)
 
         // MARK: - Disable (from any state)
 
@@ -161,9 +170,10 @@ enum AlarmStateMachine {
             )
 
         // MARK: - Wake-check confirmed
-        // Branch priority (R-7.7): override > repeating > delete-on-use > kept.
+        // Branch priority (R-7.7): override > disabled > repeating > modified
+        // one-shot > delete-on-use > kept.
 
-        case (.awaitingWakeCheck, .wakeCheckConfirmed):
+        case (.awaitingWakeCheck, .wakeCheckConfirmed(let modifiedDuringSession)):
             if let override = alarm.activeOverride {
                 return TransitionResult(
                     phase: .overrideActive(bridgeAlarmIDs: Set(override.bridgeAlarmIDs)),
@@ -171,7 +181,24 @@ enum AlarmStateMachine {
                 )
             }
 
+            if !alarm.isEnabled {
+                return TransitionResult(
+                    phase: .idle,
+                    effects: [.persist(bookkept(alarm, now: now, lifecycleState: .scheduled))]
+                )
+            }
+
             if alarm.isRepeating {
+                return TransitionResult(
+                    phase: .scheduled(alarmKitIDs: [alarm.id]),
+                    effects: [
+                        .persist(bookkept(alarm, now: now, lifecycleState: .scheduled)),
+                        .scheduleAlarmKit(alarmID: alarm.id),
+                    ]
+                )
+            }
+
+            if modifiedDuringSession {
                 return TransitionResult(
                     phase: .scheduled(alarmKitIDs: [alarm.id]),
                     effects: [

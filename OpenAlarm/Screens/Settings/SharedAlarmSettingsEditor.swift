@@ -320,7 +320,7 @@ struct SharedAlarmSettingsEditor: View {
                     },
                     onDisableFeature: {
                         settings.wakeUpCheckEnabled = false
-                        alarmStore.disableWakeUpCheckFeatureGlobally()
+                        Task { await alarmStore.disableWakeUpCheckFeatureGlobally() }
                         wakeCheckPermissionFlowStep = nil
                     }
                 )
