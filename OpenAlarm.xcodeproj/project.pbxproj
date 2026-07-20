@@ -1166,7 +1166,7 @@
 					"@executable_path/Frameworks",
 				);
 				LOCALIZATIONS = "en de";
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gretzke.openalarm;
 				PRODUCT_NAME = OpenAlarm;
 				SDKROOT = iphoneos;
@@ -1274,7 +1274,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gretzke.openalarm.liveactivities;
 				PRODUCT_NAME = OpenAlarmLiveActivities;
 				SDKROOT = iphoneos;
@@ -1300,7 +1300,7 @@
 					"@executable_path/Frameworks",
 				);
 				LOCALIZATIONS = "en de";
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gretzke.openalarm;
 				PRODUCT_NAME = OpenAlarm;
 				SDKROOT = iphoneos;
@@ -1325,7 +1325,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gretzke.openalarm.liveactivities;
 				PRODUCT_NAME = OpenAlarmLiveActivities;
 				SDKROOT = iphoneos;
