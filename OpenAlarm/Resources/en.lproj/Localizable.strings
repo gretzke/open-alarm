@@ -154,6 +154,9 @@
 "credits_sounds_title" = "Sounds";
 "credits_changes" = "Audio was transcoded for the app. Longer recordings were trimmed and fade-edited; short alarm sounds were converted without trimming.";
 "credits_full_ledger" = "View the complete attribution ledger";
+"credits_testing_mode_unlock_countdown" = "%d more taps to unlock testing mode";
+"credits_testing_mode_unlocked" = "Testing mode unlocked";
+"credits_testing_mode_already_unlocked" = "Testing mode is already unlocked";
 "settings_pin_alarm_volume_toggle" = "Pin alarm volume";
 "settings_pin_alarm_volume_footnote" = "During an alarm, OpenAlarm holds the system volume at the configured alarm volume so the alarm cannot be silenced with the volume buttons. Turn this off to let volume buttons work normally during alarms.";
 "settings_temporary_mute_footnote" = "During a ringing challenge, you can silence the alarm sound for 30 seconds at a time with the mute button. It fades back in automatically.";

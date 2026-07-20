@@ -15,6 +15,7 @@ final class AlarmPersistence: Sendable {
     private let userAlarmsKey = "OPENALARM_USER_ALARMS_V1"
     private let defaultSharedSettingsKey = "OPENALARM_DEFAULT_SHARED_SETTINGS_V1"
     private let testingModeEnabledKey = "OPENALARM_TESTING_MODE_ENABLED_V1"
+    private let testingSectionUnlockedKey = "OPENALARM_TESTING_SECTION_UNLOCKED_V1"
     private let pinAlarmVolumeEnabledKey = "OPENALARM_PIN_ALARM_VOLUME_ENABLED_V1"
     private let napDefaultSharedSettingsKey = "OPENALARM_NAP_DEFAULT_SHARED_SETTINGS_V1"
     private let defaultNapDurationMinutesKey = "OPENALARM_DEFAULT_NAP_DURATION_MINUTES_V1"
@@ -130,6 +131,14 @@ final class AlarmPersistence: Sendable {
 
     func saveTestingModeEnabled(_ enabled: Bool) {
         defaults.set(enabled, forKey: testingModeEnabledKey)
+    }
+
+    func loadTestingSectionUnlocked() -> Bool {
+        defaults.bool(forKey: testingSectionUnlockedKey)
+    }
+
+    func saveTestingSectionUnlocked(_ unlocked: Bool) {
+        defaults.set(unlocked, forKey: testingSectionUnlockedKey)
     }
 
     // MARK: - Pin Alarm Volume

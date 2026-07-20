@@ -1,6 +1,10 @@
 import SwiftUI
 
 struct CreditsView: View {
+    @EnvironmentObject private var alarmStore: AlarmStore
+    @State private var unlockTapCount = 0
+    @State private var showsAlreadyUnlocked = false
+
     private struct Credit: Identifiable {
         let id: String
         let creator: String
@@ -256,6 +260,12 @@ struct CreditsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                if let unlockStatusText {
+                    Text(unlockStatusText)
+                        .font(.footnote)
+                        .foregroundStyle(OAColor.textSecondary)
+                }
+
                 Text(L10n.creditsIntro)
                     .font(.body)
                     .foregroundStyle(OAColor.textSecondary)
@@ -291,6 +301,62 @@ struct CreditsView: View {
         .background(OAColor.background.ignoresSafeArea())
         .navigationTitle(L10n.settingsCreditsTitle)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text(L10n.settingsCreditsTitle)
+                    .font(.headline)
+                    .foregroundStyle(OAColor.textPrimary)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
+                    .onTapGesture(perform: handleTitleTap)
+                    .accessibilityAddTraits(.isButton)
+            }
+        }
+        .onDisappear {
+            unlockTapCount = 0
+            showsAlreadyUnlocked = false
+        }
+    }
+
+    private var unlockStatusText: String? {
+        if showsAlreadyUnlocked {
+            return L10n.creditsTestingModeAlreadyUnlocked
+        }
+
+        if unlockTapCount >= 10 {
+            return L10n.creditsTestingModeUnlocked
+        }
+
+        guard unlockTapCount >= 5 else {
+            return nil
+        }
+
+        return L10n.creditsTestingModeUnlockCountdown(10 - unlockTapCount)
+    }
+
+    private func handleTitleTap() {
+        guard !alarmStore.testingSectionUnlocked else {
+            showsAlreadyUnlocked = true
+            announceUnlockStatus()
+            return
+        }
+
+        unlockTapCount += 1
+
+        if unlockTapCount == 10 {
+            alarmStore.updateTestingSectionUnlocked(true)
+            Haptics.success()
+        } else if unlockTapCount >= 5 {
+            Haptics.impact(.light)
+        }
+        announceUnlockStatus()
+    }
+
+    /// The status line sits outside the focused toolbar element, so VoiceOver
+    /// users would otherwise get no feedback while tapping.
+    private func announceUnlockStatus() {
+        guard let unlockStatusText else { return }
+        AccessibilityNotification.Announcement(unlockStatusText).post()
     }
 
     private func creditSection(title: LocalizedStringKey, credits: [Credit]) -> some View {

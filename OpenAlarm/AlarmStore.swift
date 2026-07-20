@@ -71,6 +71,7 @@ final class AlarmStore: ObservableObject {
     @Published var napDefaultSharedSettings: SharedAlarmSettings?  // nil = use global defaults
     @Published var defaultNapDurationMinutes: Int
     @Published var testingModeEnabled: Bool
+    @Published var testingSectionUnlocked: Bool
     @Published var pinAlarmVolumeEnabled: Bool
     @Published var liveActivitiesEnabled: Bool
     @Published var liveActivitiesSystemEnabled: Bool
@@ -177,6 +178,7 @@ final class AlarmStore: ObservableObject {
         self.napDefaultSharedSettings = persistence.loadNapDefaultSharedSettings()
         self.defaultNapDurationMinutes = persistence.loadDefaultNapDurationMinutes()
         self.testingModeEnabled = persistence.loadTestingModeEnabled()
+        self.testingSectionUnlocked = persistence.loadTestingSectionUnlocked()
         self.pinAlarmVolumeEnabled = persistence.loadPinAlarmVolumeEnabled()
         self.liveActivitiesEnabled = persistence.loadLiveActivitiesEnabled()
         self.liveActivitiesSystemEnabled = ActivityAuthorizationInfo().areActivitiesEnabled
@@ -729,6 +731,11 @@ final class AlarmStore: ObservableObject {
     func updateTestingModeEnabled(_ enabled: Bool) {
         testingModeEnabled = enabled
         persistence.saveTestingModeEnabled(enabled)
+    }
+
+    func updateTestingSectionUnlocked(_ unlocked: Bool) {
+        testingSectionUnlocked = unlocked
+        persistence.saveTestingSectionUnlocked(unlocked)
     }
 
     func updatePinAlarmVolumeEnabled(_ enabled: Bool) {

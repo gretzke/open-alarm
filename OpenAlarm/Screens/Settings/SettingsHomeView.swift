@@ -167,54 +167,33 @@ struct SettingsHomeView: View {
                     .padding(OASpacing.cardPadding)
                     .oaGlassCard()
 
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(L10n.settingsTestingModeTitle)
-                            .font(.headline)
-                            .foregroundStyle(OAColor.textPrimary)
-
-                        Toggle(isOn: Binding(
-                            get: { alarmStore.testingModeEnabled },
-                            set: { alarmStore.updateTestingModeEnabled($0) }
-                        )) {
-                            Text(L10n.settingsTestingModeToggle)
-                                .font(.body.weight(.semibold))
+                    if alarmStore.testingSectionUnlocked || alarmStore.testingModeEnabled {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text(L10n.settingsTestingModeTitle)
+                                .font(.headline)
                                 .foregroundStyle(OAColor.textPrimary)
-                        }
-                        .tint(OAColor.actionCyan)
 
-                        Button {
-                            alarmStore.openSettings()
-                        } label: {
-                            HStack(spacing: 10) {
-                                Text(L10n.actionOpenSettings)
+                            Toggle(isOn: Binding(
+                                get: { alarmStore.testingModeEnabled },
+                                set: { alarmStore.updateTestingModeEnabled($0) }
+                            )) {
+                                Text(L10n.settingsTestingModeToggle)
                                     .font(.body.weight(.semibold))
                                     .foregroundStyle(OAColor.textPrimary)
-
-                                Spacer(minLength: 0)
-
-                                Image(systemName: "arrow.up.right.square")
-                                    .font(.footnote.weight(.semibold))
-                                    .foregroundStyle(OAColor.textSecondary)
                             }
-                            .padding(.horizontal, 16)
-                            .frame(maxWidth: .infinity, minHeight: OASize.rowHeight)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.glass)
-                        .accessibilityIdentifier("settings_open_system_settings")
+                            .tint(OAColor.actionCyan)
 
-                        if alarmStore.testingModeEnabled {
-                            NavigationLink {
-                                DiagnosticsView()
+                            Button {
+                                alarmStore.openSettings()
                             } label: {
                                 HStack(spacing: 10) {
-                                    Text(L10n.settingsDiagnosticsTitle)
+                                    Text(L10n.actionOpenSettings)
                                         .font(.body.weight(.semibold))
                                         .foregroundStyle(OAColor.textPrimary)
 
                                     Spacer(minLength: 0)
 
-                                    Image(systemName: "chevron.right")
+                                    Image(systemName: "arrow.up.right.square")
                                         .font(.footnote.weight(.semibold))
                                         .foregroundStyle(OAColor.textSecondary)
                                 }
@@ -223,11 +202,34 @@ struct SettingsHomeView: View {
                                 .contentShape(Rectangle())
                             }
                             .buttonStyle(.glass)
-                            .accessibilityIdentifier("settings_diagnostics")
+                            .accessibilityIdentifier("settings_open_system_settings")
+
+                            if alarmStore.testingModeEnabled {
+                                NavigationLink {
+                                    DiagnosticsView()
+                                } label: {
+                                    HStack(spacing: 10) {
+                                        Text(L10n.settingsDiagnosticsTitle)
+                                            .font(.body.weight(.semibold))
+                                            .foregroundStyle(OAColor.textPrimary)
+
+                                        Spacer(minLength: 0)
+
+                                        Image(systemName: "chevron.right")
+                                            .font(.footnote.weight(.semibold))
+                                            .foregroundStyle(OAColor.textSecondary)
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .frame(maxWidth: .infinity, minHeight: OASize.rowHeight)
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.glass)
+                                .accessibilityIdentifier("settings_diagnostics")
+                            }
                         }
+                        .padding(OASpacing.cardPadding)
+                        .oaGlassCard()
                     }
-                    .padding(OASpacing.cardPadding)
-                    .oaGlassCard()
 
                     NavigationLink {
                         CreditsView()

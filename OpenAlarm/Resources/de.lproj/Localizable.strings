@@ -154,6 +154,9 @@
 "credits_sounds_title" = "Klänge";
 "credits_changes" = "Audio wurde für die App transkodiert. Längere Aufnahmen wurden gekürzt und ausgeblendet; kurze Alarmtöne wurden ohne Kürzung konvertiert.";
 "credits_full_ledger" = "Vollständige Quellenangaben anzeigen";
+"credits_testing_mode_unlock_countdown" = "Noch %d Mal tippen, um den Testmodus freizuschalten";
+"credits_testing_mode_unlocked" = "Testmodus freigeschaltet";
+"credits_testing_mode_already_unlocked" = "Testmodus ist bereits freigeschaltet";
 "settings_pin_alarm_volume_toggle" = "Alarmlautstärke fixieren";
 "settings_pin_alarm_volume_footnote" = "Während eines Alarms hält OpenAlarm die Systemlautstärke auf der eingestellten Alarmlautstärke, damit der Alarm nicht über die Lautstärketasten stummgeschaltet werden kann. Deaktiviere das, wenn die Lautstärketasten während Alarmen normal funktionieren sollen.";
 "settings_temporary_mute_footnote" = "Während einer klingelnden Aufgabe kannst du den Alarmton mit der Stummschalten-Taste jeweils für 30 Sekunden stummschalten. Danach wird er automatisch wieder eingeblendet.";

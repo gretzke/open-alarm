@@ -96,6 +96,8 @@ enum L10n {
     static let creditsSoundsTitle: LocalizedStringKey = "credits_sounds_title"
     static let creditsChanges: LocalizedStringKey = "credits_changes"
     static let creditsFullLedger: LocalizedStringKey = "credits_full_ledger"
+    static let creditsTestingModeUnlocked = String(localized: "credits_testing_mode_unlocked")
+    static let creditsTestingModeAlreadyUnlocked = String(localized: "credits_testing_mode_already_unlocked")
     static let settingsPinAlarmVolumeToggle: LocalizedStringKey = "settings_pin_alarm_volume_toggle"
     static let settingsPinAlarmVolumeFootnote: LocalizedStringKey = "settings_pin_alarm_volume_footnote"
     static let settingsTemporaryMuteFootnote: LocalizedStringKey = "settings_temporary_mute_footnote"
@@ -189,6 +191,10 @@ enum L10n {
 
     static func taskStepsCounter(_ steps: Int, goal: Int) -> String {
         String(format: String(localized: "task_steps_counter_format"), steps, goal)
+    }
+
+    static func creditsTestingModeUnlockCountdown(_ remainingTaps: Int) -> String {
+        String(format: String(localized: "credits_testing_mode_unlock_countdown"), remainingTaps)
     }
 
     static func taskScanObjectName(_ identifier: String) -> String {
