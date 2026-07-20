@@ -55,7 +55,7 @@ final class HapticRamp {
             try? player?.stop(atTime: CHHapticTimeImmediate)
         }
         isPlaying = false
-        try? engine?.stop()
+        engine?.stop()
     }
 
     private func createEngineAndPlayer() {
