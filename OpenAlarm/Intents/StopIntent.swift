@@ -42,8 +42,14 @@ struct StopIntent: LiveActivityIntent {
         // guard: two reads could disagree across a concurrent full-blob write
         // and cancel a registration the newer snapshot owns.
         let modelAlarms = persistence.loadUserAlarms()
+        let alertReferenceStore = AlertReferenceStore()
 
-        if let resolved = Self.resolveParentAlarm(for: id, in: modelAlarms, persistence: persistence) {
+        if let resolved = Self.resolveParentAlarm(
+            for: id,
+            in: modelAlarms,
+            persistence: persistence,
+            alertReferenceStore: alertReferenceStore
+        ) {
             let parentID = resolved.alarm.id
             let previous = BackstopSlotStore.backstopID(forParent: parentID)
             // Snapshot once: the toggle is mutable shared state, and the log must
@@ -69,10 +75,9 @@ struct StopIntent: LiveActivityIntent {
             pendingDisarm.remove(id)
             persistence.savePendingDisarmAlarmIDs(pendingDisarm)
             IntentDiagnostics.log("StopIntent resolved parent=unresolved id=\(id.uuidString) pending=removed")
-            // Backstop configurations carry the parent UUID, not always the
-            // ringing registration's ID; within this snapshot an unresolved
-            // backstop can target only that deleted parent's orphaned canonical
-            // slot, never a live owner (D-3 torn reads remain the accepted risk).
+            // This is a genuine model-and-registry double miss. Backstop
+            // configurations carry the parent UUID, not always the ringing
+            // registration's ID; D-3 torn reads hiding both remain accepted.
             // This is event-driven single-ID cleanup, never an AlarmKit sweep.
             if StopIntentPolicy.shouldCancelUnresolved(alarms: modelAlarms) {
                 try? AlarmManager.shared.cancel(id: id)
@@ -99,23 +104,30 @@ struct StopIntent: LiveActivityIntent {
         }
     }
 
-    private struct ResolvedAlarm {
+    struct ResolvedAlarm {
         var alarm: AlarmDefinition
         var settings: SharedAlarmSettings
     }
 
-    private static func resolveParentAlarm(
+    static func resolveParentAlarm(
         for alarmKitID: UUID,
         in alarms: [AlarmDefinition],
-        persistence: AlarmPersistence
+        persistence: AlarmPersistence,
+        alertReferenceStore: AlertReferenceStore = AlertReferenceStore()
     ) -> ResolvedAlarm? {
         let index = alarms.firstIndex { alarm in
             alarm.id == alarmKitID
         } ?? alarms.firstIndex { alarm in
             alarm.activeOverride?.bridgeAlarmIDs.contains(alarmKitID) == true
         }
-        guard let index else { return nil }
-        return resolvedAlarm(for: alarms[index], persistence: persistence)
+        if let index {
+            return resolvedAlarm(for: alarms[index], persistence: persistence)
+        }
+        guard let parentAlarmID = alertReferenceStore.reference(alarmKitID: alarmKitID)?.parentAlarmID,
+              let parentIndex = alarms.firstIndex(where: { $0.id == parentAlarmID }) else {
+            return nil
+        }
+        return resolvedAlarm(for: alarms[parentIndex], persistence: persistence)
     }
 
     private static func resolvedAlarm(
@@ -152,7 +164,10 @@ struct StopIntent: LiveActivityIntent {
             AlertReferenceStore().record(
                 AlertReference(
                     expectedFireDate: fireDate,
-                    ringtoneID: RingtoneCatalog.resolve(settings.ringtoneID).id
+                    ringtoneID: RingtoneCatalog.resolve(settings.ringtoneID).id,
+                    // This overwrites the parent-keyed registration by design; the
+                    // parent mapping remains identical while alertStartedAt updates.
+                    parentAlarmID: alarm.id
                 ),
                 alarmKitID: alarm.id
             )
@@ -165,7 +180,9 @@ struct StopIntent: LiveActivityIntent {
                 AlertReferenceStore().record(
                     AlertReference(
                         expectedFireDate: fireDate,
-                        ringtoneID: RingtoneCatalog.resolve(settings.ringtoneID).id
+                        ringtoneID: RingtoneCatalog.resolve(settings.ringtoneID).id,
+                        // Preserve the same parent mapping on the retry overwrite.
+                        parentAlarmID: alarm.id
                     ),
                     alarmKitID: alarm.id
                 )

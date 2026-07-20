@@ -57,7 +57,10 @@ final class ForceCloseAlarmManager {
                 AlertReferenceStore().record(
                     AlertReference(
                         expectedFireDate: fireDate,
-                        ringtoneID: RingtoneCatalog.resolve(resolvedSettings.ringtoneID).id
+                        ringtoneID: RingtoneCatalog.resolve(resolvedSettings.ringtoneID).id,
+                        // Parent-keyed by design; overwrite keeps this mapping
+                        // stable while refreshing the backstop fire time.
+                        parentAlarmID: mainAlarm.id
                     ),
                     alarmKitID: mainAlarm.id
                 )

@@ -3,6 +3,9 @@ import Foundation
 struct AlertReference: Codable, Equatable, Sendable {
     let expectedFireDate: Date
     let ringtoneID: String
+    /// The model alarm that owns this AlarmKit registration. Optional solely so
+    /// pre-registry entries continue to decode without a migration.
+    let parentAlarmID: UUID?
 }
 
 /// Each reference lives under its own defaults key. The app and the Live Activity
@@ -31,11 +34,37 @@ struct AlertReferenceStore {
         defaults.removeObject(forKey: Self.key(for: alarmKitID))
     }
 
-    func sweep(keeping activeIDs: Set<UUID>) {
+    func sweep(
+        keeping activeIDs: Set<UUID>,
+        existingParentAlarmIDs: Set<UUID>,
+        now: Date = .now
+    ) {
         let keptKeys = Set(activeIDs.map(Self.key(for:)))
         for key in defaults.dictionaryRepresentation().keys
-        where key.hasPrefix(Self.keyPrefix) && !keptKeys.contains(key) {
-            defaults.removeObject(forKey: key)
+        where key.hasPrefix(Self.keyPrefix) {
+            // Active keys are kept unconditionally, BEFORE decoding: an intent
+            // in another process may replace the entry between our read and
+            // the removal, and an undecodable snapshot must never delete a
+            // live registration's reference.
+            guard !keptKeys.contains(key) else { continue }
+
+            guard let data = defaults.data(forKey: key),
+                  let reference = try? JSONDecoder().decode(AlertReference.self, from: data) else {
+                defaults.removeObject(forKey: key)
+                continue
+            }
+
+            let retentionStart = now.addingTimeInterval(-SchedulingConstants.referenceRetentionSeconds)
+            let shouldRetainRecentFiring = reference.parentAlarmID.map { parentAlarmID in
+                existingParentAlarmIDs.contains(parentAlarmID)
+                    && reference.expectedFireDate > retentionStart
+                    && reference.expectedFireDate <= now
+            } ?? false
+
+            guard shouldRetainRecentFiring else {
+                defaults.removeObject(forKey: key)
+                continue
+            }
         }
     }
 

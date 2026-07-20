@@ -984,7 +984,12 @@ final class AlarmStore: ObservableObject {
                     )
                     try? alarmManager.stop(id: alarmID)
                     try? alarmManager.cancel(id: alarmID)
-                    recordAlertReference(alarmKitID: alarmID, expectedFireDate: newDeadline, settings: settings)
+                    recordAlertReference(
+                        alarmKitID: alarmID,
+                        expectedFireDate: newDeadline,
+                        settings: settings,
+                        parentAlarmID: alarm.id
+                    )
                     _ = try? await alarmManager.schedule(id: alarmID, configuration: config)
                 }
 
@@ -1211,7 +1216,12 @@ final class AlarmStore: ObservableObject {
             resolvedSettings: settings
         )
         guard isCurrentWakeCheckSession(alarmID: alarmID, cycle: newCycle) else { return }
-        recordAlertReference(alarmKitID: alarmID, expectedFireDate: deadlineAt, settings: settings)
+        recordAlertReference(
+            alarmKitID: alarmID,
+            expectedFireDate: deadlineAt,
+            settings: settings,
+            parentAlarmID: alarm.id
+        )
         _ = try? await alarmManager.schedule(id: alarmID, configuration: config)
         compensateWakeCheckStartupIfAlarmWasDeleted(alarmID: alarmID, notificationID: notificationID)
         await reconcileLateWakeCheckBackupWrite(alarmID: alarmID, cycle: newCycle)
@@ -1235,7 +1245,12 @@ final class AlarmStore: ObservableObject {
                 deadlineAt: current.deadlineAt,
                 resolvedSettings: settings
             )
-            recordAlertReference(alarmKitID: alarmID, expectedFireDate: current.deadlineAt, settings: settings)
+            recordAlertReference(
+                alarmKitID: alarmID,
+                expectedFireDate: current.deadlineAt,
+                settings: settings,
+                parentAlarmID: alarm.id
+            )
             _ = try? await alarmManager.schedule(id: alarmID, configuration: config)
             return
         }
@@ -1363,7 +1378,7 @@ final class AlarmStore: ObservableObject {
             let runtimeSchedule = AlarmScheduleResolver.runtimeSchedule(for: alarm)
             let config = makeConfiguration(for: alarm, schedule: runtimeSchedule)
             do {
-                recordAlertReference(alarmKitID: alarm.id, for: alarm)
+                recordAlertReference(alarmKitID: alarm.id, for: alarm, parentAlarmID: alarm.id)
                 _ = try await alarmManager.schedule(id: alarm.id, configuration: config)
             } catch {
                 Self.logger.error("Force reschedule failed for \(alarm.id): \(error.localizedDescription)")
@@ -1381,14 +1396,14 @@ final class AlarmStore: ObservableObject {
         let config = makeConfiguration(for: alarm, schedule: runtimeSchedule)
 
         do {
-            recordAlertReference(alarmKitID: alarm.id, for: alarm)
+            recordAlertReference(alarmKitID: alarm.id, for: alarm, parentAlarmID: alarm.id)
             _ = try await alarmManager.schedule(id: alarm.id, configuration: config)
         } catch {
             Self.logger.warning("Schedule failed for \(alarm.id), retrying: \(error.localizedDescription)")
             try? alarmManager.stop(id: alarm.id)
             try? alarmManager.cancel(id: alarm.id)
             do {
-                recordAlertReference(alarmKitID: alarm.id, for: alarm)
+                recordAlertReference(alarmKitID: alarm.id, for: alarm, parentAlarmID: alarm.id)
                 _ = try await alarmManager.schedule(id: alarm.id, configuration: config)
             } catch {
                 Self.logger.error("Retry schedule failed for \(alarm.id): \(error.localizedDescription)")
@@ -1483,7 +1498,8 @@ final class AlarmStore: ObservableObject {
             recordAlertReference(
                 alarmKitID: bridgeID,
                 expectedFireDate: date,
-                settings: resolvedSettingsForAlarm(parentAlarm)
+                settings: resolvedSettingsForAlarm(parentAlarm),
+                parentAlarmID: parentAlarm.id
             )
             _ = try await alarmManager.schedule(id: bridgeID, configuration: config)
         } catch {
@@ -1494,7 +1510,8 @@ final class AlarmStore: ObservableObject {
                 recordAlertReference(
                     alarmKitID: bridgeID,
                     expectedFireDate: date,
-                    settings: resolvedSettingsForAlarm(parentAlarm)
+                    settings: resolvedSettingsForAlarm(parentAlarm),
+                    parentAlarmID: parentAlarm.id
                 )
                 _ = try await alarmManager.schedule(id: bridgeID, configuration: config)
             } catch {
@@ -1528,23 +1545,28 @@ final class AlarmStore: ObservableObject {
     private func recordAlertReference(
         alarmKitID: UUID,
         expectedFireDate: Date,
-        settings: SharedAlarmSettings
+        settings: SharedAlarmSettings,
+        parentAlarmID: UUID
     ) {
         alertReferenceStore.record(
             AlertReference(
                 expectedFireDate: expectedFireDate,
-                ringtoneID: RingtoneCatalog.resolve(settings.ringtoneID).id
+                ringtoneID: RingtoneCatalog.resolve(settings.ringtoneID).id,
+                parentAlarmID: parentAlarmID
             ),
             alarmKitID: alarmKitID
         )
     }
 
-    private func recordAlertReference(alarmKitID: UUID, for alarm: UserAlarm) {
-        guard let expectedFireDate = nextExpectedFireDate(for: alarm) else { return }
+    private func recordAlertReference(alarmKitID: UUID, for alarm: UserAlarm, parentAlarmID: UUID) {
+        // Schedule may proceed even when recurrence math cannot yield a date;
+        // write a conservative reference so every registration still has a parent mapping.
+        let expectedFireDate = nextExpectedFireDate(for: alarm) ?? .now
         recordAlertReference(
             alarmKitID: alarmKitID,
             expectedFireDate: expectedFireDate,
-            settings: resolvedSettingsForAlarm(alarm)
+            settings: resolvedSettingsForAlarm(alarm),
+            parentAlarmID: parentAlarmID
         )
     }
 
@@ -1584,13 +1606,17 @@ final class AlarmStore: ObservableObject {
 
     // MARK: - Bridge Alarm Resolution
 
-    /// Resolves the parent alarm for a given AlarmKit ID. Returns the alarm directly if the ID
-    /// matches an alarm's own ID, or scans activeOverride.bridgeAlarmIDs for bridge alarms.
-    private func resolveParentAlarm(for alarmKitID: UUID) -> (alarm: AlarmDefinition, index: Int)? {
+    /// Resolves from the loaded model first, then from a schedule-time registry
+    /// entry whose parent still exists in that same model snapshot.
+    func resolveParentAlarm(for alarmKitID: UUID) -> (alarm: AlarmDefinition, index: Int)? {
         if let index = alarms.firstIndex(where: { $0.id == alarmKitID }) {
             return (alarms[index], index)
         }
         if let index = alarms.firstIndex(where: { $0.activeOverride?.bridgeAlarmIDs.contains(alarmKitID) == true }) {
+            return (alarms[index], index)
+        }
+        if let parentAlarmID = alertReferenceStore.reference(alarmKitID: alarmKitID)?.parentAlarmID,
+           let index = alarms.firstIndex(where: { $0.id == parentAlarmID }) {
             return (alarms[index], index)
         }
         return nil
@@ -1807,6 +1833,29 @@ final class AlarmStore: ObservableObject {
                 continue
             }
 
+            // A bridge cycle may be in flight around its recorded fire date:
+            // recently due (rang, stop not yet landed) or, when the model
+            // shows a snooze in flight, near future (a SnoozeIntent rewrite
+            // points a fired bridge at now + snooze, up to 60 minutes out;
+            // the intent persists the parent's snoozeCount, so a zero count
+            // means any near-future reference is a sibling occurrence — it
+            // must not defer, or a failed sibling schedule could suppress the
+            // canonical restore across a real occurrence). References are
+            // written before scheduling, so a twice-failed bridge can defer
+            // restore for the backward window; that delay is accepted.
+            let snoozeInFlight = alarm.snoozeCount > 0
+            let hasBridgeCycleInFlight = override.bridgeAlarmIDs.contains { bridgeID in
+                guard let reference = alertReferenceStore.reference(alarmKitID: bridgeID) else { return false }
+                let sinceFire = now.timeIntervalSince(reference.expectedFireDate)
+                if sinceFire >= 0 {
+                    return sinceFire < SchedulingConstants.dueBridgeGraceSeconds
+                }
+                return snoozeInFlight && sinceFire > -SchedulingConstants.snoozedBridgeHorizonSeconds
+            }
+            guard !hasBridgeCycleInFlight else {
+                continue
+            }
+
             // Don't restore if a bridge alarm is mid-lifecycle
             let phase = runtimePhases[alarm.id] ?? .idle
             switch phase {
@@ -1869,7 +1918,10 @@ final class AlarmStore: ObservableObject {
         let activeIDs = Set(alarms.map(\.id))
             .union(alarms.flatMap { $0.activeOverride?.bridgeAlarmIDs ?? [] })
             .union(BackstopSlotStore.allSlots().values)
-        alertReferenceStore.sweep(keeping: activeIDs)
+        alertReferenceStore.sweep(
+            keeping: activeIDs,
+            existingParentAlarmIDs: Set(alarms.map(\.id))
+        )
     }
 
     // MARK: - Wake-Up Check Helpers

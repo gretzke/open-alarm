@@ -14,6 +14,14 @@ enum SchedulingConstants {
     static let debugSentinelSeconds: TimeInterval = 5
     /// Interval for StopIntent's locked-context disarm backstop loop.
     static let disarmBackstopSeconds: TimeInterval = 30
+    /// How long a past firing registration remains resolvable after its AlarmKit ID is no longer active.
+    static let referenceRetentionSeconds: TimeInterval = 24 * 60 * 60
+    /// Window in which a due bridge may be ringing before StopIntent writes its pending-disarm ID.
+    static let dueBridgeGraceSeconds: TimeInterval = 15 * 60
+    /// Forward window in which a future-dated bridge reference means a snoozed
+    /// instance in flight (snooze durations go up to 60 minutes) rather than a
+    /// sibling occurrence.
+    static let snoozedBridgeHorizonSeconds: TimeInterval = 65 * 60
     /// Minimum wake-check grace extension when opening from a notification tap.
     static let wakeCheckGraceMinimumSeconds: TimeInterval = 60
     /// Deep-link nap extension bounds.

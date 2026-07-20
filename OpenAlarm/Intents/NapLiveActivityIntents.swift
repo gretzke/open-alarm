@@ -77,7 +77,8 @@ struct NapExtendIntent: LiveActivityIntent {
         AlertReferenceStore().record(
             AlertReference(
                 expectedFireDate: updatedTarget,
-                ringtoneID: RingtoneCatalog.resolve(nap.resolvedSharedSettings(defaults: effectiveDefaults).ringtoneID).id
+                ringtoneID: RingtoneCatalog.resolve(nap.resolvedSharedSettings(defaults: effectiveDefaults).ringtoneID).id,
+                parentAlarmID: nap.id
             ),
             alarmKitID: id
         )
@@ -214,7 +215,8 @@ struct NapResumeIntent: LiveActivityIntent {
         AlertReferenceStore().record(
             AlertReference(
                 expectedFireDate: newTarget,
-                ringtoneID: RingtoneCatalog.resolve(nap.resolvedSharedSettings(defaults: effectiveDefaults).ringtoneID).id
+                ringtoneID: RingtoneCatalog.resolve(nap.resolvedSharedSettings(defaults: effectiveDefaults).ringtoneID).id,
+                parentAlarmID: nap.id
             ),
             alarmKitID: id
         )

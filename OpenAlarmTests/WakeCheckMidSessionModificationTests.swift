@@ -178,6 +178,226 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
         XCTAssertEqual(store.runtimePhases[alarm.id], .idle)
     }
 
+    // Field repro 2026-07-21 (modify-next dismiss flow lost even after the
+    // pending-disarm guard): the anchor for modify-next IS the bridge fire
+    // time, so between the bridge becoming due and the user's stop there is a
+    // window where no pending disarm exists yet and the phase only protects
+    // the restore if the AlarmKit runtime read happens to report .alerting.
+    // Fire jitter, countdown states, or a read gap leave the phase at
+    // .overrideActive, the restore clears the override mid-ring, and the stop
+    // that follows can no longer resolve the bridge — no dismiss screen, no
+    // backstop.
+    func testReconcileDoesNotRestoreWhileDueBridgeIsNotObservedAlerting() async throws {
+        let alarm = makeAlarm(
+            overrideKind: .modifyNext,
+            restoreAnchorDate: .now.addingTimeInterval(-5),
+            lifecycleState: .scheduled
+        )
+        let bridgeID = try XCTUnwrap(alarm.activeOverride?.bridgeAlarmIDs.first)
+        let (store, manager, _) = makeStore(alarm: alarm, withSession: false)
+        let persistence = AlarmPersistence(defaults: defaults)
+        AlertReferenceStore(defaults: defaults).record(
+            AlertReference(
+                expectedFireDate: .now.addingTimeInterval(-60),
+                ringtoneID: "classic.default",
+                parentAlarmID: alarm.id
+            ),
+            alarmKitID: bridgeID
+        )
+
+        // Due bridge, no stop yet, runtime read does not show it alerting
+        // (FakeAlarmManager returns an empty runtime list).
+        await store.handleAppOpened()
+
+        // The override (the ringing bridge's dismiss mapping) must survive the
+        // due window, and the due bridge must not be cancelled out from under
+        // the ring.
+        XCTAssertNotNil(store.alarms.first?.activeOverride)
+        XCTAssertFalse(manager.cancelIDs.contains(bridgeID))
+
+        // The stop lands only now.
+        persistence.savePendingDisarmAlarmIDs([bridgeID])
+        await store.handleAppOpened()
+
+        // The pending disarm must still resolve to the alarm so the dismiss
+        // screen can present; it must not be drained as unresolvable.
+        XCTAssertEqual(persistence.loadPendingDisarmAlarmIDs(), [bridgeID])
+        XCTAssertEqual(store.alarms.first?.lifecycleState, .awaitingDisarmChallenge)
+    }
+
+    func testProcessPendingDisarmResolvesClearedBridgeFromRegistry() async {
+        let alarm = makeAlarm(lifecycleState: .scheduled)
+        let bridgeID = UUID()
+        let (store, _, _) = makeStore(alarm: alarm, withSession: false)
+        let persistence = AlarmPersistence(defaults: defaults)
+        let referenceStore = AlertReferenceStore(defaults: defaults)
+        referenceStore.record(
+            AlertReference(
+                expectedFireDate: .now.addingTimeInterval(-60),
+                ringtoneID: "classic.default",
+                parentAlarmID: alarm.id
+            ),
+            alarmKitID: bridgeID
+        )
+        persistence.savePendingDisarmAlarmIDs([bridgeID])
+
+        await store.handleAppOpened()
+
+        XCTAssertEqual(persistence.loadPendingDisarmAlarmIDs(), [bridgeID])
+        XCTAssertEqual(store.alarms.first?.lifecycleState, .awaitingDisarmChallenge)
+    }
+
+    func testStopIntentResolverUsesRegistryOnlyForLiveParent() {
+        let alarm = makeAlarm(lifecycleState: .scheduled)
+        let bridgeID = UUID()
+        let persistence = AlarmPersistence(defaults: defaults)
+        let referenceStore = AlertReferenceStore(defaults: defaults)
+        referenceStore.record(
+            AlertReference(
+                expectedFireDate: .now,
+                ringtoneID: "classic.default",
+                parentAlarmID: alarm.id
+            ),
+            alarmKitID: bridgeID
+        )
+
+        let resolved = StopIntent.resolveParentAlarm(
+            for: bridgeID,
+            in: [alarm],
+            persistence: persistence,
+            alertReferenceStore: referenceStore
+        )
+        XCTAssertEqual(resolved?.alarm.id, alarm.id)
+
+        let deletedParentBridgeID = UUID()
+        referenceStore.record(
+            AlertReference(
+                expectedFireDate: .now,
+                ringtoneID: "classic.default",
+                parentAlarmID: UUID()
+            ),
+            alarmKitID: deletedParentBridgeID
+        )
+        XCTAssertNil(StopIntent.resolveParentAlarm(
+            for: deletedParentBridgeID,
+            in: [alarm],
+            persistence: persistence,
+            alertReferenceStore: referenceStore
+        ))
+
+        XCTAssertNil(StopIntent.resolveParentAlarm(
+            for: UUID(),
+            in: [alarm],
+            persistence: persistence,
+            alertReferenceStore: referenceStore
+        ))
+    }
+
+    func testReconcileRestoresAfterDueBridgeGraceExpires() async throws {
+        let alarm = makeAlarm(
+            overrideKind: .modifyNext,
+            restoreAnchorDate: .now.addingTimeInterval(-60),
+            lifecycleState: .scheduled
+        )
+        let bridgeID = try XCTUnwrap(alarm.activeOverride?.bridgeAlarmIDs.first)
+        let (store, manager, _) = makeStore(alarm: alarm, withSession: false)
+        AlertReferenceStore(defaults: defaults).record(
+            AlertReference(
+                expectedFireDate: .now.addingTimeInterval(-SchedulingConstants.dueBridgeGraceSeconds - 60),
+                ringtoneID: "classic.default",
+                parentAlarmID: alarm.id
+            ),
+            alarmKitID: bridgeID
+        )
+
+        await store.handleAppOpened()
+
+        XCTAssertNil(store.alarms.first?.activeOverride)
+        XCTAssertTrue(manager.scheduledIDs.contains(alarm.id))
+    }
+
+    func testReconcileRestoresDespiteFarFutureSiblingBridgeReferences() async throws {
+        let alarm = makeAlarm(
+            overrideKind: .skipNext,
+            restoreAnchorDate: .now.addingTimeInterval(-60),
+            lifecycleState: .scheduled
+        )
+        let (store, manager, _) = makeStore(alarm: alarm, withSession: false)
+        let referenceStore = AlertReferenceStore(defaults: defaults)
+        // Sibling bridges at their real future occurrences (days out) are the
+        // normal state of every override and must not defer the restore.
+        for (offset, bridgeID) in alarm.activeOverride!.bridgeAlarmIDs.enumerated() {
+            referenceStore.record(
+                AlertReference(
+                    expectedFireDate: .now.addingTimeInterval(TimeInterval((offset + 1) * 86_400)),
+                    ringtoneID: "classic.default",
+                    parentAlarmID: alarm.id
+                ),
+                alarmKitID: bridgeID
+            )
+        }
+
+        await store.handleAppOpened()
+
+        XCTAssertNil(store.alarms.first?.activeOverride)
+        XCTAssertTrue(store.alarms.first?.isEnabled == true)
+        XCTAssertTrue(manager.scheduledIDs.contains(alarm.id))
+    }
+
+    func testReconcileDefersRestoreForFutureSnoozedBridgeReference() async throws {
+        var alarm = makeAlarm(
+            overrideKind: .modifyNext,
+            restoreAnchorDate: .now.addingTimeInterval(-60),
+            lifecycleState: .scheduled
+        )
+        // SnoozeIntent persists the parent's snooze count; the forward window
+        // only applies while the model shows a snooze in flight.
+        alarm.snoozeCount = 1
+        let bridgeID = try XCTUnwrap(alarm.activeOverride?.bridgeAlarmIDs.first)
+        let (store, manager, _) = makeStore(alarm: alarm, withSession: false)
+        AlertReferenceStore(defaults: defaults).record(
+            AlertReference(
+                // A 45-minute snooze rewrite: inside the snoozed-bridge
+                // horizon, outside the backward due-bridge grace.
+                expectedFireDate: .now.addingTimeInterval(45 * 60),
+                ringtoneID: "classic.default",
+                parentAlarmID: alarm.id
+            ),
+            alarmKitID: bridgeID
+        )
+
+        await store.handleAppOpened()
+
+        XCTAssertNotNil(store.alarms.first?.activeOverride)
+        XCTAssertFalse(manager.cancelIDs.contains(bridgeID))
+    }
+
+    func testReconcileRestoresDespiteNearFutureSiblingWhenNotSnoozed() async throws {
+        // A sibling occurrence 45 minutes out with snoozeCount == 0 must not
+        // defer: if that sibling's schedule failed, deferral would suppress
+        // the canonical restore across a real occurrence (missed alarm).
+        let alarm = makeAlarm(
+            overrideKind: .modifyNext,
+            restoreAnchorDate: .now.addingTimeInterval(-60),
+            lifecycleState: .scheduled
+        )
+        let bridgeID = try XCTUnwrap(alarm.activeOverride?.bridgeAlarmIDs.first)
+        let (store, manager, _) = makeStore(alarm: alarm, withSession: false)
+        AlertReferenceStore(defaults: defaults).record(
+            AlertReference(
+                expectedFireDate: .now.addingTimeInterval(45 * 60),
+                ringtoneID: "classic.default",
+                parentAlarmID: alarm.id
+            ),
+            alarmKitID: bridgeID
+        )
+
+        await store.handleAppOpened()
+
+        XCTAssertNil(store.alarms.first?.activeOverride)
+        XCTAssertTrue(manager.scheduledIDs.contains(alarm.id))
+    }
+
     func testReconcileModifyNextDefersRestoreForPendingBridgeDisarm() async throws {
         let alarm = makeAlarm(
             overrideKind: .modifyNext,

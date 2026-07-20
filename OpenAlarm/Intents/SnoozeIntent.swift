@@ -87,7 +87,8 @@ struct SnoozeIntent: LiveActivityIntent {
         AlertReferenceStore().record(
             AlertReference(
                 expectedFireDate: snoozeDate,
-                ringtoneID: RingtoneCatalog.resolve(settings.ringtoneID).id
+                ringtoneID: RingtoneCatalog.resolve(settings.ringtoneID).id,
+                parentAlarmID: alarm.id
             ),
             alarmKitID: id
         )
