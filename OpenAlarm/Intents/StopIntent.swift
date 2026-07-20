@@ -38,7 +38,12 @@ struct StopIntent: LiveActivityIntent {
         // Silence the alarm
         try? AlarmManager.shared.stop(id: id)
 
-        if let resolved = Self.resolveParentAlarm(for: id, persistence: persistence) {
+        // Single model snapshot for both resolution and the unresolved-cancel
+        // guard: two reads could disagree across a concurrent full-blob write
+        // and cancel a registration the newer snapshot owns.
+        let modelAlarms = persistence.loadUserAlarms()
+
+        if let resolved = Self.resolveParentAlarm(for: id, in: modelAlarms, persistence: persistence) {
             let parentID = resolved.alarm.id
             let previous = BackstopSlotStore.backstopID(forParent: parentID)
             // Snapshot once: the toggle is mutable shared state, and the log must
@@ -64,6 +69,17 @@ struct StopIntent: LiveActivityIntent {
             pendingDisarm.remove(id)
             persistence.savePendingDisarmAlarmIDs(pendingDisarm)
             IntentDiagnostics.log("StopIntent resolved parent=unresolved id=\(id.uuidString) pending=removed")
+            // Backstop configurations carry the parent UUID, not always the
+            // ringing registration's ID; within this snapshot an unresolved
+            // backstop can target only that deleted parent's orphaned canonical
+            // slot, never a live owner (D-3 torn reads remain the accepted risk).
+            // This is event-driven single-ID cleanup, never an AlarmKit sweep.
+            if StopIntentPolicy.shouldCancelUnresolved(alarms: modelAlarms) {
+                try? AlarmManager.shared.cancel(id: id)
+                IntentDiagnostics.log("StopIntent resolved parent=unresolved id=\(id.uuidString) cancel attempted")
+            } else {
+                IntentDiagnostics.log("StopIntent resolved parent=unresolved id=\(id.uuidString) cancel skipped model=empty")
+            }
         }
 
         // Notify AlarmStore after backstop persistence/cancellation so any
@@ -90,9 +106,9 @@ struct StopIntent: LiveActivityIntent {
 
     private static func resolveParentAlarm(
         for alarmKitID: UUID,
+        in alarms: [AlarmDefinition],
         persistence: AlarmPersistence
     ) -> ResolvedAlarm? {
-        let alarms = persistence.loadUserAlarms()
         let index = alarms.firstIndex { alarm in
             alarm.id == alarmKitID
         } ?? alarms.firstIndex { alarm in

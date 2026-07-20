@@ -97,14 +97,19 @@ enum AlarmStateMachine {
             return TransitionResult(phase: .awaitingWakeCheck, effects: effects)
 
         // MARK: - Disable (from any state)
+        // The canonical ID and any override bridge IDs on the model are always
+        // cancelled in addition to the phase's IDs: `.awaitingDisarmChallenge`
+        // holds only the fired ID, and a stale `.idle` (after an AlarmKit read
+        // failure) must still cancel registrations represented by the model.
 
         case (_, .disabled):
             let idsToCancel = alarmKitIDs(in: current)
-            var effects: [SchedulingSideEffect] = []
-            if !idsToCancel.isEmpty {
-                effects.append(.cancelAlarmKit(ids: idsToCancel))
-            }
-            return TransitionResult(phase: .idle, effects: effects)
+                .union([alarm.id])
+                .union(alarm.activeOverride?.bridgeAlarmIDs ?? [])
+            return TransitionResult(
+                phase: .idle,
+                effects: [.cancelAlarmKit(ids: idsToCancel)]
+            )
 
         // MARK: - Enable
         // `.completed` arm: re-enabling a finished kept one-shot must schedule
@@ -120,12 +125,15 @@ enum AlarmStateMachine {
 
         case (_, .updated):
             if !alarm.isEnabled {
+                // Disabled edits use the same model-first cancellation set as
+                // plain disable: stale phases cannot account for all bridges.
                 let idsToCancel = alarmKitIDs(in: current)
-                var effects: [SchedulingSideEffect] = []
-                if !idsToCancel.isEmpty {
-                    effects.append(.cancelAlarmKit(ids: idsToCancel))
-                }
-                return TransitionResult(phase: .idle, effects: effects)
+                    .union([alarm.id])
+                    .union(alarm.activeOverride?.bridgeAlarmIDs ?? [])
+                return TransitionResult(
+                    phase: .idle,
+                    effects: [.cancelAlarmKit(ids: idsToCancel)]
+                )
             }
             let idsToCancel = alarmKitIDs(in: current)
             var effects: [SchedulingSideEffect] = []

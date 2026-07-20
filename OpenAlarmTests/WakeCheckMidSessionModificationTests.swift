@@ -62,6 +62,92 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
         XCTAssertTrue(manager.scheduledIDs.isEmpty)
     }
 
+    func testDisableWithOverrideAfterReadFailureCancelsCanonicalAndBridges() async throws {
+        let alarm = makeAlarm(overrideKind: .skipNext)
+        let (store, manager, _) = makeStore(alarm: alarm, withSession: false, alarmsReadFails: true)
+
+        try await store.setAlarmEnabled(alarm, enabled: false)
+
+        XCTAssertTrue(manager.cancelIDs.contains(alarm.id))
+        XCTAssertTrue(Set(alarm.activeOverride!.bridgeAlarmIDs).isSubset(of: Set(manager.cancelIDs)))
+    }
+
+    func testDisableWithSessionAfterReadFailureCancelsBridgesButNotBackup() async throws {
+        let alarm = makeAlarm(overrideKind: .skipNext)
+        let (store, manager, _) = makeStore(alarm: alarm, withSession: true, alarmsReadFails: true)
+
+        try await store.setAlarmEnabled(alarm, enabled: false)
+
+        XCTAssertFalse(manager.touchedIDs.contains(alarm.id))
+        XCTAssertTrue(Set(alarm.activeOverride!.bridgeAlarmIDs).isSubset(of: Set(manager.cancelIDs)))
+        XCTAssertEqual(store.runtimePhases[alarm.id], .awaitingWakeCheck)
+    }
+
+    func testDisabledEditWithSessionAfterReadFailureLeavesBackupUntouched() async throws {
+        var alarm = makeAlarm(overrideKind: .skipNext)
+        alarm.isEnabled = false
+        let (store, manager, _) = makeStore(alarm: alarm, withSession: true, alarmsReadFails: true)
+        var draft = AlarmDraft(alarm: alarm)
+        draft.name = "Edited"
+
+        try await store.updateAlarm(alarm, with: draft)
+
+        XCTAssertFalse(manager.touchedIDs.contains(alarm.id))
+        XCTAssertEqual(store.runtimePhases[alarm.id], .awaitingWakeCheck)
+        XCTAssertTrue(Set(alarm.activeOverride!.bridgeAlarmIDs).isSubset(of: Set(manager.cancelIDs)))
+    }
+
+    func testUpdateAlarmCancelsBothCallerAndCurrentModelBridges() async throws {
+        var alarm = makeAlarm(overrideKind: .skipNext)
+        alarm.lifecycleState = .scheduled
+        let (store, manager, _) = makeStore(alarm: alarm, withSession: false)
+
+        // Caller holds a stale copy whose override carries different bridge IDs.
+        var staleCopy = alarm
+        let staleBridgeIDs = [UUID(), UUID()]
+        staleCopy.activeOverride = OverrideState(
+            kind: .skipNext,
+            bridgeAlarmIDs: staleBridgeIDs,
+            restoreAnchorDate: .now.addingTimeInterval(3_600)
+        )
+        var draft = AlarmDraft(alarm: staleCopy)
+        draft.name = "Edited"
+
+        try await store.updateAlarm(staleCopy, with: draft)
+
+        let expected = Set(alarm.activeOverride!.bridgeAlarmIDs).union(staleBridgeIDs)
+        XCTAssertTrue(expected.isSubset(of: Set(manager.cancelIDs)))
+    }
+
+    func testForceRescheduleCancelsBothCallerAndCurrentModelBridges() async {
+        var alarm = makeAlarm(overrideKind: .skipNext)
+        alarm.lifecycleState = .scheduled
+        let (store, manager, _) = makeStore(alarm: alarm, withSession: false)
+
+        var staleCopy = alarm
+        let staleBridgeIDs = [UUID(), UUID()]
+        staleCopy.activeOverride = OverrideState(
+            kind: .skipNext,
+            bridgeAlarmIDs: staleBridgeIDs,
+            restoreAnchorDate: .now.addingTimeInterval(3_600)
+        )
+
+        await store.forceRescheduleAlarm(staleCopy)
+
+        let expected = Set(alarm.activeOverride!.bridgeAlarmIDs).union(staleBridgeIDs)
+        XCTAssertTrue(expected.isSubset(of: Set(manager.cancelIDs)))
+    }
+
+    func testDisableWithOverrideDuringSessionCancelsBridgesButNotBackup() async throws {
+        let alarm = makeAlarm(overrideKind: .skipNext)
+        let (store, manager, _) = makeStore(alarm: alarm, withSession: true)
+
+        try await store.setAlarmEnabled(alarm, enabled: false)
+
+        XCTAssertFalse(manager.touchedIDs.contains(alarm.id))
+        XCTAssertTrue(Set(alarm.activeOverride!.bridgeAlarmIDs).isSubset(of: Set(manager.cancelIDs)))
+    }
+
     func testConfirmModifiedOneShotSchedulesCanonicalAlarm() async {
         var alarm = makeAlarm(repeating: false)
         alarm.deleteAfterUse = false
@@ -163,7 +249,8 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
     private func makeStore(
         alarm: UserAlarm,
         withSession: Bool,
-        modifiedDuringSession: Bool = false
+        modifiedDuringSession: Bool = false,
+        alarmsReadFails: Bool = false
     ) -> (AlarmStore, FakeAlarmManager, FakeWakeCheckNotificationService) {
         let persistence = AlarmPersistence(defaults: defaults)
         persistence.saveUserAlarms([alarm])
@@ -180,6 +267,7 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
         }
 
         let manager = FakeAlarmManager()
+        manager.alarmsReadFails = alarmsReadFails
         let notifications = FakeWakeCheckNotificationService()
         let store = AlarmStore(
             alarmManager: manager,
@@ -211,17 +299,23 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
 
 @MainActor
 private final class FakeAlarmManager: AlarmManagerScheduling {
-    private enum TestError: Error { case scheduleFailed }
+    private enum TestError: Error { case scheduleFailed, alarmsReadFailed }
 
     var scheduledIDs: [UUID] = []
     var stopIDs: [UUID] = []
     var cancelIDs: [UUID] = []
     var holdSchedules = false
+    var alarmsReadFails = false
     var onScheduleStarted: (() -> Void)?
     private var scheduleContinuation: CheckedContinuation<Void, Never>?
 
     var touchedIDs: [UUID] { scheduledIDs + stopIDs + cancelIDs }
-    var alarms: [Alarm] { get throws { [] } }
+    var alarms: [Alarm] {
+        get throws {
+            if alarmsReadFails { throw TestError.alarmsReadFailed }
+            return []
+        }
+    }
 
     func alarmUpdatesForStore() -> AsyncStream<[Alarm]>? { nil }
 

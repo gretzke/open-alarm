@@ -21,6 +21,18 @@ enum SchedulingConstants {
     static let maxNapExtensionDeepLinkMinutes = 24 * 60
 }
 
+// MARK: - Stop Intent Policy
+
+enum StopIntentPolicy {
+    /// Whether StopIntent may cancel an intent ID it could not resolve to any
+    /// alarm or bridge. An empty model cannot distinguish an orphaned
+    /// registration from a missing/quarantined alarms blob, so it must not
+    /// cancel anything.
+    static func shouldCancelUnresolved(alarms: [AlarmDefinition]) -> Bool {
+        !alarms.isEmpty
+    }
+}
+
 // MARK: - Alarm Type Policy
 
 enum AlarmTypePolicy {

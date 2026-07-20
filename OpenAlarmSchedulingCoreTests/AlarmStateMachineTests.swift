@@ -115,22 +115,43 @@ final class AlarmStateMachineTests: XCTestCase {
         XCTAssertEqual(result.effects, [.cancelAlarmKit(ids: [alarm.id])])
     }
 
-    func testDisableFromIdleIsNoOp() {
+    func testDisableFromIdleCancelsCanonicalAlarm() {
         let alarm = makeAlarm()
         let result = transition(.idle, .disabled, alarm: alarm)
 
         XCTAssertEqual(result.phase, .idle)
-        XCTAssertEqual(result.effects, [])
+        XCTAssertEqual(result.effects, [.cancelAlarmKit(ids: [alarm.id])])
     }
 
-    func testDisableFromOverrideActiveCancelsBridges() {
+    func testDisableFromIdleCancelsCanonicalAndModelBridges() {
+        let bridgeIDs: Set<UUID> = [UUID(), UUID(), UUID()]
+        let alarm = makeOverrideAlarm(bridgeAlarmIDs: Array(bridgeIDs))
+
+        let result = transition(.idle, .disabled, alarm: alarm)
+
+        XCTAssertEqual(result.phase, .idle)
+        XCTAssertEqual(result.effects, [.cancelAlarmKit(ids: bridgeIDs.union([alarm.id]))])
+    }
+
+    func testDisableFromAwaitingDisarmChallengeCancelsFiredCanonicalAndModelBridges() {
+        let bridgeID = UUID()
+        let remainingBridgeIDs: Set<UUID> = [UUID(), UUID()]
+        let alarm = makeOverrideAlarm(bridgeAlarmIDs: [bridgeID] + Array(remainingBridgeIDs))
+
+        let result = transition(.awaitingDisarmChallenge(alarmKitID: bridgeID), .disabled, alarm: alarm)
+
+        XCTAssertEqual(result.phase, .idle)
+        XCTAssertEqual(result.effects, [.cancelAlarmKit(ids: remainingBridgeIDs.union([bridgeID, alarm.id]))])
+    }
+
+    func testDisableFromOverrideActiveCancelsCanonicalAndBridges() {
         let alarm = makeAlarm(repeatDays: [.monday, .wednesday, .friday])
         let bridgeIDs: Set<UUID> = [UUID(), UUID(), UUID()]
 
         let result = transition(.overrideActive(bridgeAlarmIDs: bridgeIDs), .disabled, alarm: alarm)
 
         XCTAssertEqual(result.phase, .idle)
-        XCTAssertEqual(result.effects, [.cancelAlarmKit(ids: bridgeIDs)])
+        XCTAssertEqual(result.effects, [.cancelAlarmKit(ids: bridgeIDs.union([alarm.id]))])
     }
 
     func testWakeCheckModificationEventsPreserveBackupPhase() {
@@ -244,6 +265,22 @@ final class AlarmStateMachineTests: XCTestCase {
 
         XCTAssertEqual(result.phase, .idle)
         XCTAssertEqual(result.effects, [.cancelAlarmKit(ids: [alarm.id])])
+    }
+
+    func testUpdatedDisabledFromIdleCancelsCanonicalAndModelBridges() {
+        let bridgeIDs: Set<UUID> = [UUID(), UUID()]
+        var alarm = makeOverrideAlarm(bridgeAlarmIDs: Array(bridgeIDs))
+        alarm.isEnabled = false
+
+        let result = transition(.idle, .updated, alarm: alarm)
+
+        XCTAssertEqual(result.phase, .idle)
+        XCTAssertEqual(result.effects, [.cancelAlarmKit(ids: bridgeIDs.union([alarm.id]))])
+    }
+
+    func testUnresolvedStopIntentCancellationRequiresNonEmptyModel() {
+        XCTAssertFalse(StopIntentPolicy.shouldCancelUnresolved(alarms: []))
+        XCTAssertTrue(StopIntentPolicy.shouldCancelUnresolved(alarms: [makeAlarm()]))
     }
 
     func testUpdatedFromOverrideActiveCancelsBridgesAndReschedules() {

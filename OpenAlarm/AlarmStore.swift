@@ -342,6 +342,8 @@ final class AlarmStore: ObservableObject {
         }
 
         guard let index = alarms.firstIndex(where: { $0.id == alarm.id }) else { return }
+        let bridgeIDsToCancel = Set(alarm.activeOverride?.bridgeAlarmIDs ?? [])
+            .union(alarms[index].activeOverride?.bridgeAlarmIDs ?? [])
 
         var updated = draft.toUserAlarm(
             id: alarm.id,
@@ -359,12 +361,10 @@ final class AlarmStore: ObservableObject {
         alarms[index].activeOverride = nil
         alarms[index].nextTriggerOverrideDate = nil
 
-        // Cancel any active bridge alarms from the old alarm
-        if let override = alarm.activeOverride {
-            for bridgeID in override.bridgeAlarmIDs {
-                try? alarmManager.stop(id: bridgeID)
-                try? alarmManager.cancel(id: bridgeID)
-            }
+        // Cancel bridge IDs from both snapshots: the caller may be stale.
+        for bridgeID in bridgeIDsToCancel {
+            try? alarmManager.stop(id: bridgeID)
+            try? alarmManager.cancel(id: bridgeID)
         }
 
         alarms = sortAlarms(alarms)
@@ -535,11 +535,9 @@ final class AlarmStore: ObservableObject {
 
         // If disabling and there's an active override, clear it
         if !enabled, let override = alarms[index].activeOverride {
-            if hasWakeCheckSession {
-                for bridgeID in override.bridgeAlarmIDs {
-                    try? alarmManager.stop(id: bridgeID)
-                    try? alarmManager.cancel(id: bridgeID)
-                }
+            for bridgeID in override.bridgeAlarmIDs {
+                try? alarmManager.stop(id: bridgeID)
+                try? alarmManager.cancel(id: bridgeID)
             }
             alarms[index].activeOverride = nil
             alarms[index].nextTriggerOverrideDate = nil
@@ -1287,13 +1285,16 @@ final class AlarmStore: ObservableObject {
     /// Used when updating config on an already-active alarm.
     func forceRescheduleAlarm(_ alarm: UserAlarm) async {
         let hasWakeCheckSession = wakeCheckSessions[alarm.id] != nil
+        let currentBridgeIDs = alarms.first(where: { $0.id == alarm.id })?.activeOverride?.bridgeAlarmIDs ?? []
+        let bridgeIDsToCancel = Set(alarm.activeOverride?.bridgeAlarmIDs ?? [])
+            .union(currentBridgeIDs)
         if hasWakeCheckSession {
             markWakeCheckSessionModified(for: alarm.id)
         }
 
         if let override = alarm.activeOverride {
             // Cancel all existing bridge alarms
-            for bridgeID in override.bridgeAlarmIDs {
+            for bridgeID in bridgeIDsToCancel {
                 try? alarmManager.stop(id: bridgeID)
                 try? alarmManager.cancel(id: bridgeID)
             }
@@ -1648,6 +1649,9 @@ final class AlarmStore: ObservableObject {
             runtimeAlarms = try alarmManager.alarms
         } catch {
             runtimePhases = [:]
+            for alarm in alarms where wakeCheckSessions[alarm.id] != nil {
+                runtimePhases[alarm.id] = .awaitingWakeCheck
+            }
             return
         }
         let runtimeByID = Dictionary(uniqueKeysWithValues: runtimeAlarms.map { ($0.id, $0) })
