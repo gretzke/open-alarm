@@ -120,6 +120,7 @@ struct TaskContainerView: View {
                     .font(OADawnType.button)
                     .foregroundStyle(DawnPalette.inkDark)
                     .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+                    .contentShape(Rectangle())
             }
             .background(Color.white, in: Capsule())
             .buttonStyle(.plain)
@@ -177,6 +178,7 @@ struct TaskContainerView: View {
                     .foregroundStyle(dawnInk)
                     .padding(.horizontal, 14)
                     .frame(minHeight: OASize.minTouchTarget)
+                    .contentShape(Rectangle())
                 }
                 .background(dawnInk.opacity(0.18), in: Capsule())
                 .buttonStyle(.plain)
