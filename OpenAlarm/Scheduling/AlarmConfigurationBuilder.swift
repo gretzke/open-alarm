@@ -67,7 +67,10 @@ enum AlarmConfigurationBuilder {
         let title = resolvedTitle(for: parentAlarm)
         let sharedSettings = parentAlarm.resolvedSharedSettings(defaults: defaultSharedSettings)
         let alarmSound = alarmKitSound(for: sharedSettings)
-        let showSnooze = sharedSettings.canSnoozeAgain(currentCount: 0)
+        // The parent's snoozeCount carries across bridge reschedules:
+        // SnoozeIntent increments it before rebuilding this configuration, so
+        // a bridge that reached its snooze limit must not offer the button.
+        let showSnooze = sharedSettings.canSnoozeAgain(currentCount: parentAlarm.snoozeCount)
 
         let alertPresentation = AlarmPresentation.Alert(
             title: localizedResource(from: title),

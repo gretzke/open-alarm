@@ -44,7 +44,16 @@ struct SnoozeIntent: LiveActivityIntent {
         let settings = alarm.resolvedSharedSettings(defaults: effectiveDefaults)
 
         guard settings.canSnoozeAgain(currentCount: alarm.snoozeCount) else {
+            // A snooze press that cannot snooze (stale configuration still
+            // showing the button) must behave like a stop, not silently
+            // consume the ring: queue the disarm first, crash-safe, so the
+            // dismiss flow runs when the app opens.
+            var pendingDisarm = persistence.loadPendingDisarmAlarmIDs()
+            pendingDisarm.insert(id)
+            persistence.savePendingDisarmAlarmIDs(pendingDisarm)
             try? AlarmManager.shared.stop(id: id)
+            NotificationCenter.default.post(name: .disarmChallengeRequested, object: nil)
+            IntentDiagnostics.log("SnoozeIntent limit reached, routed to disarm id=\(id.uuidString)")
             return .result()
         }
 

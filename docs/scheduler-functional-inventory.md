@@ -40,7 +40,7 @@ Requirement IDs (`R-x.y`) are for referencing from the refactor plan.
   - Snooze duration 0 is a 5-second testing sentinel.
   - `forceDisableSnooze` parameter exists for callers to strip snooze.
   - Metadata carries `source` (parent alarm UUID) and `isShadowTrial` (= isTryOut); tint is the brand cyan.
-  - Bridge configs use the **parent's** resolved settings and title but the **bridge's** UUID in Stop/Snooze intents; bridge snooze visibility is computed with `currentCount: 0`.
+  - Bridge configs use the **parent's** resolved settings and title but the **bridge's** UUID in Stop/Snooze intents; bridge snooze visibility is computed with the parent's `snoozeCount`, so a snoozed bridge that reached its limit re-alerts without the snooze button (D-15). A snooze press that cannot snooze (stale configuration) routes to the pending-disarm queue instead of silently stopping.
   - Wake-check backup and force-close configs: fixed date, stop-only, no snooze.
 - **R-3.6** Every registration writes a per-AlarmKit-ID `AlertReference` before scheduling, including its immutable `alarmKitID → parentAlarmID` mapping. If canonical recurrence math cannot produce an expected fire date, it records `now` rather than leaving a registration unresolvable. Backstop registrations deliberately write under the parent key and preserve that same parent mapping while refreshing the fire date.
 
@@ -176,4 +176,5 @@ Requirement IDs (`R-x.y`) are for referencing from the refactor plan.
 - **D-11** — **Accepted + documented (2026-07-09).** Setter no-op documented; characterization test pins it.
 - **D-12** — **Fixed (2026-07-09).** Pending wake-check-UI task is cancelled and replaced instead of stacking sleeps.
 - **D-13** — **Fixed (2026-07-09).** `(.completed, .enabled)` transition added; re-enabling a completed kept one-shot schedules again.
+- **D-15** — **Fixed (2026-07-21).** Bridge configurations hard-coded `currentCount: 0` for snooze visibility since the original override system, so a bridge re-alert after the final allowed snooze still offered the button, and SnoozeIntent's limit fallback silently stopped the ring (no pending disarm, alarm consumed). Visibility now uses the parent's count; the fallback queues a disarm.
 - **D-14** — **Deferred.** Override activation and force-reschedule persist bridge IDs, then await each bridge schedule. `reconcileOverrides` likewise clears an override and then awaits canonical re-registration. A disable or delete that lands during either in-flight write can cancel every relevant ID, then lose to the landing bridge or canonical registration. Fixing this needs a bridge/canonical write-generation guard analogous to wake-check backup reconciliation.
