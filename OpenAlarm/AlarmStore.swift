@@ -1041,14 +1041,22 @@ final class AlarmStore: ObservableObject {
         guard disarmPresentation == nil else { return }
 
         var pendingIDs = persistence.loadPendingDisarmAlarmIDs()
-        guard let alarmKitID = pendingIDs.first else { return }
+        var resolvedPendingDisarm: (alarmKitID: UUID, index: Int)?
 
-        // Resolve parent alarm — alarmKitID may be a bridge UUID
-        guard let (_, index) = resolveParentAlarm(for: alarmKitID) else {
+        // Resolve parent alarm — alarmKitID may be a bridge UUID. Drain stale
+        // entries so they cannot starve a valid pending challenge behind them.
+        while let alarmKitID = pendingIDs.first {
+            if let (_, index) = resolveParentAlarm(for: alarmKitID) {
+                resolvedPendingDisarm = (alarmKitID, index)
+                break
+            }
             pendingIDs.remove(alarmKitID)
             persistence.savePendingDisarmAlarmIDs(pendingIDs)
-            return
         }
+
+        guard let resolvedPendingDisarm else { return }
+        let alarmKitID = resolvedPendingDisarm.alarmKitID
+        let index = resolvedPendingDisarm.index
 
         // Mark alarm as awaiting disarm challenge (StopIntent only writes the pending ID,
         // all lifecycle logic lives here in the app).
@@ -1788,6 +1796,16 @@ final class AlarmStore: ObservableObject {
             let alarm = alarms[index]
             guard let override = alarm.activeOverride else { continue }
             guard now > override.restoreAnchorDate else { continue }
+
+            // Don't restore mid-disarm-cycle. The phase cannot see a stopped
+            // bridge until pending-disarm processing runs later in this pass.
+            let pendingDisarmIDs = persistence.loadPendingDisarmAlarmIDs()
+            let hasPendingDisarm = pendingDisarmIDs.contains { pendingID in
+                resolveParentAlarm(for: pendingID)?.alarm.id == alarm.id
+            }
+            guard !hasPendingDisarm, disarmPresentation?.id != alarm.id else {
+                continue
+            }
 
             // Don't restore if a bridge alarm is mid-lifecycle
             let phase = runtimePhases[alarm.id] ?? .idle

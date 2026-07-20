@@ -178,6 +178,84 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
         XCTAssertEqual(store.runtimePhases[alarm.id], .idle)
     }
 
+    func testReconcileModifyNextDefersRestoreForPendingBridgeDisarm() async throws {
+        let alarm = makeAlarm(
+            overrideKind: .modifyNext,
+            restoreAnchorDate: .now.addingTimeInterval(-60),
+            lifecycleState: .scheduled
+        )
+        let bridgeID = try XCTUnwrap(alarm.activeOverride?.bridgeAlarmIDs.first)
+        let (store, manager, _) = makeStore(alarm: alarm, withSession: false)
+        let persistence = AlarmPersistence(defaults: defaults)
+        persistence.savePendingDisarmAlarmIDs([bridgeID])
+
+        await store.handleAppOpened()
+
+        XCTAssertNotNil(store.alarms.first?.activeOverride)
+        XCTAssertTrue(Set(alarm.activeOverride!.bridgeAlarmIDs).isDisjoint(with: Set(manager.cancelIDs)))
+        XCTAssertEqual(persistence.loadPendingDisarmAlarmIDs(), [bridgeID])
+    }
+
+    func testReconcileModifyNextRestoresWithoutPendingDisarm() async {
+        let alarm = makeAlarm(
+            overrideKind: .modifyNext,
+            restoreAnchorDate: .now.addingTimeInterval(-60),
+            lifecycleState: .scheduled
+        )
+        let (store, manager, _) = makeStore(alarm: alarm, withSession: false)
+
+        await store.handleAppOpened()
+
+        XCTAssertNil(store.alarms.first?.activeOverride)
+        XCTAssertTrue(store.alarms.first?.isEnabled == true)
+        XCTAssertTrue(Set(alarm.activeOverride!.bridgeAlarmIDs).isSubset(of: Set(manager.cancelIDs)))
+        XCTAssertTrue(manager.scheduledIDs.contains(alarm.id))
+    }
+
+    func testPendingDisarmForDifferentAlarmDoesNotBlockModifyNextRestore() async {
+        let alarm = makeAlarm(
+            overrideKind: .modifyNext,
+            restoreAnchorDate: .now.addingTimeInterval(-60),
+            lifecycleState: .scheduled
+        )
+        let otherAlarm = makeAlarm(lifecycleState: .scheduled)
+        let (store, manager, _) = makeStore(
+            alarm: alarm,
+            withSession: false,
+            additionalAlarms: [otherAlarm]
+        )
+        let persistence = AlarmPersistence(defaults: defaults)
+        persistence.savePendingDisarmAlarmIDs([otherAlarm.id])
+
+        await store.handleAppOpened()
+
+        let restoredAlarm = store.alarms.first { $0.id == alarm.id }
+        XCTAssertNil(restoredAlarm?.activeOverride)
+        XCTAssertTrue(Set(alarm.activeOverride!.bridgeAlarmIDs).isSubset(of: Set(manager.cancelIDs)))
+        XCTAssertTrue(manager.scheduledIDs.contains(alarm.id))
+    }
+
+    func testModifyNextRestoresAfterPendingDisarmCycleCompletes() async throws {
+        let alarm = makeAlarm(
+            overrideKind: .modifyNext,
+            restoreAnchorDate: .now.addingTimeInterval(-60),
+            lifecycleState: .scheduled
+        )
+        let bridgeID = try XCTUnwrap(alarm.activeOverride?.bridgeAlarmIDs.first)
+        let (store, manager, _) = makeStore(alarm: alarm, withSession: false)
+        let persistence = AlarmPersistence(defaults: defaults)
+        persistence.savePendingDisarmAlarmIDs([bridgeID])
+
+        await store.handleAppOpened()
+        await store.process(event: .disarmRequested(alarmKitID: bridgeID), for: alarm.id)
+        await store.completeDisarmChallenge(for: alarm.id)
+        await store.handleAppOpened()
+
+        XCTAssertNil(store.alarms.first?.activeOverride)
+        XCTAssertTrue(Set(alarm.activeOverride!.bridgeAlarmIDs).isSubset(of: Set(manager.cancelIDs)))
+        XCTAssertTrue(manager.scheduledIDs.contains(alarm.id))
+    }
+
     func testDeleteDuringWakeCheckStartupCancelsLateScheduledBackup() async {
         let alarm = makeAlarm()
         let (store, manager, _) = makeStore(alarm: alarm, withSession: false)
@@ -250,10 +328,11 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
         alarm: UserAlarm,
         withSession: Bool,
         modifiedDuringSession: Bool = false,
-        alarmsReadFails: Bool = false
+        alarmsReadFails: Bool = false,
+        additionalAlarms: [UserAlarm] = []
     ) -> (AlarmStore, FakeAlarmManager, FakeWakeCheckNotificationService) {
         let persistence = AlarmPersistence(defaults: defaults)
-        persistence.saveUserAlarms([alarm])
+        persistence.saveUserAlarms([alarm] + additionalAlarms)
         if withSession {
             let session = WakeCheckSession(
                 alarmID: alarm.id,
@@ -280,7 +359,9 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
 
     private func makeAlarm(
         repeating: Bool = true,
-        overrideKind: OverrideKind? = nil
+        overrideKind: OverrideKind? = nil,
+        restoreAnchorDate: Date? = nil,
+        lifecycleState: AlarmLifecycleState = .awaitingWakeCheck
     ) -> UserAlarm {
         let id = UUID()
         let bridgeIDs = [UUID(), UUID()]
@@ -290,9 +371,13 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
             recurrence: repeating ? .weekly([.monday]) : .none,
             deleteAfterUse: false,
             activeOverride: overrideKind.map {
-                OverrideState(kind: $0, bridgeAlarmIDs: bridgeIDs, restoreAnchorDate: .now.addingTimeInterval(3_600))
+                OverrideState(
+                    kind: $0,
+                    bridgeAlarmIDs: bridgeIDs,
+                    restoreAnchorDate: restoreAnchorDate ?? .now.addingTimeInterval(3_600)
+                )
             },
-            lifecycleState: .awaitingWakeCheck
+            lifecycleState: lifecycleState
         )
     }
 }
