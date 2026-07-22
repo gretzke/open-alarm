@@ -137,6 +137,7 @@ enum L10n {
     static let actionPause: LocalizedStringKey = "action_pause"
     static let actionContinue: LocalizedStringKey = "action_continue"
     static let actionClear: LocalizedStringKey = "action_clear"
+    static let actionExport: LocalizedStringKey = "action_export"
     static let alarmButtonDone: LocalizedStringKey = "alarm_button_done"
 
     static let taskConfiguratorTitle: LocalizedStringKey = "task_configurator_title"

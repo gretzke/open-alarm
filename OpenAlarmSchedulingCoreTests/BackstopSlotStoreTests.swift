@@ -33,16 +33,16 @@ final class BackstopSlotStoreTests: XCTestCase {
         XCTAssertEqual(BackstopSlotStore.allSlots(defaults: defaults), [:])
     }
 
-    func testIntentDiagnosticsRingBufferCapsAtOneHundredEntries() {
+    func testIntentDiagnosticsRingBufferCapsAtThreeHundredEntries() {
         IntentDiagnostics.clear(defaults: defaults)
 
-        for index in 0..<105 {
+        for index in 0..<305 {
             IntentDiagnostics.log("entry-\(index)", defaults: defaults)
         }
 
         let entries = IntentDiagnostics.entries(defaults: defaults)
-        XCTAssertEqual(entries.count, 100)
+        XCTAssertEqual(entries.count, 300)
         XCTAssertTrue(entries.first?.contains("entry-5") == true)
-        XCTAssertTrue(entries.last?.contains("entry-104") == true)
+        XCTAssertTrue(entries.last?.contains("entry-304") == true)
     }
 }

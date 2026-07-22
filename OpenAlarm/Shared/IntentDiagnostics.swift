@@ -1,13 +1,13 @@
 import Foundation
 
 enum IntentDiagnostics {
-    private static let maxEntries = 100
+    private static let maxEntries = 300
     private static let key = OpenAlarmSharedDefaults.Key.diagnosticsLog
     private static let lock = NSLock()
     private static let formatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "HH:mm:ss.SSS"
+        formatter.dateFormat = "MM-dd HH:mm:ss.SSS"
         return formatter
     }()
 

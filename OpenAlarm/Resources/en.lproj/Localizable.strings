@@ -204,6 +204,7 @@
 "action_pause" = "Pause";
 "action_continue" = "Continue";
 "action_clear" = "Clear";
+"action_export" = "Export";
 
 "wake_check_confirm_title" = "Are you awake?";
 "wake_check_confirm_subtitle" = "Alarm rings again in";

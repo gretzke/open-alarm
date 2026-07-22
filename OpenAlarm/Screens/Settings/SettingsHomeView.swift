@@ -1,3 +1,5 @@
+import AlarmKit
+import Foundation
 import SwiftUI
 
 struct SettingsHomeView: View {
@@ -275,6 +277,7 @@ struct SettingsHomeView: View {
 // MARK: - Supporting Views
 
 private struct DiagnosticsView: View {
+    @EnvironmentObject private var alarmStore: AlarmStore
     @State private var entries: [String] = []
 
     var body: some View {
@@ -294,6 +297,11 @@ private struct DiagnosticsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
+                ShareLink(item: diagnosticsExportText) {
+                    Text(L10n.actionExport)
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
                 Button(L10n.actionClear) {
                     IntentDiagnostics.clear()
                     entries = IntentDiagnostics.entries()
@@ -303,6 +311,51 @@ private struct DiagnosticsView: View {
         .onAppear {
             entries = IntentDiagnostics.entries()
         }
+    }
+
+    private var diagnosticsExportText: String {
+        let dateFormatter = ISO8601DateFormatter()
+        let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
+        let pendingDisarmIDs = alarmStore.pendingDisarmAlarmIDsForDiagnostics
+            .map(\.uuidString)
+            .sorted()
+            .joined(separator: ",")
+        let backstopSlots = BackstopSlotStore.allSlots()
+            .sorted { $0.key.uuidString < $1.key.uuidString }
+            .map { "\($0.key.uuidString) -> \($0.value.uuidString)" }
+            .joined(separator: ", ")
+        let wakeCheckSessions = alarmStore.wakeCheckSessions.values
+            .sorted { $0.alarmID.uuidString < $1.alarmID.uuidString }
+            .map {
+                "alarmID=\($0.alarmID.uuidString) cycle=\($0.cycle) checkAt=\(dateFormatter.string(from: $0.checkAt)) deadlineAt=\(dateFormatter.string(from: $0.deadlineAt))"
+            }
+            .joined(separator: "\n")
+        let runtimeRegistrations: String
+        if let runtimeAlarms = try? AlarmManager.shared.alarms {
+            runtimeRegistrations = runtimeAlarms
+                .map { "\($0.id.uuidString):\(String(describing: $0.state))" }
+                .joined(separator: ",")
+        } else {
+            runtimeRegistrations = "read failed"
+        }
+
+        return [
+            "OpenAlarm Diagnostics",
+            "Generated: \(dateFormatter.string(from: .now))",
+            "App version: \(appVersion) (\(build))",
+            "iOS: \(ProcessInfo.processInfo.operatingSystemVersionString)",
+            "",
+            "STATE",
+            "Pending disarm alarm IDs: [\(pendingDisarmIDs)]",
+            "Backstop slots: \(backstopSlots.isEmpty ? "none" : backstopSlots)",
+            "Wake-check sessions:",
+            wakeCheckSessions.isEmpty ? "none" : wakeCheckSessions,
+            "AlarmKit runtime registrations: \(runtimeRegistrations)",
+            "",
+            "LOG",
+            IntentDiagnostics.entries().joined(separator: "\n")
+        ].joined(separator: "\n")
     }
 }
 
