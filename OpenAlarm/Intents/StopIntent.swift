@@ -62,7 +62,9 @@ struct StopIntent: LiveActivityIntent {
                 await Self.scheduleDisarmBackstop(
                     for: resolved.alarm,
                     settings: resolved.settings,
-                    replacing: previous
+                    replacing: previous,
+                    intentID: id,
+                    persistence: persistence
                 )
             } else {
                 if let backstopID = BackstopSlotStore.clear(forParent: parentID) {
@@ -144,10 +146,15 @@ struct StopIntent: LiveActivityIntent {
         )
     }
 
-    private static func scheduleDisarmBackstop(
+    @MainActor
+    static func scheduleDisarmBackstop(
         for alarm: AlarmDefinition,
         settings: SharedAlarmSettings,
-        replacing previousBackstopID: UUID?
+        replacing previousBackstopID: UUID?,
+        intentID: UUID,
+        persistence: AlarmPersistence,
+        alarmManager: any AlarmManagerScheduling = AlarmManager.shared,
+        defaults: UserDefaults = OpenAlarmSharedDefaults.userDefaults
     ) async {
         let newID = UUID()
         let fireDate = Date.now.addingTimeInterval(SchedulingConstants.disarmBackstopSeconds)
@@ -161,7 +168,7 @@ struct StopIntent: LiveActivityIntent {
         do {
             // Keyed by the PARENT id: the backstop's StopIntent carries the parent
             // UUID, so that's the pending-disarm id the reference lookup uses.
-            AlertReferenceStore().record(
+            AlertReferenceStore(defaults: defaults).record(
                 AlertReference(
                     expectedFireDate: fireDate,
                     ringtoneID: RingtoneCatalog.resolve(settings.ringtoneID).id,
@@ -171,13 +178,13 @@ struct StopIntent: LiveActivityIntent {
                 ),
                 alarmKitID: alarm.id
             )
-            _ = try await AlarmManager.shared.schedule(id: newID, configuration: config)
+            _ = try await alarmManager.schedule(id: newID, configuration: config)
         } catch {
             IntentDiagnostics.log("StopIntent backstop schedule retry id=\(newID.uuidString) parent=\(alarm.id.uuidString) error=\(error.localizedDescription)")
-            try? AlarmManager.shared.stop(id: newID)
-            try? AlarmManager.shared.cancel(id: newID)
+            try? alarmManager.stop(id: newID)
+            try? alarmManager.cancel(id: newID)
             do {
-                AlertReferenceStore().record(
+                AlertReferenceStore(defaults: defaults).record(
                     AlertReference(
                         expectedFireDate: fireDate,
                         ringtoneID: RingtoneCatalog.resolve(settings.ringtoneID).id,
@@ -186,7 +193,7 @@ struct StopIntent: LiveActivityIntent {
                     ),
                     alarmKitID: alarm.id
                 )
-                _ = try await AlarmManager.shared.schedule(id: newID, configuration: config)
+                _ = try await alarmManager.schedule(id: newID, configuration: config)
             } catch {
                 IntentDiagnostics.log("StopIntent backstop schedule failed id=\(newID.uuidString) parent=\(alarm.id.uuidString) error=\(error.localizedDescription)")
                 return
@@ -194,12 +201,30 @@ struct StopIntent: LiveActivityIntent {
         }
 
         IntentDiagnostics.log("StopIntent backstop schedule success id=\(newID.uuidString) parent=\(alarm.id.uuidString)")
-        BackstopSlotStore.set(backstopID: newID, forParent: alarm.id)
+        BackstopSlotStore.set(backstopID: newID, forParent: alarm.id, defaults: defaults)
 
         if let previousBackstopID {
-            try? AlarmManager.shared.stop(id: previousBackstopID)
-            try? AlarmManager.shared.cancel(id: previousBackstopID)
+            try? alarmManager.stop(id: previousBackstopID)
+            try? alarmManager.cancel(id: previousBackstopID)
             IntentDiagnostics.log("StopIntent backstop previous cancelled id=\(previousBackstopID.uuidString) parent=\(alarm.id.uuidString)")
+        }
+
+        // The schedule call above suspends with no cycle guard: the challenge
+        // can complete while it is in flight, and this write would then park a
+        // live 30s backstop in the slot that the wake-check sweep deliberately
+        // preserves. Re-check pending-disarm AFTER the slot write (completion
+        // removes it before its own slot revocation, so one side always sees
+        // the other) and revoke our own write if the cycle already ended.
+        let pendingAfterWrite = persistence.loadPendingDisarmAlarmIDs()
+        let parentStillPending = pendingAfterWrite.contains(intentID)
+            || pendingAfterWrite.contains(alarm.id)
+        if !parentStillPending {
+            if BackstopSlotStore.backstopID(forParent: alarm.id, defaults: defaults) == newID {
+                BackstopSlotStore.clear(forParent: alarm.id, defaults: defaults)
+            }
+            try? alarmManager.stop(id: newID)
+            try? alarmManager.cancel(id: newID)
+            IntentDiagnostics.log("StopIntent backstop revoked after late write id=\(newID.uuidString) parent=\(alarm.id.uuidString) reason=cycle-ended")
         }
     }
 

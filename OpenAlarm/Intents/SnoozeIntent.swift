@@ -48,11 +48,14 @@ struct SnoozeIntent: LiveActivityIntent {
             // showing the button) must behave like a stop, not silently
             // consume the ring: queue the disarm first, crash-safe, so the
             // dismiss flow runs when the app opens.
-            var pendingDisarm = persistence.loadPendingDisarmAlarmIDs()
-            pendingDisarm.insert(id)
-            persistence.savePendingDisarmAlarmIDs(pendingDisarm)
-            try? AlarmManager.shared.stop(id: id)
+            await Self.routeLimitReachedToDisarm(
+                intentID: id,
+                alarms: alarms,
+                persistence: persistence,
+                alarmManager: AlarmManager.shared
+            )
             NotificationCenter.default.post(name: .disarmChallengeRequested, object: nil)
+            await requestForegroundEscalation()
             IntentDiagnostics.log("SnoozeIntent limit reached, routed to disarm id=\(id.uuidString)")
             return .result()
         }
@@ -111,5 +114,57 @@ struct SnoozeIntent: LiveActivityIntent {
         }
 
         return .result()
+    }
+
+    @MainActor
+    static func routeLimitReachedToDisarm(
+        intentID: UUID,
+        alarms: [AlarmDefinition],
+        persistence: AlarmPersistence,
+        alarmManager: any AlarmManagerScheduling,
+        defaults: UserDefaults = OpenAlarmSharedDefaults.userDefaults
+    ) async {
+        var pendingDisarm = persistence.loadPendingDisarmAlarmIDs()
+        pendingDisarm.insert(intentID)
+        persistence.savePendingDisarmAlarmIDs(pendingDisarm)
+        try? alarmManager.stop(id: intentID)
+
+        let alertReferences = AlertReferenceStore(defaults: defaults)
+        guard let resolved = StopIntent.resolveParentAlarm(
+            for: intentID,
+            in: alarms,
+            persistence: persistence,
+            alertReferenceStore: alertReferences
+        ) else {
+            return
+        }
+
+        let effectiveTaskCount = persistence.effectiveTasks(from: resolved.settings).count
+        let needsProtection = effectiveTaskCount > 0 || resolved.settings.wakeUpCheckEnabled
+        IntentDiagnostics.log("SnoozeIntent limit parent=\(resolved.alarm.id.uuidString) tasks=\(effectiveTaskCount) wakeCheck=\(resolved.settings.wakeUpCheckEnabled) protect=\(needsProtection)")
+        if needsProtection {
+            await StopIntent.scheduleDisarmBackstop(
+                for: resolved.alarm,
+                settings: resolved.settings,
+                replacing: BackstopSlotStore.backstopID(forParent: resolved.alarm.id, defaults: defaults),
+                intentID: intentID,
+                persistence: persistence,
+                alarmManager: alarmManager,
+                defaults: defaults
+            )
+        } else if let backstopID = BackstopSlotStore.clear(forParent: resolved.alarm.id, defaults: defaults) {
+            try? alarmManager.stop(id: backstopID)
+            try? alarmManager.cancel(id: backstopID)
+            IntentDiagnostics.log("SnoozeIntent limit backstop cleared parent=\(resolved.alarm.id.uuidString) id=\(backstopID.uuidString) reason=no-protection")
+        }
+    }
+
+    private func requestForegroundEscalation() async {
+        do {
+            try await continueInForeground(alwaysConfirm: false)
+            IntentDiagnostics.log("SnoozeIntent foreground success case=limit")
+        } catch {
+            IntentDiagnostics.log("SnoozeIntent foreground failed case=limit error=\(error.localizedDescription)")
+        }
     }
 }

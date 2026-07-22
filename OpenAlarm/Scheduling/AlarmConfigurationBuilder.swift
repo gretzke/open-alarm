@@ -2,6 +2,38 @@ import ActivityKit
 import AlarmKit
 import Foundation
 
+// This scheduling seam is shared by the app and Live Activity targets so
+// intent bodies can be tested without constructing AlarmKit.Alarm values.
+@MainActor
+protocol AlarmManagerScheduling: AnyObject {
+    var alarms: [Alarm] { get throws }
+    func alarmUpdatesForStore() -> AsyncStream<[Alarm]>?
+    func schedule(
+        id: UUID,
+        configuration: AlarmManager.AlarmConfiguration<OpenAlarmMetadata>
+    ) async throws -> Alarm
+    func stop(id: UUID) throws
+    func cancel(id: UUID) throws
+}
+
+extension AlarmManager: AlarmManagerScheduling {}
+
+extension AlarmManager {
+    func alarmUpdatesForStore() -> AsyncStream<[Alarm]>? {
+        let manager = self
+        return AsyncStream { continuation in
+            let task = Task {
+                for await alarms in manager.alarmUpdates {
+                    guard !Task.isCancelled else { break }
+                    continuation.yield(alarms)
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+}
+
 enum AlarmConfigurationBuilder {
 
     // MARK: - Primary alarm configuration

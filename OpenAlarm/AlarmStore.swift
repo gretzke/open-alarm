@@ -8,38 +8,6 @@ import SwiftUI
 import UIKit
 import UserNotifications
 
-// MARK: - AlarmManagerScheduling
-
-@MainActor
-protocol AlarmManagerScheduling: AnyObject {
-    var alarms: [Alarm] { get throws }
-    func alarmUpdatesForStore() -> AsyncStream<[Alarm]>?
-    func schedule(
-        id: UUID,
-        configuration: AlarmManager.AlarmConfiguration<OpenAlarmMetadata>
-    ) async throws -> Alarm
-    func stop(id: UUID) throws
-    func cancel(id: UUID) throws
-}
-
-extension AlarmManager: AlarmManagerScheduling {}
-
-extension AlarmManager {
-    func alarmUpdatesForStore() -> AsyncStream<[Alarm]>? {
-        let manager = self
-        return AsyncStream { continuation in
-            let task = Task {
-                for await alarms in manager.alarmUpdates {
-                    guard !Task.isCancelled else { break }
-                    continuation.yield(alarms)
-                }
-                continuation.finish()
-            }
-            continuation.onTermination = { _ in task.cancel() }
-        }
-    }
-}
-
 // MARK: - DisarmPresentation
 
 struct DisarmPresentation: Identifiable {
@@ -125,6 +93,10 @@ final class AlarmStore: ObservableObject {
 
     var areNapLiveActivitiesEnabled: Bool {
         liveActivitiesSystemEnabled && liveActivitiesEnabled
+    }
+
+    var pendingDisarmAlarmIDsForDiagnostics: Set<UUID> {
+        persistence.loadPendingDisarmAlarmIDs()
     }
 
     private var isInteractivelyVisible: Bool {
@@ -260,6 +232,14 @@ final class AlarmStore: ObservableObject {
     // MARK: - App Lifecycle
 
     func handleAppOpened() async {
+        if let runtimeAlarms = try? alarmManager.alarms {
+            let registrations = runtimeAlarms
+                .map { "\($0.id.uuidString):\(String(describing: $0.state))" }
+                .joined(separator: ",")
+            IntentDiagnostics.log("AppOpened runtime ids=[\(registrations)]")
+        } else {
+            IntentDiagnostics.log("AppOpened runtime read failed")
+        }
         permissionStatus = permissionService.currentStatus()
         refreshLiveActivityAuthorizationStatus()
         load()
@@ -1144,6 +1124,22 @@ final class AlarmStore: ObservableObject {
             runtimePhases[alarmID] = .overrideActive(bridgeAlarmIDs: liveBridgeIDs)
         }
 
+        // Revoke any backstop slot survivor. The manager's own registration was
+        // already stopped by complete(), so anything in the slot here is a LATE
+        // StopIntent backstop write that landed during this completion (its
+        // schedule call has no cycle guard). Without this, the sweep would keep
+        // it alive through an active wake-check session and it would re-ring
+        // mid-cycle (R-7.9 violation). Paired with StopIntent's post-write
+        // pending-disarm re-check, one side always sees the other's write.
+        if let staleBackstopID = BackstopSlotStore.backstopID(forParent: alarmID) {
+            if cancelBackstopRegistration(id: staleBackstopID) {
+                BackstopSlotStore.clear(forParent: alarmID)
+                IntentDiagnostics.log("AlarmStore completion revoked late backstop parent=\(alarmID.uuidString) id=\(staleBackstopID.uuidString)")
+            } else {
+                IntentDiagnostics.log("AlarmStore completion backstop cancel failed retained parent=\(alarmID.uuidString) id=\(staleBackstopID.uuidString)")
+            }
+        }
+
         // Process next pending disarm if any
         await processPendingDisarmChallenges()
     }
@@ -1935,6 +1931,26 @@ final class AlarmStore: ObservableObject {
 
     private func isCurrentWakeCheckSession(alarmID: UUID, cycle: Int) -> Bool {
         wakeCheckSessions[alarmID]?.cycle == cycle
+    }
+
+    private func cancelBackstopRegistration(id: UUID) -> Bool {
+        func attempt() -> Bool {
+            var succeeded = true
+            do {
+                try alarmManager.stop(id: id)
+            } catch {
+                succeeded = false
+            }
+            do {
+                try alarmManager.cancel(id: id)
+            } catch {
+                succeeded = false
+            }
+            return succeeded
+        }
+
+        if attempt() { return true }
+        return attempt()
     }
 
     private func compensateWakeCheckStartupIfAlarmWasDeleted(alarmID: UUID, notificationID: String) {

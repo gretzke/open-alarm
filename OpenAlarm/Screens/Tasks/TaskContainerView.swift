@@ -59,11 +59,12 @@ struct TaskContainerView: View {
         }
         .interactiveDismissDisabled()
         .onAppear {
-            // Cancel any orphaned force-close alarm for this challenge from a previous app session.
-            if let orphanedID = BackstopSlotStore.clear(forParent: alarm.id) {
-                try? AlarmManager.shared.stop(id: orphanedID)
-                try? AlarmManager.shared.cancel(id: orphanedID)
-            }
+            // Adopt the orphan until the rolling replacement is registered, so
+            // a force-quit during the first schedule attempt never leaves a gap.
+            let orphanedID = BackstopSlotStore.backstopID(forParent: alarm.id)
+            IntentDiagnostics.log(
+                "TaskUI appear parent=\(alarm.id.uuidString) orphanAdopted=\(orphanedID?.uuidString ?? "none")"
+            )
 
             if alarm.isNap {
                 NapCountdownLiveActivityManager.shared.stop()
@@ -71,13 +72,18 @@ struct TaskContainerView: View {
             soundManager.startPlaying()
             AlarmSoundLiveActivityManager.shared.start(alarm: alarm)
             let manager = ForceCloseAlarmManager(alarm: alarm, resolvedSettings: resolvedSettings)
-            manager.start()
+            manager.start(replacingOrphanID: orphanedID)
             forceCloseManager = manager
         }
         .onDisappear {
+            IntentDiagnostics.log("TaskUI disappear parent=\(alarm.id.uuidString)")
             completionTask?.cancel()
             soundManager.stopPlaying()
-            forceCloseManager?.stop()
+            // suspend, not stop: on iOS 26.5 a force-quit tears down the scene
+            // (running onDisappear) before killing the process, and a terminal
+            // cancel here removed the backstop protection entirely. Completion
+            // still cancels via complete() -> stop() before dismissal.
+            forceCloseManager?.suspend()
             AlarmSoundLiveActivityManager.shared.stop()
         }
     }

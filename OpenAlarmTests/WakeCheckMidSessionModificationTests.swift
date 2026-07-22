@@ -544,6 +544,36 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
         XCTAssertGreaterThan(manager.cancelIDs.filter { $0 == alarm.id }.count, cancelsBefore)
     }
 
+    func testCompleteDisarmChallengeRetainsLateBackstopSlotWhenCancellationFailsTwice() async {
+        let alarm = makeAlarm(lifecycleState: .awaitingDisarmChallenge)
+        let (store, manager, _) = makeStore(alarm: alarm, withSession: false)
+        let backstopID = UUID()
+        BackstopSlotStore.set(backstopID: backstopID, forParent: alarm.id)
+        defer { BackstopSlotStore.clear(forParent: alarm.id) }
+        manager.stopFailureIDs.insert(backstopID)
+        manager.cancelFailureIDs.insert(backstopID)
+
+        await store.completeDisarmChallenge(for: alarm.id)
+
+        XCTAssertEqual(BackstopSlotStore.backstopID(forParent: alarm.id), backstopID)
+        XCTAssertEqual(manager.stopIDs.filter { $0 == backstopID }.count, 2)
+        XCTAssertEqual(manager.cancelIDs.filter { $0 == backstopID }.count, 2)
+    }
+
+    func testCompleteDisarmChallengeClearsLateBackstopSlotWhenCancellationSucceeds() async {
+        let alarm = makeAlarm(lifecycleState: .awaitingDisarmChallenge)
+        let (store, manager, _) = makeStore(alarm: alarm, withSession: false)
+        let backstopID = UUID()
+        BackstopSlotStore.set(backstopID: backstopID, forParent: alarm.id)
+        defer { BackstopSlotStore.clear(forParent: alarm.id) }
+
+        await store.completeDisarmChallenge(for: alarm.id)
+
+        XCTAssertNil(BackstopSlotStore.backstopID(forParent: alarm.id))
+        XCTAssertEqual(manager.stopIDs.filter { $0 == backstopID }.count, 1)
+        XCTAssertEqual(manager.cancelIDs.filter { $0 == backstopID }.count, 1)
+    }
+
     private func makeStore(
         alarm: UserAlarm,
         withSession: Bool,
@@ -604,13 +634,15 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
 
 @MainActor
 private final class FakeAlarmManager: AlarmManagerScheduling {
-    private enum TestError: Error { case scheduleFailed, alarmsReadFailed }
+    private enum TestError: Error { case scheduleFailed, alarmsReadFailed, stopFailed, cancelFailed }
 
     var scheduledIDs: [UUID] = []
     var stopIDs: [UUID] = []
     var cancelIDs: [UUID] = []
     var holdSchedules = false
     var alarmsReadFails = false
+    var stopFailureIDs = Set<UUID>()
+    var cancelFailureIDs = Set<UUID>()
     var onScheduleStarted: (() -> Void)?
     private var scheduleContinuation: CheckedContinuation<Void, Never>?
 
@@ -640,10 +672,12 @@ private final class FakeAlarmManager: AlarmManagerScheduling {
 
     func stop(id: UUID) throws {
         stopIDs.append(id)
+        if stopFailureIDs.contains(id) { throw TestError.stopFailed }
     }
 
     func cancel(id: UUID) throws {
         cancelIDs.append(id)
+        if cancelFailureIDs.contains(id) { throw TestError.cancelFailed }
     }
 
     func resumeSchedule() {
