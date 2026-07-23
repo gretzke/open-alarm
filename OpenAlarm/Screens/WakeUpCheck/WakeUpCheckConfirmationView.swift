@@ -52,6 +52,7 @@ struct WakeUpCheckConfirmationView: View {
                         .font(OADawnType.button)
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+                        .contentShape(Rectangle())
                 }
                 .background(DawnPalette.inkDark, in: Capsule())
                 .buttonStyle(.plain)

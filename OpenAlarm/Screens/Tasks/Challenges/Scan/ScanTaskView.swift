@@ -117,6 +117,7 @@ struct ScanTaskView: View {
                     .font(OADawnType.button)
                     .foregroundStyle(DawnPalette.inkDark)
                     .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+                    .contentShape(Rectangle())
             }
             .background(.white, in: Capsule())
             .buttonStyle(.plain)

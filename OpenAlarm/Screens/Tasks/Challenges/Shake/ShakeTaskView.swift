@@ -69,6 +69,7 @@ struct ShakeTaskView: View {
                 .font(OADawnType.button)
                 .foregroundStyle(DawnPalette.inkDark)
                 .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+                .contentShape(Rectangle())
         }
         .background(Color.white, in: Capsule())
         .buttonStyle(.plain)
