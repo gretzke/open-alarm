@@ -46,6 +46,7 @@ final class AlarmStore: ObservableObject {
     @Published var permissionStatus: AlarmPermissionStatus
     @Published var notificationPermissionStatus: NotificationPermissionStatus = .notDetermined
     @Published var remoteStates: [UUID: Alarm.State] = [:]
+    @Published private(set) var restoredAlarmSettingsFromICloud: Bool
 
     @Published var disarmPresentation: DisarmPresentation?
     @Published var wakeUpCheckConfirmationPresentation: WakeUpCheckConfirmationPresentation?
@@ -112,6 +113,7 @@ final class AlarmStore: ObservableObject {
     private let permissionService: AlarmPermissionService
     private let notificationPermissionService: NotificationPermissionService
     private let persistence: AlarmPersistence
+    private let settingsBackupCoordinator: AlarmSettingsBackupCoordinator?
     private let alertReferenceStore: AlertReferenceStore
     private let wakeCheckNotificationService: any WakeUpCheckNotificationServicing
     private var alarmUpdatesTask: Task<Void, Never>?
@@ -119,6 +121,7 @@ final class AlarmStore: ObservableObject {
     private var wakeCheckConfirmationObserver: Any?
     private var disarmChallengeObserver: Any?
     private var protectedDataAvailableObserver: Any?
+    private var iCloudSettingsObserver: Any?
     private var isProcessingPendingDisarms = false
     /// Pending delayed wake-check-UI presentation; replaced (not stacked) when
     /// processPendingWakeCheckConfirmations reschedules itself.
@@ -131,6 +134,7 @@ final class AlarmStore: ObservableObject {
         permissionService: AlarmPermissionService? = nil,
         notificationPermissionService: NotificationPermissionService? = nil,
         userDefaults: UserDefaults? = nil,
+        iCloudKeyValueStore: (any UbiquitousKeyValueStoring)? = nil,
         wakeCheckNotificationService: (any WakeUpCheckNotificationServicing)? = nil
     ) {
         let resolvedDefaults = userDefaults ?? OpenAlarmSharedDefaults.userDefaults
@@ -144,8 +148,23 @@ final class AlarmStore: ObservableObject {
         )
         self.notificationPermissionService = notificationPermissionService ?? NotificationPermissionService()
         self.persistence = AlarmPersistence(defaults: resolvedDefaults)
+        let resolvedICloudKeyValueStore: (any UbiquitousKeyValueStoring)? = {
+            if let iCloudKeyValueStore {
+                return iCloudKeyValueStore
+            }
+            return userDefaults == nil ? NSUbiquitousKeyValueStore.default : nil
+        }()
+        if let resolvedICloudKeyValueStore {
+            self.settingsBackupCoordinator = AlarmSettingsBackupCoordinator(
+                persistence: self.persistence,
+                cloudStore: ICloudAlarmSettingsStore(keyValueStore: resolvedICloudKeyValueStore)
+            )
+        } else {
+            self.settingsBackupCoordinator = nil
+        }
         self.alertReferenceStore = AlertReferenceStore(defaults: resolvedDefaults)
         self.wakeCheckNotificationService = wakeCheckNotificationService ?? WakeUpCheckNotificationService()
+        self.restoredAlarmSettingsFromICloud = false
         self.defaultSharedSettings = persistence.loadDefaultSharedSettings()
         self.napDefaultSharedSettings = persistence.loadNapDefaultSharedSettings()
         self.defaultNapDurationMinutes = persistence.loadDefaultNapDurationMinutes()
@@ -155,6 +174,17 @@ final class AlarmStore: ObservableObject {
         self.liveActivitiesEnabled = persistence.loadLiveActivitiesEnabled()
         self.liveActivitiesSystemEnabled = ActivityAuthorizationInfo().areActivitiesEnabled
         self.permissionStatus = self.permissionService.currentStatus()
+
+        observeICloudSettingsIfNeeded()
+        self.restoredAlarmSettingsFromICloud = self.settingsBackupCoordinator?.bootstrap() ?? false
+        stopObservingICloudSettingsIfResolved()
+
+        if restoredAlarmSettingsFromICloud {
+            self.defaultSharedSettings = persistence.loadDefaultSharedSettings()
+            self.napDefaultSharedSettings = persistence.loadNapDefaultSharedSettings()
+            self.defaultNapDurationMinutes = persistence.loadDefaultNapDurationMinutes()
+            self.pinAlarmVolumeEnabled = persistence.loadPinAlarmVolumeEnabled()
+        }
 
         if !liveActivitiesSystemEnabled && liveActivitiesEnabled {
             self.liveActivitiesEnabled = false
@@ -210,6 +240,9 @@ final class AlarmStore: ObservableObject {
             NotificationCenter.default.removeObserver(observer)
         }
         if let observer = wakeCheckConfirmationObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        if let observer = iCloudSettingsObserver {
             NotificationCenter.default.removeObserver(observer)
         }
     }
@@ -309,6 +342,9 @@ final class AlarmStore: ObservableObject {
         alarms.append(alarm)
         alarms = sortAlarms(alarms)
         saveAlarms()
+        if !alarm.isTryOut {
+            backUpAlarmSettingsAfterLocalChange()
+        }
 
         await process(event: .enabled, for: alarm.id)
     }
@@ -351,6 +387,7 @@ final class AlarmStore: ObservableObject {
 
         alarms = sortAlarms(alarms)
         saveAlarms()
+        backUpAlarmSettingsAfterLocalChange()
 
         markWakeCheckSessionModified(for: alarm.id)
 
@@ -405,6 +442,7 @@ final class AlarmStore: ObservableObject {
         alarms[index].updatedAt = .now
         alarms = sortAlarms(alarms)
         saveAlarms()
+        backUpAlarmSettingsAfterLocalChange()
 
         markWakeCheckSessionModified(for: alarm.id)
 
@@ -464,6 +502,7 @@ final class AlarmStore: ObservableObject {
         runtimePhases[alarm.id] = result.phase
 
         // Execute effects synchronously (delete only produces cancel + delete effects)
+        var deletedAlarm = false
         for effect in result.effects {
             switch effect {
             case .cancelAlarmKit(let ids):
@@ -476,6 +515,7 @@ final class AlarmStore: ObservableObject {
                 runtimePhases.removeValue(forKey: id)
                 remoteStates.removeValue(forKey: id)
                 saveAlarms()
+                deletedAlarm = true
             case .scheduleAlarmKit, .persist:
                 break
             }
@@ -483,6 +523,10 @@ final class AlarmStore: ObservableObject {
 
         if shouldStopNapActivity {
             NapCountdownLiveActivityManager.shared.stop()
+        }
+
+        if deletedAlarm, !alarm.isTryOut {
+            backUpAlarmSettingsAfterLocalChange()
         }
     }
 
@@ -502,12 +546,14 @@ final class AlarmStore: ObservableObject {
         // Un-skip: toggling on while skip-next is active
         if enabled, alarms[index].activeOverride?.kind == .skipNext {
             await clearOverrideAndRestore(alarmIndex: index)
+            backUpAlarmSettingsAfterLocalChange()
             return
         }
 
         // Skip-next: only for repeating alarms
         if !enabled, skipNext == true, alarm.isRepeating {
             await activateSkipNext(alarmIndex: index)
+            backUpAlarmSettingsAfterLocalChange()
             return
         }
 
@@ -532,6 +578,7 @@ final class AlarmStore: ObservableObject {
 
         alarms = sortAlarms(alarms)
         saveAlarms()
+        backUpAlarmSettingsAfterLocalChange()
 
         markWakeCheckSessionModified(for: alarm.id)
 
@@ -567,6 +614,7 @@ final class AlarmStore: ObservableObject {
         alarms.append(alarm)
         alarms = sortAlarms(alarms)
         saveAlarms()
+        backUpAlarmSettingsAfterLocalChange()
 
         await process(event: .enabled, for: alarm.id)
         syncNapLiveActivity()
@@ -689,9 +737,18 @@ final class AlarmStore: ObservableObject {
     // MARK: - Settings
 
     func updateDefaultSharedSettings(_ settings: SharedAlarmSettings) {
-        guard defaultSharedSettings != settings else { return }
+        guard defaultSharedSettings != settings else {
+            // Saving unchanged settings is still an explicit user confirmation
+            // (onboarding accepts defaults this way); it must close the
+            // restore window so a late cloud delivery cannot overwrite them.
+            if settingsBackupCoordinator?.isAwaitingInitialRestore == true {
+                confirmCurrentAlarmSettings()
+            }
+            return
+        }
         defaultSharedSettings = settings
         persistence.saveDefaultSharedSettings(settings)
+        backUpAlarmSettingsAfterLocalChange()
 
         // Reschedule all enabled alarms using defaults so new config takes effect.
         // This includes naps — settings are pointers, changes propagate immediately.
@@ -722,6 +779,7 @@ final class AlarmStore: ObservableObject {
     func updatePinAlarmVolumeEnabled(_ enabled: Bool) {
         pinAlarmVolumeEnabled = enabled
         persistence.savePinAlarmVolumeEnabled(enabled)
+        backUpAlarmSettingsAfterLocalChange()
     }
 
     @discardableResult
@@ -759,6 +817,7 @@ final class AlarmStore: ObservableObject {
         guard napDefaultSharedSettings != settings else { return }
         napDefaultSharedSettings = settings
         persistence.saveNapDefaultSharedSettings(settings)
+        backUpAlarmSettingsAfterLocalChange()
 
         // Reschedule active nap alarms so new config takes effect immediately.
         let previousTask = settingsRescheduleTask
@@ -776,6 +835,15 @@ final class AlarmStore: ObservableObject {
     func updateDefaultNapDurationMinutes(_ minutes: Int) {
         defaultNapDurationMinutes = max(0, minutes)
         persistence.saveDefaultNapDurationMinutes(defaultNapDurationMinutes)
+        backUpAlarmSettingsAfterLocalChange()
+    }
+
+    func confirmCurrentAlarmSettings() {
+        persistence.saveDefaultSharedSettings(defaultSharedSettings)
+        persistence.saveNapDefaultSharedSettings(napDefaultSharedSettings)
+        persistence.saveDefaultNapDurationMinutes(defaultNapDurationMinutes)
+        persistence.savePinAlarmVolumeEnabled(pinAlarmVolumeEnabled)
+        backUpAlarmSettingsAfterLocalChange()
     }
 
     func openSettings() {
@@ -2040,6 +2108,63 @@ final class AlarmStore: ObservableObject {
 
     private func saveAlarms() {
         persistence.saveUserAlarms(alarms)
+    }
+
+    private func observeICloudSettingsIfNeeded() {
+        guard
+            let settingsBackupCoordinator,
+            settingsBackupCoordinator.needsCloudObservation,
+            iCloudSettingsObserver == nil
+        else {
+            return
+        }
+
+        iCloudSettingsObserver = NotificationCenter.default.addObserver(
+            forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
+            object: settingsBackupCoordinator.notificationObject,
+            queue: .main
+        ) { [weak self] notification in
+            Task { @MainActor [weak self] in
+                self?.handleICloudSettingsChange(notification)
+            }
+        }
+    }
+
+    private func handleICloudSettingsChange(_ notification: Notification) {
+        guard let settingsBackupCoordinator else {
+            return
+        }
+
+        let restored = settingsBackupCoordinator.handleCloudChange(
+            initialSyncCompleted: settingsBackupCoordinator.isInitialSync(notification)
+        )
+
+        if restored {
+            defaultSharedSettings = persistence.loadDefaultSharedSettings()
+            napDefaultSharedSettings = persistence.loadNapDefaultSharedSettings()
+            defaultNapDurationMinutes = persistence.loadDefaultNapDurationMinutes()
+            pinAlarmVolumeEnabled = persistence.loadPinAlarmVolumeEnabled()
+            restoredAlarmSettingsFromICloud = true
+        }
+
+        stopObservingICloudSettingsIfResolved()
+    }
+
+    private func backUpAlarmSettingsAfterLocalChange() {
+        settingsBackupCoordinator?.localAlarmConfigurationDidChange()
+        stopObservingICloudSettingsIfResolved()
+    }
+
+    private func stopObservingICloudSettingsIfResolved() {
+        guard
+            settingsBackupCoordinator?.needsCloudObservation != true,
+            let iCloudSettingsObserver
+        else {
+            return
+        }
+
+        NotificationCenter.default.removeObserver(iCloudSettingsObserver)
+        self.iCloudSettingsObserver = nil
     }
 
     private func sortAlarms(_ alarms: [UserAlarm]) -> [UserAlarm] {

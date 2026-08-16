@@ -22,6 +22,7 @@ let package = Package(
                 "Scheduling/AlarmStateMachine.swift",
                 "Scheduling/BridgeDateCalculator.swift",
                 "Models/AlarmDefinition.swift",
+                "Models/AlarmSettingsBackup.swift",
                 "Models/AlarmSettingsCore.swift",
                 "Models/AlertReferenceStore.swift",
                 "Models/RingtoneCatalog.swift",

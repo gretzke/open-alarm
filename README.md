@@ -21,14 +21,17 @@ Website: [tryopenalarm.com](https://tryopenalarm.com)
 - A wake-up check that can re-trigger an alarm when it is not confirmed
 - Nap timers with pause, resume, extend, and Live Activity controls
 - Per-alarm settings layered over global alarm and nap defaults
+- iCloud restoration for global alarm and nap defaults after reinstalling
 - English and German localization
 
-Alarm audio, challenge state, and scheduling data stay on the device. The app
-contains no advertising, analytics, tracking SDK, account system, or network
-client. Camera classification runs on-device; shake challenges use device
-motion, while step challenges use Core Motion's system-generated pedometer
-data. See the [privacy policy](https://tryopenalarm.com/privacy) for the
-permission-level explanation.
+Alarm audio, individual alarms, and scheduling state stay on the device. Global
+alarm settings are copied to the user's private iCloud key-value store when
+iCloud is available so they can be restored after reinstalling. The app contains
+no advertising, analytics, tracking SDK, or account system. Camera
+classification runs on-device; shake challenges use device motion, while step
+challenges use Core Motion's system-generated pedometer data. See the
+[privacy policy](https://tryopenalarm.com/privacy) for the permission-level
+explanation.
 
 ## Project status
 
@@ -115,6 +118,8 @@ GitHub Actions also runs the core suite and a no-signing device-SDK build.
 - `BridgeDateCalculator` performs DST-safe recurring-date and override math.
 - Models and persistence are Foundation-only and are shared with App Intents
   through an app-group `UserDefaults` suite.
+- Global alarm settings are mirrored to iCloud key-value storage and imported
+  only when an installation has no local alarm data.
 - Stop, snooze, and nap controls use `LiveActivityIntent` so the app process can
   reconcile shared state after an interaction.
 - The scheduling core is also exposed as a local Swift package for fast,

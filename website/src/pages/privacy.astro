@@ -3,12 +3,14 @@ import Plain from '../layouts/Plain.astro';
 ---
 <Plain
   title="Privacy policy · OpenAlarm"
-  description="OpenAlarm collects no data. What the app's permissions are used for."
+  description="How OpenAlarm stores settings and uses app permissions."
   heading="Privacy policy"
 >
-  <p>OpenAlarm does not collect, store, or transmit any personal data. There are no accounts, no analytics, no tracking, and no third-party services.</p>
+  <p>OpenAlarm does not collect personal data or send it to the developer. There are no OpenAlarm accounts, analytics, tracking, advertising, or third-party data services.</p>
 
-  <p>Your alarms, settings, and challenge configuration all stay on your device, plus the device backups you control.</p>
+  <p>Your individual alarms and scheduling state stay on your device, plus the device backups you control.</p>
+
+  <p>If you are signed in to iCloud, OpenAlarm stores your global alarm and nap settings in your private iCloud key-value store. This lets the app restore settings after a reinstall. The backup includes snooze, wake-up check, challenge, ringtone, volume, and nap defaults. It does not include your alarm list. You can disable iCloud for OpenAlarm in the system settings.</p>
 
   <p>Permissions the app asks for are used only for the feature they enable: notifications and alarms so your alarm can ring, Motion &amp; Fitness for the Steps challenge, device motion for the Shake challenge, and the camera for the Scan challenge. Camera frames are processed on-device and never stored or uploaded.</p>
 

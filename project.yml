@@ -66,6 +66,7 @@ targets:
       - path: OpenAlarm/Shared/BackstopSlotStore.swift
       - path: OpenAlarm/Shared/IntentDiagnostics.swift
       - path: OpenAlarm/Models/AlarmDefinition.swift
+      - path: OpenAlarm/Models/AlarmSettingsBackup.swift
       - path: OpenAlarm/Models/AlarmModels.swift
       - path: OpenAlarm/Models/AlarmSettingsCore.swift
       - path: OpenAlarm/Models/AlertReferenceStore.swift

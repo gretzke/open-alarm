@@ -19,8 +19,16 @@ struct AppRootView: View {
         .fontDesign(.rounded)
         .preferredColorScheme(.dark)
         .onAppear {
+            completeRestoredSettingsOnboardingIfNeeded()
             onboardingEngine.handleAppOpened()
             Task { await alarmStore.handleAppOpened() }
+            evaluateWakeCheckPermissionGuard()
+        }
+        .onChange(of: alarmStore.restoredAlarmSettingsFromICloud) { _, restored in
+            guard restored else {
+                return
+            }
+            completeRestoredSettingsOnboardingIfNeeded()
             evaluateWakeCheckPermissionGuard()
         }
         .onChange(of: scenePhase) { _, newPhase in
@@ -81,6 +89,13 @@ struct AppRootView: View {
             guard alarmStore.disarmPresentation == nil else { return }
             showWakeCheckPermissionDeniedPrompt = shouldPresent
         }
+    }
+
+    private func completeRestoredSettingsOnboardingIfNeeded() {
+        guard alarmStore.restoredAlarmSettingsFromICloud else {
+            return
+        }
+        onboardingEngine.completeRestoredDefaultSharedSettings()
     }
 }
 

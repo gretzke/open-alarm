@@ -23,6 +23,7 @@ final class AlarmPersistence: Sendable {
     private let pendingWakeUpCheckShowConfirmUIIDsKey = "OPENALARM_PENDING_WAKE_CHECK_SHOW_CONFIRM_UI_IDS_V1"
     private let wakeCheckSessionsKey = "OPENALARM_WAKE_CHECK_SESSIONS_V1"
     private let pendingDisarmAlarmIDsKey = "OPENALARM_PENDING_DISARM_ALARM_IDS_V1"
+    private let iCloudAlarmSettingsBackupSeededKey = "OPENALARM_ICLOUD_ALARM_SETTINGS_BACKUP_SEEDED_V1"
     init(defaults: UserDefaults = OpenAlarmSharedDefaults.userDefaults) {
         self.defaults = defaults
     }
@@ -50,6 +51,7 @@ final class AlarmPersistence: Sendable {
             "OPENALARM_PENDING_WAKE_CHECK_SHOW_CONFIRM_UI_IDS_V1",
             "OPENALARM_WAKE_CHECK_SESSIONS_V1",
             "OPENALARM_PENDING_DISARM_ALARM_IDS_V1",
+            "OPENALARM_ICLOUD_ALARM_SETTINGS_BACKUP_SEEDED_V1",
             OpenAlarmSharedDefaults.Key.legacyBackstopAlarmID,
             OpenAlarmSharedDefaults.Key.legacyBackstopParentAlarmID,
             OpenAlarmSharedDefaults.Key.backstopSlots,
@@ -98,6 +100,44 @@ final class AlarmPersistence: Sendable {
             // Never delete the existing (good) data because a new encode failed.
             Self.logger.error("Alarm store encode failed, keeping previous data: \(error.localizedDescription)")
         }
+    }
+
+    // MARK: - Alarm Settings Backup
+
+    func hasEstablishedLocalAlarmData() -> Bool {
+        [
+            userAlarmsKey,
+            defaultSharedSettingsKey,
+            pinAlarmVolumeEnabledKey,
+            napDefaultSharedSettingsKey,
+            defaultNapDurationMinutesKey,
+            iCloudAlarmSettingsBackupSeededKey
+        ].contains { defaults.object(forKey: $0) != nil }
+    }
+
+    func makeAlarmSettingsBackup(updatedAt: Date = .now) -> AlarmSettingsBackup {
+        AlarmSettingsBackup(
+            defaultSharedSettings: loadDefaultSharedSettings(),
+            napDefaultSharedSettings: loadNapDefaultSharedSettings(),
+            defaultNapDurationMinutes: loadDefaultNapDurationMinutes(),
+            pinAlarmVolumeEnabled: loadPinAlarmVolumeEnabled(),
+            updatedAt: updatedAt
+        )
+    }
+
+    func restoreAlarmSettings(from backup: AlarmSettingsBackup) {
+        saveDefaultSharedSettings(backup.defaultSharedSettings)
+        saveNapDefaultSharedSettings(backup.napDefaultSharedSettings)
+        saveDefaultNapDurationMinutes(backup.defaultNapDurationMinutes)
+        savePinAlarmVolumeEnabled(backup.pinAlarmVolumeEnabled)
+    }
+
+    func hasSeededICloudAlarmSettingsBackup() -> Bool {
+        defaults.bool(forKey: iCloudAlarmSettingsBackupSeededKey)
+    }
+
+    func markICloudAlarmSettingsBackupSeeded() {
+        defaults.set(true, forKey: iCloudAlarmSettingsBackupSeededKey)
     }
 
     // MARK: - Default Shared Settings

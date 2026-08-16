@@ -20,6 +20,7 @@ struct OnboardingFlowView: View {
                         engine.completeOneTimeDefaultSharedSettings()
                     },
                     onSkip: {
+                        alarmStore.confirmCurrentAlarmSettings()
                         engine.skipOneTimeDefaultSharedSettings()
                     }
                 )

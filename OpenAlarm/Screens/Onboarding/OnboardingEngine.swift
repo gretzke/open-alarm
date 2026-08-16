@@ -82,6 +82,10 @@ final class OnboardingEngine: ObservableObject {
         markOneTimeStepComplete(.defaultSharedSettings)
     }
 
+    func completeRestoredDefaultSharedSettings() {
+        markOneTimeStepComplete(.defaultSharedSettings)
+    }
+
     func skipOneTimeDefaultSharedSettings() {
         markOneTimeStepComplete(.defaultSharedSettings)
     }
