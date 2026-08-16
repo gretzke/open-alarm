@@ -293,6 +293,8 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
     var tasks: [AlarmTask]
     var volume: AlarmVolumeSettings
     var ringtoneID: String
+    var ringtoneShuffleEnabled: Bool
+    var ringtoneIDs: [String]
 
     static let featureDefaults = SharedAlarmSettings(
         snoozeEnabled: false,
@@ -304,8 +306,44 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         tasksEnabled: true,
         tasks: [],
         volume: .default,
-        ringtoneID: RingtoneCatalog.defaultToneID
+        ringtoneID: RingtoneCatalog.defaultToneID,
+        ringtoneShuffleEnabled: false,
+        ringtoneIDs: [RingtoneCatalog.defaultToneID]
     )
+
+    var selectedRingtoneIDs: [String] {
+        if ringtoneShuffleEnabled {
+            return ringtoneIDs.isEmpty ? [ringtoneID] : ringtoneIDs
+        }
+        return [ringtoneID]
+    }
+
+    mutating func setRingtoneShuffleEnabled(_ enabled: Bool) {
+        ringtoneShuffleEnabled = enabled
+        if enabled {
+            if ringtoneIDs.isEmpty {
+                ringtoneIDs = [ringtoneID]
+            }
+        } else {
+            ringtoneIDs = [ringtoneID]
+        }
+    }
+
+    mutating func selectRingtone(_ id: String) {
+        if ringtoneShuffleEnabled {
+            if let index = ringtoneIDs.firstIndex(of: id) {
+                guard ringtoneIDs.count > 1 else { return }
+                ringtoneIDs.remove(at: index)
+                ringtoneID = ringtoneIDs.last ?? RingtoneCatalog.defaultToneID
+            } else {
+                ringtoneIDs.append(id)
+                ringtoneID = id
+            }
+        } else {
+            ringtoneID = id
+            ringtoneIDs = [id]
+        }
+    }
 
     func canSnoozeAgain(currentCount: Int) -> Bool {
         guard snoozeEnabled else {
@@ -344,6 +382,8 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         case tasks
         case volume
         case ringtoneID
+        case ringtoneShuffleEnabled
+        case ringtoneIDs
     }
 
     init(
@@ -356,7 +396,9 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         tasksEnabled: Bool = true,
         tasks: [AlarmTask] = [],
         volume: AlarmVolumeSettings = .default,
-        ringtoneID: String = RingtoneCatalog.defaultToneID
+        ringtoneID: String = RingtoneCatalog.defaultToneID,
+        ringtoneShuffleEnabled: Bool = false,
+        ringtoneIDs: [String]? = nil
     ) {
         self.snoozeEnabled = snoozeEnabled
         self.snoozeDurationMinutes = snoozeDurationMinutes
@@ -368,6 +410,15 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         self.tasks = tasks
         self.volume = volume
         self.ringtoneID = ringtoneID
+        self.ringtoneShuffleEnabled = ringtoneShuffleEnabled
+        if let ringtoneIDs, !ringtoneIDs.isEmpty {
+            self.ringtoneIDs = ringtoneIDs
+        } else {
+            self.ringtoneIDs = [ringtoneID]
+        }
+        if !self.ringtoneIDs.contains(ringtoneID) {
+            self.ringtoneIDs.append(ringtoneID)
+        }
     }
 
     init(from decoder: Decoder) throws {
@@ -386,6 +437,12 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         tasks = try container.decodeIfPresent([AlarmTask].self, forKey: .tasks) ?? []
         volume = try container.decodeIfPresent(AlarmVolumeSettings.self, forKey: .volume) ?? .default
         ringtoneID = try container.decodeIfPresent(String.self, forKey: .ringtoneID) ?? RingtoneCatalog.defaultToneID
+        ringtoneShuffleEnabled = try container.decodeIfPresent(Bool.self, forKey: .ringtoneShuffleEnabled) ?? false
+        let decodedRingtoneIDs = try container.decodeIfPresent([String].self, forKey: .ringtoneIDs) ?? []
+        ringtoneIDs = decodedRingtoneIDs.isEmpty ? [ringtoneID] : decodedRingtoneIDs
+        if !ringtoneIDs.contains(ringtoneID) {
+            ringtoneIDs.append(ringtoneID)
+        }
     }
 
     func encode(to encoder: Encoder) throws {
@@ -400,6 +457,8 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         try container.encode(tasks, forKey: .tasks)
         try container.encode(volume, forKey: .volume)
         try container.encode(ringtoneID, forKey: .ringtoneID)
+        try container.encode(ringtoneShuffleEnabled, forKey: .ringtoneShuffleEnabled)
+        try container.encode(ringtoneIDs, forKey: .ringtoneIDs)
     }
 }
 
@@ -665,9 +724,10 @@ struct WakeCheckSession: Codable, Equatable, Sendable {
     var deadlineAt: Date
     var notificationID: String
     var modifiedDuringSession: Bool
+    var ringtoneID: String?
 
     private enum CodingKeys: String, CodingKey {
-        case alarmID, cycle, checkAt, deadlineAt, notificationID, modifiedDuringSession
+        case alarmID, cycle, checkAt, deadlineAt, notificationID, modifiedDuringSession, ringtoneID
     }
 
     init(
@@ -676,7 +736,8 @@ struct WakeCheckSession: Codable, Equatable, Sendable {
         checkAt: Date,
         deadlineAt: Date,
         notificationID: String,
-        modifiedDuringSession: Bool = false
+        modifiedDuringSession: Bool = false,
+        ringtoneID: String? = nil
     ) {
         self.alarmID = alarmID
         self.cycle = cycle
@@ -684,6 +745,7 @@ struct WakeCheckSession: Codable, Equatable, Sendable {
         self.deadlineAt = deadlineAt
         self.notificationID = notificationID
         self.modifiedDuringSession = modifiedDuringSession
+        self.ringtoneID = ringtoneID
     }
 
     init(from decoder: Decoder) throws {
@@ -694,6 +756,7 @@ struct WakeCheckSession: Codable, Equatable, Sendable {
         deadlineAt = try container.decode(Date.self, forKey: .deadlineAt)
         notificationID = try container.decode(String.self, forKey: .notificationID)
         modifiedDuringSession = try container.decodeIfPresent(Bool.self, forKey: .modifiedDuringSession) ?? false
+        ringtoneID = try container.decodeIfPresent(String.self, forKey: .ringtoneID)
     }
 }
 

@@ -278,7 +278,7 @@ struct SharedAlarmSettingsEditor: View {
         }
         .sheet(isPresented: $isRingtonePickerPresented) {
             NavigationStack {
-                RingtonePickerView(selection: $settings.ringtoneID)
+                RingtonePickerView(settings: $settings)
             }
             .preferredColorScheme(.dark)
         }
@@ -339,9 +339,15 @@ struct SharedAlarmSettingsEditor: View {
 
                 Spacer(minLength: 0)
 
-                Text(LocalizedStringKey(RingtoneCatalog.resolve(settings.ringtoneID).displayNameKey))
-                    .font(OAType.rowValue)
-                    .foregroundStyle(OAColor.textSecondary)
+                Group {
+                    if settings.ringtoneShuffleEnabled {
+                        Text(L10n.ringtoneShuffleToggle)
+                    } else {
+                        Text(LocalizedStringKey(RingtoneCatalog.resolve(settings.ringtoneID).displayNameKey))
+                    }
+                }
+                .font(OAType.rowValue)
+                .foregroundStyle(OAColor.textSecondary)
 
                 Image(systemName: "chevron.right")
                     .font(.footnote.weight(.semibold))

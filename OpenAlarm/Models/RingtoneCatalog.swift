@@ -125,6 +125,34 @@ enum RingtoneCatalog {
         return ringtone
     }
 
+    static func randomSelectionID(
+        from ids: [String],
+        excluding previousID: String?
+    ) -> String {
+        var generator = SystemRandomNumberGenerator()
+        return randomSelectionID(from: ids, excluding: previousID, using: &generator)
+    }
+
+    static func randomSelectionID<Generator: RandomNumberGenerator>(
+        from ids: [String],
+        excluding previousID: String?,
+        using generator: inout Generator
+    ) -> String {
+        var seen = Set<String>()
+        let candidates = ids
+            .map { resolve($0).id }
+            .filter { seen.insert($0).inserted }
+
+        guard !candidates.isEmpty else {
+            return defaultToneID
+        }
+
+        let eligible = candidates.count > 1
+            ? candidates.filter { $0 != previousID }
+            : candidates
+        return eligible.randomElement(using: &generator) ?? candidates[0]
+    }
+
     static var defaultTone: Ringtone {
         // This is an invariant of the static catalog above.
         all.first(where: { $0.id == defaultToneID })!

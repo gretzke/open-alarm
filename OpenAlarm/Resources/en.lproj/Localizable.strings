@@ -111,6 +111,7 @@
 "settings_credits_title" = "Credits";
 "ringtone_picker_title" = "Ringtone";
 "ringtone_picker_row_title" = "Ringtone";
+"ringtone_shuffle_toggle" = "Shuffle";
 "ringtone_section_classical" = "Classical";
 "ringtone_section_classic_alarms" = "Classic alarms";
 "ringtone_section_dawn" = "Dawn";

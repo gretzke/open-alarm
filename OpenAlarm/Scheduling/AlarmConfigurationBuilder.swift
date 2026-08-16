@@ -42,11 +42,12 @@ enum AlarmConfigurationBuilder {
         for alarm: AlarmDefinition,
         schedule: Alarm.Schedule,
         defaultSharedSettings: SharedAlarmSettings,
-        forceDisableSnooze: Bool = false
+        forceDisableSnooze: Bool = false,
+        ringtoneID: String? = nil
     ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
         let title = resolvedTitle(for: alarm)
         let sharedSettings = alarm.resolvedSharedSettings(defaults: defaultSharedSettings)
-        let alarmSound = alarmKitSound(for: sharedSettings)
+        let alarmSound = alarmKitSound(for: sharedSettings, ringtoneID: ringtoneID)
         let showSnooze = !forceDisableSnooze && sharedSettings.canSnoozeAgain(currentCount: alarm.snoozeCount)
 
         let alertPresentation = AlarmPresentation.Alert(
@@ -94,11 +95,12 @@ enum AlarmConfigurationBuilder {
         for parentAlarm: AlarmDefinition,
         bridgeID: UUID,
         schedule: Alarm.Schedule,
-        defaultSharedSettings: SharedAlarmSettings
+        defaultSharedSettings: SharedAlarmSettings,
+        ringtoneID: String? = nil
     ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
         let title = resolvedTitle(for: parentAlarm)
         let sharedSettings = parentAlarm.resolvedSharedSettings(defaults: defaultSharedSettings)
-        let alarmSound = alarmKitSound(for: sharedSettings)
+        let alarmSound = alarmKitSound(for: sharedSettings, ringtoneID: ringtoneID)
         // The parent's snoozeCount carries across bridge reschedules:
         // SnoozeIntent increments it before rebuilding this configuration, so
         // a bridge that reached its snooze limit must not offer the button.
@@ -143,11 +145,12 @@ enum AlarmConfigurationBuilder {
     static func makeWakeCheckBackupConfiguration(
         for alarm: AlarmDefinition,
         deadlineAt: Date,
-        resolvedSettings: SharedAlarmSettings
+        resolvedSettings: SharedAlarmSettings,
+        ringtoneID: String? = nil
     ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
         let title = resolvedTitle(for: alarm)
         let titleResource = localizedResource(from: title)
-        let alarmSound = alarmKitSound(for: resolvedSettings)
+        let alarmSound = alarmKitSound(for: resolvedSettings, ringtoneID: ringtoneID)
         let alertPresentation = AlarmPresentation.Alert(
             title: titleResource,
             stopButton: .stopButton,
@@ -176,11 +179,12 @@ enum AlarmConfigurationBuilder {
     static func makeForceCloseAlarmConfiguration(
         for alarm: AlarmDefinition,
         fireAt: Date,
-        resolvedSettings: SharedAlarmSettings
+        resolvedSettings: SharedAlarmSettings,
+        ringtoneID: String? = nil
     ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
         let title = resolvedTitle(for: alarm)
         let titleResource = localizedResource(from: title)
-        let alarmSound = alarmKitSound(for: resolvedSettings)
+        let alarmSound = alarmKitSound(for: resolvedSettings, ringtoneID: ringtoneID)
         let alertPresentation = AlarmPresentation.Alert(
             title: titleResource,
             stopButton: .stopButton,
@@ -206,8 +210,11 @@ enum AlarmConfigurationBuilder {
 
     // MARK: - Helpers
 
-    private static func alarmKitSound(for settings: SharedAlarmSettings) -> AlertConfiguration.AlertSound {
-        let ringtone = RingtoneCatalog.resolve(settings.ringtoneID)
+    private static func alarmKitSound(
+        for settings: SharedAlarmSettings,
+        ringtoneID: String?
+    ) -> AlertConfiguration.AlertSound {
+        let ringtone = RingtoneCatalog.resolve(ringtoneID ?? settings.ringtoneID)
         guard !ringtone.isDefault else { return .default }
 
         let fileURL = URL(fileURLWithPath: ringtone.excerptFileName)

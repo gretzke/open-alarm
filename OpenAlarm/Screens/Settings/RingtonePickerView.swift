@@ -2,22 +2,35 @@ import AVFoundation
 import SwiftUI
 
 struct RingtonePickerView: View {
-    @Binding var selection: String
+    @Binding var settings: SharedAlarmSettings
     @StateObject private var previewPlayer = RingtonePreviewPlayer()
 
     var body: some View {
         List {
+            Section {
+                Toggle(isOn: Binding(
+                    get: { settings.ringtoneShuffleEnabled },
+                    set: { enabled in
+                        Haptics.impact()
+                        settings.setRingtoneShuffleEnabled(enabled)
+                    }
+                )) {
+                    Label(L10n.ringtoneShuffleToggle, systemImage: "shuffle")
+                }
+                .tint(OAColor.actionCyan)
+            }
+
             ForEach(RingtoneCatalog.sections, id: \.0) { section, ringtones in
                 Section(LocalizedStringKey(section.displayNameKey)) {
                     ForEach(ringtones, id: \.id) { ringtone in
                         Button {
-                            selection = ringtone.id
+                            settings.selectRingtone(ringtone.id)
                             previewPlayer.play(ringtone)
                         } label: {
                             HStack {
                                 Text(LocalizedStringKey(ringtone.displayNameKey))
                                 Spacer()
-                                if selection == ringtone.id {
+                                if settings.selectedRingtoneIDs.contains(ringtone.id) {
                                     Image(systemName: "checkmark")
                                         .foregroundStyle(OAColor.actionCyan)
                                 }

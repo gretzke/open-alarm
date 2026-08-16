@@ -9,6 +9,7 @@ enum OpenAlarmSharedDefaults {
     /// no target re-types them as string literals (drift risk).
     enum Key {
         static let backstopSlots = "OPENALARM_BACKSTOP_SLOTS_V1"
+        static let lastRingtoneIDs = "OPENALARM_LAST_RINGTONE_IDS_V1"
         static let diagnosticsLog = "OPENALARM_DIAGNOSTICS_LOG"
         static let wakeCheckGraceAppliedIDs = "OPENALARM_WAKE_CHECK_GRACE_APPLIED_IDS"
         static let legacyBackstopAlarmID = "OPENALARM_FORCE_CLOSE_ALARM_ID"

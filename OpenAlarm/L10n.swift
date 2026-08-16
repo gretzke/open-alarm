@@ -93,6 +93,7 @@ enum L10n {
     static let settingsCreditsTitle: LocalizedStringKey = "settings_credits_title"
     static let ringtonePickerTitle: LocalizedStringKey = "ringtone_picker_title"
     static let ringtonePickerRowTitle: LocalizedStringKey = "ringtone_picker_row_title"
+    static let ringtoneShuffleToggle: LocalizedStringKey = "ringtone_shuffle_toggle"
     static let creditsIntro: LocalizedStringKey = "credits_intro"
     static let creditsCodeLicense: LocalizedStringKey = "credits_code_license"
     static let creditsClassicalTitle: LocalizedStringKey = "credits_classical_title"

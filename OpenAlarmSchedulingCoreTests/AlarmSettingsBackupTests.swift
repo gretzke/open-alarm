@@ -16,7 +16,7 @@ struct AlarmSettingsBackupTests {
 
         var globalSettings = SharedAlarmSettings.featureDefaults
         globalSettings.snoozeEnabled = true
-        globalSettings.ringtoneID = "nature.rain"
+        globalSettings.selectRingtone("nature.rain")
         var napSettings = SharedAlarmSettings.featureDefaults
         napSettings.tasks = [.math(difficulty: .hard, count: 4)]
 

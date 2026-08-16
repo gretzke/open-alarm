@@ -158,10 +158,16 @@ struct StopIntent: LiveActivityIntent {
     ) async {
         let newID = UUID()
         let fireDate = Date.now.addingTimeInterval(SchedulingConstants.disarmBackstopSeconds)
+        let ringtoneID = RingtoneCatalog.resolve(
+            AlertReferenceStore(defaults: defaults).reference(alarmKitID: intentID)?.ringtoneID
+                ?? LastRingtoneStore.lastRingtoneID(forAlarm: alarm.id, defaults: defaults)
+                ?? settings.ringtoneID
+        ).id
         let config = AlarmConfigurationBuilder.makeForceCloseAlarmConfiguration(
             for: alarm,
             fireAt: fireDate,
-            resolvedSettings: settings
+            resolvedSettings: settings,
+            ringtoneID: ringtoneID
         )
 
         IntentDiagnostics.log("StopIntent backstop schedule attempt id=\(newID.uuidString) parent=\(alarm.id.uuidString)")
@@ -171,7 +177,7 @@ struct StopIntent: LiveActivityIntent {
             AlertReferenceStore(defaults: defaults).record(
                 AlertReference(
                     expectedFireDate: fireDate,
-                    ringtoneID: RingtoneCatalog.resolve(settings.ringtoneID).id,
+                    ringtoneID: ringtoneID,
                     // This overwrites the parent-keyed registration by design; the
                     // parent mapping remains identical while alertStartedAt updates.
                     parentAlarmID: alarm.id
@@ -187,7 +193,7 @@ struct StopIntent: LiveActivityIntent {
                 AlertReferenceStore(defaults: defaults).record(
                     AlertReference(
                         expectedFireDate: fireDate,
-                        ringtoneID: RingtoneCatalog.resolve(settings.ringtoneID).id,
+                        ringtoneID: ringtoneID,
                         // Preserve the same parent mapping on the retry overwrite.
                         parentAlarmID: alarm.id
                     ),

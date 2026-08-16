@@ -478,6 +478,7 @@ final class AlarmStore: ObservableObject {
             try? alarmManager.stop(id: backstopID)
             try? alarmManager.cancel(id: backstopID)
         }
+        LastRingtoneStore.clear(forAlarm: alarm.id)
 
         // Clean up wake-check session if active
         if let session = wakeCheckSessions[alarm.id] {
@@ -1026,17 +1027,23 @@ final class AlarmStore: ObservableObject {
                 // Reschedule backup alarm
                 if let alarm = alarms.first(where: { $0.id == alarmID }) {
                     let settings = resolvedSettingsForAlarm(alarm)
+                    let ringtoneID = currentRingtoneID(
+                        for: alarm,
+                        settings: settings,
+                        preferredID: session.ringtoneID
+                    )
                     let config = AlarmConfigurationBuilder.makeWakeCheckBackupConfiguration(
                         for: alarm,
                         deadlineAt: newDeadline,
-                        resolvedSettings: settings
+                        resolvedSettings: settings,
+                        ringtoneID: ringtoneID
                     )
                     try? alarmManager.stop(id: alarmID)
                     try? alarmManager.cancel(id: alarmID)
                     recordAlertReference(
                         alarmKitID: alarmID,
                         expectedFireDate: newDeadline,
-                        settings: settings,
+                        ringtoneID: ringtoneID,
                         parentAlarmID: alarm.id
                     )
                     _ = try? await alarmManager.schedule(id: alarmID, configuration: config)
@@ -1132,13 +1139,20 @@ final class AlarmStore: ObservableObject {
             now: .now,
             calendar: .autoupdatingCurrent
         )
+        let ringtone = RingtoneCatalog.resolve(
+            reference?.ringtoneID
+                ?? LastRingtoneStore.lastRingtoneID(forAlarm: alarm.id)
+                ?? settings.ringtoneID
+        )
+        var playbackSettings = settings
+        playbackSettings.ringtoneID = ringtone.id
         disarmPresentation = DisarmPresentation(
             id: alarms[index].id,
             alarm: alarm,
             tasks: persistence.effectiveTasks(from: settings),
-            resolvedSettings: settings,
+            resolvedSettings: playbackSettings,
             alertStartedAt: alertStartedAt,
-            ringtone: RingtoneCatalog.resolve(reference?.ringtoneID ?? settings.ringtoneID)
+            ringtone: ringtone
         )
         IntentDiagnostics.log("AlarmStore disarm presentation shown alarm=\(alarm.id.uuidString)")
     }
@@ -1150,6 +1164,9 @@ final class AlarmStore: ObservableObject {
         } else {
             completedAlarmKitID = alarmID
         }
+        let completedRingtoneID = alertReferenceStore.reference(
+            alarmKitID: completedAlarmKitID
+        )?.ringtoneID
 
         // Remove from pending disarm — pending set may contain bridge UUID or parent ID
         var pendingIDs = persistence.loadPendingDisarmAlarmIDs()
@@ -1182,7 +1199,12 @@ final class AlarmStore: ObservableObject {
 
         // Handle wake-check (previously in StopIntent) — trust the state machine
         if phase == .awaitingWakeCheck {
-            await startWakeCheckSession(for: alarmID, alarm: alarm, settings: settings)
+            await startWakeCheckSession(
+                for: alarmID,
+                alarm: alarm,
+                settings: settings,
+                ringtoneID: completedRingtoneID
+            )
         }
 
         // Refresh bridge runtime IDs after returning to override-active.
@@ -1213,7 +1235,12 @@ final class AlarmStore: ObservableObject {
         await processPendingDisarmChallenges()
     }
 
-    func startWakeCheckSession(for alarmID: UUID, alarm: AlarmDefinition, settings: SharedAlarmSettings) async {
+    func startWakeCheckSession(
+        for alarmID: UUID,
+        alarm: AlarmDefinition,
+        settings: SharedAlarmSettings,
+        ringtoneID preferredRingtoneID: String? = nil
+    ) async {
         let previousSession = wakeCheckSessions[alarmID]
         let existingCycle = previousSession?.cycle ?? 0
         let newCycle = existingCycle + 1
@@ -1238,13 +1265,19 @@ final class AlarmStore: ObservableObject {
         let checkAt = Date.now.addingTimeInterval(checkDelay)
         let deadlineAt = checkAt.addingTimeInterval(responseTimeout)
         let notificationID = WakeUpCheckNotificationConstants.notificationID(alarmID: alarmID, cycle: newCycle)
+        let ringtoneID = currentRingtoneID(
+            for: alarm,
+            settings: settings,
+            preferredID: preferredRingtoneID
+        )
 
         let session = WakeCheckSession(
             alarmID: alarmID,
             cycle: newCycle,
             checkAt: checkAt,
             deadlineAt: deadlineAt,
-            notificationID: notificationID
+            notificationID: notificationID,
+            ringtoneID: ringtoneID
         )
         wakeCheckSessions[alarmID] = session
         persistence.saveWakeCheckSessions(wakeCheckSessions)
@@ -1278,13 +1311,14 @@ final class AlarmStore: ObservableObject {
         let config = AlarmConfigurationBuilder.makeWakeCheckBackupConfiguration(
             for: alarm,
             deadlineAt: deadlineAt,
-            resolvedSettings: settings
+            resolvedSettings: settings,
+            ringtoneID: ringtoneID
         )
         guard isCurrentWakeCheckSession(alarmID: alarmID, cycle: newCycle) else { return }
         recordAlertReference(
             alarmKitID: alarmID,
             expectedFireDate: deadlineAt,
-            settings: settings,
+            ringtoneID: ringtoneID,
             parentAlarmID: alarm.id
         )
         _ = try? await alarmManager.schedule(id: alarmID, configuration: config)
@@ -1305,15 +1339,21 @@ final class AlarmStore: ObservableObject {
             guard current.cycle != cycle else { return }
             // A newer cycle owns the canonical slot; restore its backup.
             let settings = resolvedSettingsForAlarm(alarm)
+            let ringtoneID = currentRingtoneID(
+                for: alarm,
+                settings: settings,
+                preferredID: current.ringtoneID
+            )
             let config = AlarmConfigurationBuilder.makeWakeCheckBackupConfiguration(
                 for: alarm,
                 deadlineAt: current.deadlineAt,
-                resolvedSettings: settings
+                resolvedSettings: settings,
+                ringtoneID: ringtoneID
             )
             recordAlertReference(
                 alarmKitID: alarmID,
                 expectedFireDate: current.deadlineAt,
-                settings: settings,
+                ringtoneID: ringtoneID,
                 parentAlarmID: alarm.id
             )
             _ = try? await alarmManager.schedule(id: alarmID, configuration: config)
@@ -1441,10 +1481,21 @@ final class AlarmStore: ObservableObject {
             try? alarmManager.cancel(id: alarm.id)
 
             let runtimeSchedule = AlarmScheduleResolver.runtimeSchedule(for: alarm)
-            let config = makeConfiguration(for: alarm, schedule: runtimeSchedule)
+            let ringtoneID = nextRingtoneID(for: alarm)
+            let config = makeConfiguration(
+                for: alarm,
+                schedule: runtimeSchedule,
+                ringtoneID: ringtoneID
+            )
             do {
-                recordAlertReference(alarmKitID: alarm.id, for: alarm, parentAlarmID: alarm.id)
+                recordAlertReference(
+                    alarmKitID: alarm.id,
+                    for: alarm,
+                    parentAlarmID: alarm.id,
+                    ringtoneID: ringtoneID
+                )
                 _ = try await alarmManager.schedule(id: alarm.id, configuration: config)
+                persistLastScheduledRingtoneID(ringtoneID, for: alarm.id)
             } catch {
                 Self.logger.error("Force reschedule failed for \(alarm.id): \(error.localizedDescription)")
             }
@@ -1458,18 +1509,35 @@ final class AlarmStore: ObservableObject {
         }
 
         let runtimeSchedule = AlarmScheduleResolver.runtimeSchedule(for: alarm)
-        let config = makeConfiguration(for: alarm, schedule: runtimeSchedule)
+        let ringtoneID = nextRingtoneID(for: alarm)
+        let config = makeConfiguration(
+            for: alarm,
+            schedule: runtimeSchedule,
+            ringtoneID: ringtoneID
+        )
 
         do {
-            recordAlertReference(alarmKitID: alarm.id, for: alarm, parentAlarmID: alarm.id)
+            recordAlertReference(
+                alarmKitID: alarm.id,
+                for: alarm,
+                parentAlarmID: alarm.id,
+                ringtoneID: ringtoneID
+            )
             _ = try await alarmManager.schedule(id: alarm.id, configuration: config)
+            persistLastScheduledRingtoneID(ringtoneID, for: alarm.id)
         } catch {
             Self.logger.warning("Schedule failed for \(alarm.id), retrying: \(error.localizedDescription)")
             try? alarmManager.stop(id: alarm.id)
             try? alarmManager.cancel(id: alarm.id)
             do {
-                recordAlertReference(alarmKitID: alarm.id, for: alarm, parentAlarmID: alarm.id)
+                recordAlertReference(
+                    alarmKitID: alarm.id,
+                    for: alarm,
+                    parentAlarmID: alarm.id,
+                    ringtoneID: ringtoneID
+                )
                 _ = try await alarmManager.schedule(id: alarm.id, configuration: config)
+                persistLastScheduledRingtoneID(ringtoneID, for: alarm.id)
             } catch {
                 Self.logger.error("Retry schedule failed for \(alarm.id): \(error.localizedDescription)")
             }
@@ -1552,21 +1620,26 @@ final class AlarmStore: ObservableObject {
     private func scheduleBridgeAlarm(bridgeID: UUID, trigger: AlarmTrigger, parentAlarm: AlarmDefinition) async {
         guard case .fixed(let date) = trigger else { return }
 
+        let currentParent = alarms.first(where: { $0.id == parentAlarm.id }) ?? parentAlarm
+        let ringtoneID = nextRingtoneID(for: currentParent)
+
         let config = AlarmConfigurationBuilder.makeBridgeConfiguration(
-            for: parentAlarm,
+            for: currentParent,
             bridgeID: bridgeID,
             schedule: .fixed(date),
-            defaultSharedSettings: resolvedDefaultsForAlarm(parentAlarm)
+            defaultSharedSettings: resolvedDefaultsForAlarm(currentParent),
+            ringtoneID: ringtoneID
         )
 
         do {
             recordAlertReference(
                 alarmKitID: bridgeID,
                 expectedFireDate: date,
-                settings: resolvedSettingsForAlarm(parentAlarm),
-                parentAlarmID: parentAlarm.id
+                ringtoneID: ringtoneID,
+                parentAlarmID: currentParent.id
             )
             _ = try await alarmManager.schedule(id: bridgeID, configuration: config)
+            persistLastScheduledRingtoneID(ringtoneID, for: currentParent.id)
         } catch {
             Self.logger.warning("Bridge schedule failed for \(bridgeID), retrying: \(error.localizedDescription)")
             try? alarmManager.stop(id: bridgeID)
@@ -1575,10 +1648,11 @@ final class AlarmStore: ObservableObject {
                 recordAlertReference(
                     alarmKitID: bridgeID,
                     expectedFireDate: date,
-                    settings: resolvedSettingsForAlarm(parentAlarm),
-                    parentAlarmID: parentAlarm.id
+                    ringtoneID: ringtoneID,
+                    parentAlarmID: currentParent.id
                 )
                 _ = try await alarmManager.schedule(id: bridgeID, configuration: config)
+                persistLastScheduledRingtoneID(ringtoneID, for: currentParent.id)
             } catch {
                 Self.logger.error("Bridge retry failed for \(bridgeID): \(error.localizedDescription)")
             }
@@ -1587,13 +1661,39 @@ final class AlarmStore: ObservableObject {
 
     private func makeConfiguration(
         for alarm: UserAlarm,
-        schedule: Alarm.Schedule
+        schedule: Alarm.Schedule,
+        ringtoneID: String
     ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
         AlarmConfigurationBuilder.makeConfiguration(
             for: alarm,
             schedule: schedule,
-            defaultSharedSettings: resolvedDefaultsForAlarm(alarm)
+            defaultSharedSettings: resolvedDefaultsForAlarm(alarm),
+            ringtoneID: ringtoneID
         )
+    }
+
+    private func nextRingtoneID(for alarm: UserAlarm) -> String {
+        let settings = resolvedSettingsForAlarm(alarm)
+        return RingtoneCatalog.randomSelectionID(
+            from: settings.selectedRingtoneIDs,
+            excluding: LastRingtoneStore.lastRingtoneID(forAlarm: alarm.id)
+        )
+    }
+
+    private func currentRingtoneID(
+        for alarm: UserAlarm,
+        settings: SharedAlarmSettings,
+        preferredID: String? = nil
+    ) -> String {
+        RingtoneCatalog.resolve(
+            preferredID
+                ?? LastRingtoneStore.lastRingtoneID(forAlarm: alarm.id)
+                ?? settings.ringtoneID
+        ).id
+    }
+
+    private func persistLastScheduledRingtoneID(_ ringtoneID: String, for alarmID: UUID) {
+        LastRingtoneStore.set(ringtoneID, forAlarm: alarmID)
     }
 
     /// Returns the effective default settings for the given alarm.
@@ -1610,27 +1710,32 @@ final class AlarmStore: ObservableObject {
     private func recordAlertReference(
         alarmKitID: UUID,
         expectedFireDate: Date,
-        settings: SharedAlarmSettings,
+        ringtoneID: String,
         parentAlarmID: UUID
     ) {
         alertReferenceStore.record(
             AlertReference(
                 expectedFireDate: expectedFireDate,
-                ringtoneID: RingtoneCatalog.resolve(settings.ringtoneID).id,
+                ringtoneID: RingtoneCatalog.resolve(ringtoneID).id,
                 parentAlarmID: parentAlarmID
             ),
             alarmKitID: alarmKitID
         )
     }
 
-    private func recordAlertReference(alarmKitID: UUID, for alarm: UserAlarm, parentAlarmID: UUID) {
+    private func recordAlertReference(
+        alarmKitID: UUID,
+        for alarm: UserAlarm,
+        parentAlarmID: UUID,
+        ringtoneID: String
+    ) {
         // Schedule may proceed even when recurrence math cannot yield a date;
         // write a conservative reference so every registration still has a parent mapping.
         let expectedFireDate = nextExpectedFireDate(for: alarm) ?? .now
         recordAlertReference(
             alarmKitID: alarmKitID,
             expectedFireDate: expectedFireDate,
-            settings: resolvedSettingsForAlarm(alarm),
+            ringtoneID: ringtoneID,
             parentAlarmID: parentAlarmID
         )
     }
@@ -1740,6 +1845,7 @@ final class AlarmStore: ObservableObject {
             alarms.removeAll { $0.id == id }
             runtimePhases.removeValue(forKey: id)
             remoteStates.removeValue(forKey: id)
+            LastRingtoneStore.clear(forAlarm: id)
             saveAlarms()
         case .persist(let updatedAlarm):
             if let index = alarms.firstIndex(where: { $0.id == updatedAlarm.id }) {

@@ -64,6 +64,7 @@ targets:
       - path: OpenAlarm/LiveActivities/NapCountdownLiveActivityAttributes.swift
       - path: OpenAlarm/Shared/OpenAlarmSharedDefaults.swift
       - path: OpenAlarm/Shared/BackstopSlotStore.swift
+      - path: OpenAlarm/Shared/LastRingtoneStore.swift
       - path: OpenAlarm/Shared/IntentDiagnostics.swift
       - path: OpenAlarm/Models/AlarmDefinition.swift
       - path: OpenAlarm/Models/AlarmSettingsBackup.swift

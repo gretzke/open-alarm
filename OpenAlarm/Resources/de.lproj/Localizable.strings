@@ -111,6 +111,7 @@
 "settings_credits_title" = "Danksagungen";
 "ringtone_picker_title" = "Klingelton";
 "ringtone_picker_row_title" = "Klingelton";
+"ringtone_shuffle_toggle" = "Zufällige Wiedergabe";
 "ringtone_section_classical" = "Klassik";
 "ringtone_section_classic_alarms" = "Klassische Wecktöne";
 "ringtone_section_dawn" = "Morgendämmerung";

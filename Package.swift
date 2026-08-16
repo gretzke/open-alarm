@@ -32,6 +32,7 @@ let package = Package(
                 "Models/TaskLogic/ScanObjectCatalog.swift",
                 "Models/AlarmPersistenceStore.swift",
                 "Shared/BackstopSlotStore.swift",
+                "Shared/LastRingtoneStore.swift",
                 "Shared/IntentDiagnostics.swift",
                 "Shared/OpenAlarmSharedDefaults.swift"
             ],

@@ -55,6 +55,7 @@ final class AlarmPersistence: Sendable {
             OpenAlarmSharedDefaults.Key.legacyBackstopAlarmID,
             OpenAlarmSharedDefaults.Key.legacyBackstopParentAlarmID,
             OpenAlarmSharedDefaults.Key.backstopSlots,
+            OpenAlarmSharedDefaults.Key.lastRingtoneIDs,
             OpenAlarmSharedDefaults.Key.diagnosticsLog,
             OpenAlarmSharedDefaults.Key.wakeCheckGraceAppliedIDs
         ]

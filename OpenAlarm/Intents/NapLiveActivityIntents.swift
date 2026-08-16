@@ -67,10 +67,16 @@ struct NapExtendIntent: LiveActivityIntent {
 
         let defaultSharedSettings = persistence.loadDefaultSharedSettings()
         let effectiveDefaults = persistence.loadNapDefaultSharedSettings() ?? defaultSharedSettings
+        let ringtoneID = RingtoneCatalog.resolve(
+            AlertReferenceStore().reference(alarmKitID: id)?.ringtoneID
+                ?? LastRingtoneStore.lastRingtoneID(forAlarm: nap.id)
+                ?? nap.resolvedSharedSettings(defaults: effectiveDefaults).ringtoneID
+        ).id
         let config = AlarmConfigurationBuilder.makeConfiguration(
             for: nap,
             schedule: .fixed(updatedTarget),
-            defaultSharedSettings: effectiveDefaults
+            defaultSharedSettings: effectiveDefaults,
+            ringtoneID: ringtoneID
         )
 
         try? AlarmManager.shared.stop(id: id)
@@ -78,7 +84,7 @@ struct NapExtendIntent: LiveActivityIntent {
         AlertReferenceStore().record(
             AlertReference(
                 expectedFireDate: updatedTarget,
-                ringtoneID: RingtoneCatalog.resolve(nap.resolvedSharedSettings(defaults: effectiveDefaults).ringtoneID).id,
+                ringtoneID: ringtoneID,
                 parentAlarmID: nap.id
             ),
             alarmKitID: id
@@ -205,10 +211,16 @@ struct NapResumeIntent: LiveActivityIntent {
 
         let defaultSharedSettings = persistence.loadDefaultSharedSettings()
         let effectiveDefaults = persistence.loadNapDefaultSharedSettings() ?? defaultSharedSettings
+        let ringtoneID = RingtoneCatalog.resolve(
+            AlertReferenceStore().reference(alarmKitID: id)?.ringtoneID
+                ?? LastRingtoneStore.lastRingtoneID(forAlarm: nap.id)
+                ?? nap.resolvedSharedSettings(defaults: effectiveDefaults).ringtoneID
+        ).id
         let config = AlarmConfigurationBuilder.makeConfiguration(
             for: nap,
             schedule: .fixed(newTarget),
-            defaultSharedSettings: effectiveDefaults
+            defaultSharedSettings: effectiveDefaults,
+            ringtoneID: ringtoneID
         )
 
         try? AlarmManager.shared.stop(id: id)
@@ -216,7 +228,7 @@ struct NapResumeIntent: LiveActivityIntent {
         AlertReferenceStore().record(
             AlertReference(
                 expectedFireDate: newTarget,
-                ringtoneID: RingtoneCatalog.resolve(nap.resolvedSharedSettings(defaults: effectiveDefaults).ringtoneID).id,
+                ringtoneID: ringtoneID,
                 parentAlarmID: nap.id
             ),
             alarmKitID: id
@@ -253,7 +265,7 @@ struct NapDeleteIntent: LiveActivityIntent {
         }
 
         let persistence = AlarmPersistence(defaults: OpenAlarmSharedDefaults.userDefaults)
-        var alarms = persistence.loadUserAlarms()
+        let alarms = persistence.loadUserAlarms()
         guard alarms.contains(where: { $0.id == id && $0.isNap }) else {
             await MainActor.run {
                 NapCountdownLiveActivityManager.shared.stop()
@@ -284,6 +296,7 @@ struct NapDeleteIntent: LiveActivityIntent {
         var alarms = persistence.loadUserAlarms()
         alarms.removeAll { $0.id == napID }
         persistence.saveUserAlarms(alarms)
+        LastRingtoneStore.clear(forAlarm: napID, defaults: defaults)
 
         var pendingDisarm = persistence.loadPendingDisarmAlarmIDs()
         if pendingDisarm.remove(napID) != nil {

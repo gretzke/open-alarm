@@ -42,6 +42,11 @@ struct SnoozeIntent: LiveActivityIntent {
             ? (persistence.loadNapDefaultSharedSettings() ?? defaultSharedSettings)
             : defaultSharedSettings
         let settings = alarm.resolvedSharedSettings(defaults: effectiveDefaults)
+        let ringtoneID = RingtoneCatalog.resolve(
+            AlertReferenceStore().reference(alarmKitID: id)?.ringtoneID
+                ?? LastRingtoneStore.lastRingtoneID(forAlarm: alarm.id)
+                ?? settings.ringtoneID
+        ).id
 
         guard settings.canSnoozeAgain(currentCount: alarm.snoozeCount) else {
             // A snooze press that cannot snooze (stale configuration still
@@ -83,13 +88,15 @@ struct SnoozeIntent: LiveActivityIntent {
                 for: alarm,
                 bridgeID: id,
                 schedule: .fixed(snoozeDate),
-                defaultSharedSettings: effectiveDefaults
+                defaultSharedSettings: effectiveDefaults,
+                ringtoneID: ringtoneID
             )
         } else {
             config = AlarmConfigurationBuilder.makeConfiguration(
                 for: alarm,
                 schedule: .fixed(snoozeDate),
-                defaultSharedSettings: effectiveDefaults
+                defaultSharedSettings: effectiveDefaults,
+                ringtoneID: ringtoneID
             )
         }
 
@@ -99,7 +106,7 @@ struct SnoozeIntent: LiveActivityIntent {
         AlertReferenceStore().record(
             AlertReference(
                 expectedFireDate: snoozeDate,
-                ringtoneID: RingtoneCatalog.resolve(settings.ringtoneID).id,
+                ringtoneID: ringtoneID,
                 parentAlarmID: alarm.id
             ),
             alarmKitID: id

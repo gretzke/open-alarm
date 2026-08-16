@@ -161,8 +161,10 @@
 		C07AF6525014A17A24016F3E /* ringtone_classical_winter.caf in Resources */ = {isa = PBXBuildFile; fileRef = 3044A86C6B9E2FC6A2CDB8B6 /* ringtone_classical_winter.caf */; };
 		C0C5DB3CA3295C5FD262F398 /* ringtone_classic_twinbell.caf in Resources */ = {isa = PBXBuildFile; fileRef = BFC8D7E592B56E0FCDE3D9A1 /* ringtone_classic_twinbell.caf */; };
 		C327B3F413FE4A38DAF74852 /* BackstopSlotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0DD4B896793968D6338FC7 /* BackstopSlotStore.swift */; };
+		C4A0D3E4F5A6B7C8D9E0F1A2 /* LastRingtoneStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B8C9D0E1F2A3B4C5D6E7F80 /* LastRingtoneStore.swift */; };
 		C46534E1686286BBEC56D511 /* MemoryConfigurator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1905F484888DEF43ACE01077 /* MemoryConfigurator.swift */; };
 		C51C46AE71920DAA1B16253B /* BackstopSlotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0DD4B896793968D6338FC7 /* BackstopSlotStore.swift */; };
+		C5A1D3E4F5A6B7C8D9E0F1A2 /* LastRingtoneStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B8C9D0E1F2A3B4C5D6E7F80 /* LastRingtoneStore.swift */; };
 		C669FDD2D25E4256D2430161 /* SharedAlarmSettingsEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 672FBF5B1749EB576E198EF2 /* SharedAlarmSettingsEditor.swift */; };
 		C66E7E158C86C510683DEAB7 /* AlarmSoundLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F23ABC24B2EFA33EBE57548 /* AlarmSoundLiveActivityAttributes.swift */; };
 		C6E89EE4F2C9E834C6F4E5F4 /* NapEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 896CD183713535DB742DC78B /* NapEditorView.swift */; };
@@ -301,6 +303,7 @@
 		59535AE7D6830B97391FD0E5 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Localizable.strings; sourceTree = "<group>"; };
 		5CE5FCD2600C609E90F47E0C /* ringtone_energetic_glitterblast_full.m4a */ = {isa = PBXFileReference; path = ringtone_energetic_glitterblast_full.m4a; sourceTree = "<group>"; };
 		5E0DD4B896793968D6338FC7 /* BackstopSlotStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstopSlotStore.swift; sourceTree = "<group>"; };
+		7B8C9D0E1F2A3B4C5D6E7F80 /* LastRingtoneStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LastRingtoneStore.swift; sourceTree = "<group>"; };
 		6093C9086BF89A5DE696608D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		624997C42E3B64847820F32C /* StepsTaskDescriptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepsTaskDescriptor.swift; sourceTree = "<group>"; };
 		64C8D5520C1CB729C8109A1E /* ringtone_classic_churchbells.caf */ = {isa = PBXFileReference; path = ringtone_classic_churchbells.caf; sourceTree = "<group>"; };
@@ -666,6 +669,7 @@
 			isa = PBXGroup;
 			children = (
 				5E0DD4B896793968D6338FC7 /* BackstopSlotStore.swift */,
+				7B8C9D0E1F2A3B4C5D6E7F80 /* LastRingtoneStore.swift */,
 				B910E31AA40B29343D4DBBE4 /* IntentDiagnostics.swift */,
 				8806D09A2BB84C05748859AD /* OpenAlarmSharedDefaults.swift */,
 			);
@@ -1026,6 +1030,7 @@
 				54F0370917883AEC84424F0F /* AlarmSoundLiveActivityWidget.swift in Sources */,
 				B7A9F2F3F00781062F4DDBBC /* AlertReferenceStore.swift in Sources */,
 				C51C46AE71920DAA1B16253B /* BackstopSlotStore.swift in Sources */,
+				C5A1D3E4F5A6B7C8D9E0F1A2 /* LastRingtoneStore.swift in Sources */,
 				47C904E0E9C74855B52C6167 /* IntentDiagnostics.swift in Sources */,
 				F7682DE307E3D1A4C0AC4614 /* NapCountdownLiveActivityAttributes.swift in Sources */,
 				D103B10F135185661E92DB3A /* NapCountdownLiveActivityManager.swift in Sources */,
@@ -1073,6 +1078,7 @@
 				0CC35926881B075580A7F6C3 /* AlertReferenceStore.swift in Sources */,
 				CEEB02817569AB0C4EDD35C2 /* AppRootView.swift in Sources */,
 				C327B3F413FE4A38DAF74852 /* BackstopSlotStore.swift in Sources */,
+				C4A0D3E4F5A6B7C8D9E0F1A2 /* LastRingtoneStore.swift in Sources */,
 				47FCB6814D4511114CEB807A /* BridgeDateCalculator.swift in Sources */,
 				7743920775A80D0A96A0E580 /* ConfiguratorControls.swift in Sources */,
 				60918536CF97C3503586093F /* CreditsView.swift in Sources */,
