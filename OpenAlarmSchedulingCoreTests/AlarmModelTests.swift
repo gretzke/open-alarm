@@ -9,6 +9,31 @@ final class AlarmModelTests: XCTestCase {
         try JSONDecoder().decode(AlarmDefinition.self, from: Data(json.utf8))
     }
 
+    private var berlinCalendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/Berlin")!
+        return calendar
+    }
+
+    private func date(
+        _ year: Int,
+        _ month: Int,
+        _ day: Int,
+        _ hour: Int,
+        _ minute: Int,
+        calendar: Calendar
+    ) -> Date {
+        var components = DateComponents()
+        components.calendar = calendar
+        components.timeZone = calendar.timeZone
+        components.year = year
+        components.month = month
+        components.day = day
+        components.hour = hour
+        components.minute = minute
+        return calendar.date(from: components)!
+    }
+
     // MARK: - Legacy decode (R-14.2)
 
     func testLegacyFlatFieldsDecodeToTimeTrigger() throws {
@@ -227,6 +252,171 @@ final class AlarmModelTests: XCTestCase {
         XCTAssertEqual(alarm.name, "Gym", "name is trimmed at init (R-1.5)")
         XCTAssertTrue(alarm.isEnabled)
         XCTAssertEqual(alarm.lifecycleState, .scheduled)
+    }
+
+    func testAlarmDraftPrefillsCanonicalTimeInsteadOfModifyNextOverride() {
+        let calendar = berlinCalendar
+        let referenceDate = date(2026, 8, 16, 12, 0, calendar: calendar)
+        let overrideDate = date(2026, 8, 16, 7, 40, calendar: calendar)
+        let alarm = AlarmDefinition(
+            trigger: .time(hour: 12, minute: 0),
+            recurrence: .weekly([.monday]),
+            deleteAfterUse: false,
+            nextTriggerOverrideDate: overrideDate,
+            activeOverride: OverrideState(
+                kind: .modifyNext,
+                bridgeAlarmIDs: [UUID(), UUID()],
+                restoreAnchorDate: date(2026, 8, 16, 12, 1, calendar: calendar)
+            ),
+            createdAt: referenceDate,
+            updatedAt: referenceDate
+        )
+
+        let draft = AlarmDraft(alarm: alarm, calendar: calendar, referenceDate: referenceDate)
+        let components = calendar.dateComponents([.hour, .minute], from: draft.time)
+
+        XCTAssertEqual(components.hour, 12)
+        XCTAssertEqual(components.minute, 0)
+    }
+
+    func testAlarmDraftPrefillUsesNextValidTimeDuringSpringForwardGap() throws {
+        let calendar = berlinCalendar
+        let referenceDate = date(2026, 3, 29, 12, 0, calendar: calendar)
+        let alarm = AlarmDefinition(
+            trigger: .time(hour: 2, minute: 30),
+            recurrence: .weekly([.sunday]),
+            deleteAfterUse: false,
+            createdAt: referenceDate,
+            updatedAt: referenceDate
+        )
+        let draft = AlarmDraft(alarm: alarm, calendar: calendar, referenceDate: referenceDate)
+
+        // 02:30 does not exist on 2026-03-29 in Berlin. The prefill must land
+        // on a real 02:30 (a later day), never a gap-shifted time like 03:00 —
+        // hour/minute are what a schedule-scope save persists.
+        let components = calendar.dateComponents([.hour, .minute], from: draft.time)
+        XCTAssertEqual(components.hour, 2)
+        XCTAssertEqual(components.minute, 30)
+    }
+
+    func testSaveScopePromptAppearsWhenDraftMatchesModifyNextOverride() {
+        let calendar = berlinCalendar
+        let referenceDate = date(2026, 8, 16, 12, 0, calendar: calendar)
+        let overrideDate = date(2026, 8, 16, 7, 40, calendar: calendar)
+        let alarm = AlarmDefinition(
+            trigger: .time(hour: 12, minute: 0),
+            recurrence: .weekly([.monday]),
+            deleteAfterUse: false,
+            nextTriggerOverrideDate: overrideDate,
+            activeOverride: OverrideState(
+                kind: .modifyNext,
+                bridgeAlarmIDs: [UUID(), UUID()],
+                restoreAnchorDate: date(2026, 8, 16, 12, 1, calendar: calendar)
+            ),
+            createdAt: referenceDate,
+            updatedAt: referenceDate
+        )
+        var draft = AlarmDraft(alarm: alarm, calendar: calendar, referenceDate: referenceDate)
+        draft.time = overrideDate
+
+        XCTAssertTrue(AlarmSaveScopePolicy.shouldPrompt(
+            existing: alarm,
+            draft: draft,
+            defaults: .featureDefaults,
+            calendar: calendar
+        ))
+    }
+
+    func testSaveScopePromptDoesNotAppearForCanonicalTime() {
+        let calendar = berlinCalendar
+        let referenceDate = date(2026, 8, 16, 12, 0, calendar: calendar)
+        let overrideDate = date(2026, 8, 16, 7, 40, calendar: calendar)
+        let alarm = AlarmDefinition(
+            trigger: .time(hour: 12, minute: 0),
+            recurrence: .weekly([.monday]),
+            deleteAfterUse: false,
+            nextTriggerOverrideDate: overrideDate,
+            activeOverride: OverrideState(
+                kind: .modifyNext,
+                bridgeAlarmIDs: [UUID(), UUID()],
+                restoreAnchorDate: date(2026, 8, 16, 12, 1, calendar: calendar)
+            ),
+            createdAt: referenceDate,
+            updatedAt: referenceDate
+        )
+        let draft = AlarmDraft(alarm: alarm, calendar: calendar, referenceDate: referenceDate)
+
+        XCTAssertFalse(AlarmSaveScopePolicy.shouldPrompt(
+            existing: alarm,
+            draft: draft,
+            defaults: .featureDefaults,
+            calendar: calendar
+        ))
+    }
+
+    func testSaveScopePromptPreservesExistingConditions() {
+        let calendar = berlinCalendar
+        let referenceDate = date(2026, 8, 16, 12, 0, calendar: calendar)
+        let changedTime = date(2026, 8, 16, 7, 40, calendar: calendar)
+        let alarm = AlarmDefinition(
+            name: "Work",
+            trigger: .time(hour: 12, minute: 0),
+            recurrence: .weekly([.monday]),
+            deleteAfterUse: false,
+            createdAt: referenceDate,
+            updatedAt: referenceDate
+        )
+
+        var changedRepeatDays = AlarmDraft(alarm: alarm, calendar: calendar, referenceDate: referenceDate)
+        changedRepeatDays.time = changedTime
+        changedRepeatDays.repeatDays = [.tuesday]
+        XCTAssertFalse(AlarmSaveScopePolicy.shouldPrompt(
+            existing: alarm,
+            draft: changedRepeatDays,
+            defaults: .featureDefaults,
+            calendar: calendar
+        ))
+
+        var changedName = AlarmDraft(alarm: alarm, calendar: calendar, referenceDate: referenceDate)
+        changedName.time = changedTime
+        changedName.name = "Gym"
+        XCTAssertFalse(AlarmSaveScopePolicy.shouldPrompt(
+            existing: alarm,
+            draft: changedName,
+            defaults: .featureDefaults,
+            calendar: calendar
+        ))
+
+        var timeOnly = AlarmDraft(alarm: alarm, calendar: calendar, referenceDate: referenceDate)
+        timeOnly.time = changedTime
+        XCTAssertTrue(AlarmSaveScopePolicy.shouldPrompt(
+            existing: alarm,
+            draft: timeOnly,
+            defaults: .featureDefaults,
+            calendar: calendar
+        ))
+    }
+
+    func testApplyingSameDefaultsTwiceKeepsDraftBaselineStable() {
+        let calendar = berlinCalendar
+        let referenceDate = date(2026, 8, 16, 12, 0, calendar: calendar)
+        let alarm = AlarmDefinition(
+            trigger: .time(hour: 12, minute: 0),
+            recurrence: .weekly([.monday]),
+            deleteAfterUse: false,
+            createdAt: referenceDate,
+            updatedAt: referenceDate
+        )
+        var once = AlarmDraft(alarm: alarm, calendar: calendar, referenceDate: referenceDate)
+        var twice = once
+        var defaults = SharedAlarmSettings.featureDefaults
+        defaults.snoozeDurationMinutes = 12
+
+        once.applyDefaultSharedSettings(defaults)
+        twice.applyDefaultSharedSettings(defaults)
+        twice.applyDefaultSharedSettings(defaults)
+
+        XCTAssertEqual(once, twice)
     }
 
     // MARK: - Settings cascade (R-11.1)

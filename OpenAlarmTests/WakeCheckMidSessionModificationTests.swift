@@ -52,6 +52,21 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
         XCTAssertTrue(store.wakeCheckSessions[alarm.id]?.modifiedDuringSession == true)
     }
 
+    func testUpdateNextOccurrenceReenablesSkippedAlarmAndCancelsOldBridges() async throws {
+        var alarm = makeAlarm(overrideKind: .skipNext, lifecycleState: .scheduled)
+        alarm.isEnabled = false
+        let oldBridgeIDs = try XCTUnwrap(alarm.activeOverride?.bridgeAlarmIDs)
+        let (store, manager, _) = makeStore(alarm: alarm, withSession: false)
+        let draft = AlarmDraft(alarm: alarm)
+
+        try await store.updateNextAlarmOccurrence(alarm, with: draft)
+
+        let updatedAlarm = try XCTUnwrap(store.alarms.first)
+        XCTAssertTrue(updatedAlarm.isEnabled)
+        XCTAssertEqual(updatedAlarm.activeOverride?.kind, .modifyNext)
+        XCTAssertTrue(Set(oldBridgeIDs).isSubset(of: Set(manager.cancelIDs)))
+    }
+
     func testDisableMidSessionThenConfirmDoesNotSchedule() async throws {
         let alarm = makeAlarm()
         let (store, manager, _) = makeStore(alarm: alarm, withSession: true)

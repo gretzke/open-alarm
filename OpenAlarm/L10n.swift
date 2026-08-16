@@ -59,6 +59,10 @@ enum L10n {
     static let alarmEditorTryOut: LocalizedStringKey = "alarm_editor_try_out"
     static let alarmEditorTryOutStartsIn5Seconds: LocalizedStringKey = "alarm_editor_try_out_starts_in_5_seconds"
 
+    static func alarmEditorNextOccurrenceNote(_ time: String) -> String {
+        String(format: String(localized: "alarm_editor_next_occurrence_note"), time)
+    }
+
     static let napEditorTitle: LocalizedStringKey = "nap_editor_title"
     static let napEditorDurationTitle: LocalizedStringKey = "nap_editor_duration_title"
     static let napEditorHoursLabel: LocalizedStringKey = "nap_editor_hours_label"

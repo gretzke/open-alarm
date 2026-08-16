@@ -524,8 +524,19 @@ struct AlarmDraft: Equatable {
     }
 
     init(alarm: UserAlarm) {
+        self.init(alarm: alarm, time: alarm.canonicalTriggerDateForEditing)
+    }
+
+    init(alarm: UserAlarm, calendar: Calendar, referenceDate: Date) {
+        self.init(
+            alarm: alarm,
+            time: alarm.canonicalTriggerDateForEditing(calendar: calendar, referenceDate: referenceDate)
+        )
+    }
+
+    private init(alarm: UserAlarm, time: Date) {
         self.name = alarm.name
-        self.time = alarm.triggerDateForDisplay
+        self.time = time
         self.repeatDays = Set(alarm.repeatDays)
         self.deleteAfterUse = alarm.deleteAfterUse
         self.settingsMode = alarm.settingsMode
@@ -594,6 +605,43 @@ struct AlarmDraft: Equatable {
             createdAt: existingCreatedAt ?? .now,
             updatedAt: .now
         )
+    }
+}
+
+enum AlarmSaveScopePolicy {
+    static func shouldPrompt(
+        existing: AlarmDefinition,
+        draft: AlarmDraft,
+        defaults: SharedAlarmSettings,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> Bool {
+        guard existing.isRepeating else {
+            return false
+        }
+
+        guard Set(existing.repeatDays) == draft.repeatDays else {
+            return false
+        }
+
+        let existingTime = (existing.hour, existing.minute)
+        let draftComponents = calendar.dateComponents([.hour, .minute], from: draft.time)
+        let draftTime = (
+            draftComponents.hour ?? existing.hour,
+            draftComponents.minute ?? existing.minute
+        )
+
+        guard existingTime != draftTime else {
+            return false
+        }
+
+        let normalizedExistingName = existing.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedDraftName = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return normalizedExistingName == normalizedDraftName &&
+            existing.deleteAfterUse == draft.deleteAfterUse &&
+            existing.useDefaultSharedSettings == draft.useDefaultSharedSettings &&
+            existing.resolvedSharedSettings(defaults: defaults) ==
+                draft.resolvedSharedSettings(defaults: defaults)
     }
 }
 

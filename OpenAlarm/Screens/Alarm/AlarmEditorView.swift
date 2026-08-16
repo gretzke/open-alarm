@@ -51,6 +51,7 @@ struct AlarmEditorView: View {
     @State private var isSaving = false
     @State private var errorMessage: LocalizedStringKey?
     @State private var hasInitializedDraft = false
+    @State private var baselineDraft: AlarmDraft?
     @State private var showSaveScopePopover = false
 
     init(route: AlarmEditorRoute) {
@@ -151,8 +152,6 @@ struct AlarmEditorView: View {
                 return
             }
 
-            hasInitializedDraft = true
-
             if route.existingAlarm == nil {
                 draft.useDefaultSharedSettings = true
                 draft.applyDefaultSharedSettings(alarmStore.defaultSharedSettings)
@@ -165,6 +164,8 @@ struct AlarmEditorView: View {
                 draft.useDefaultSharedSettings = false
             }
 #endif
+            baselineDraft = draft
+            hasInitializedDraft = true
         }
         .onChange(of: shouldShowSaveScopePrompt) { _, newValue in
             if !newValue {
@@ -188,6 +189,17 @@ struct AlarmEditorView: View {
             .labelsHidden()
             .colorScheme(.dark)
             .frame(maxWidth: .infinity)
+
+            if let existing = route.existingAlarm,
+               existing.activeOverride?.kind == .modifyNext,
+               let overrideDate = existing.nextTriggerOverrideDate,
+               overrideDate > .now {
+                Text(L10n.alarmEditorNextOccurrenceNote(
+                    overrideDate.formatted(date: .omitted, time: .shortened)
+                ))
+                .font(.footnote)
+                .foregroundStyle(OAColor.textSecondary)
+            }
         }
     }
 
@@ -301,42 +313,24 @@ struct AlarmEditorView: View {
     // Save actions are handled directly in the toolbar button/menu.
 
     private var shouldShowSaveScopePrompt: Bool {
-        guard let existing = route.existingAlarm, existing.isRepeating else {
+        guard let existing = route.existingAlarm else {
             return false
         }
 
-        let existingRepeatDays = Set(existing.repeatDays)
-        let draftRepeatDays = draft.repeatDays
-
-        guard existingRepeatDays == draftRepeatDays else {
-            return false
-        }
-
-        let calendar = Calendar.autoupdatingCurrent
-        let existingComponents = calendar.dateComponents([.hour, .minute], from: existing.triggerDateForDisplay)
-        let existingTime = (existingComponents.hour ?? existing.hour, existingComponents.minute ?? existing.minute)
-        let draftComponents = calendar.dateComponents([.hour, .minute], from: draft.time)
-        let draftTime = (draftComponents.hour ?? existing.hour, draftComponents.minute ?? existing.minute)
-
-        guard existingTime != draftTime else {
-            return false
-        }
-
-        let normalizedExistingName = existing.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let normalizedDraftName = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        let otherFieldsUnchanged =
-            normalizedExistingName == normalizedDraftName &&
-            existing.deleteAfterUse == draft.deleteAfterUse &&
-            existing.useDefaultSharedSettings == draft.useDefaultSharedSettings &&
-            existing.resolvedSharedSettings(defaults: alarmStore.defaultSharedSettings) ==
-                draft.resolvedSharedSettings(defaults: alarmStore.defaultSharedSettings)
-
-        return otherFieldsUnchanged
+        return AlarmSaveScopePolicy.shouldPrompt(
+            existing: existing,
+            draft: draft,
+            defaults: alarmStore.defaultSharedSettings
+        )
     }
 
     private func saveAlarm(scope: AlarmSaveScope) {
         guard !isSaving else {
+            return
+        }
+
+        if route.existingAlarm != nil, let baselineDraft, draft == baselineDraft {
+            dismiss()
             return
         }
 

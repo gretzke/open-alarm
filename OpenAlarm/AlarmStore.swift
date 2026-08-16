@@ -400,6 +400,7 @@ final class AlarmStore: ObservableObject {
             restoreAnchorDate: result.restoreAnchorDate
         )
         alarms[index].nextTriggerOverrideDate = result.bridgeDates[0]  // the modified first bridge date
+        alarms[index].isEnabled = true
         alarms[index].snoozeCount = 0
         alarms[index].updatedAt = .now
         alarms = sortAlarms(alarms)

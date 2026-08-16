@@ -303,6 +303,40 @@ struct AlarmDefinition: Identifiable, Codable, Equatable, Sendable {
         return Calendar.autoupdatingCurrent.date(from: components) ?? .now
     }
 
+    var canonicalTriggerDateForEditing: Date {
+        canonicalTriggerDateForEditing(calendar: .autoupdatingCurrent, referenceDate: .now)
+    }
+
+    func canonicalTriggerDateForEditing(calendar: Calendar, referenceDate: Date) -> Date {
+        var components = calendar.dateComponents([.year, .month, .day], from: referenceDate)
+        components.hour = hour
+        components.minute = minute
+        components.second = 0
+
+        if let directDate = calendar.date(from: components) {
+            let directComponents = calendar.dateComponents([.hour, .minute], from: directDate)
+            if directComponents.hour == hour, directComponents.minute == minute {
+                return directDate
+            }
+        }
+
+        // `.strict` (not `.nextTime`): during a DST gap this must find a real
+        // occurrence of hour/minute on a later day, never a shifted time —
+        // a shifted prefill would rewrite the canonical time on save.
+        var matching = DateComponents()
+        matching.hour = hour
+        matching.minute = minute
+        matching.second = 0
+        let startOfDay = calendar.startOfDay(for: referenceDate)
+        return calendar.nextDate(
+            after: startOfDay,
+            matching: matching,
+            matchingPolicy: .strict,
+            repeatedTimePolicy: .first,
+            direction: .forward
+        ) ?? startOfDay
+    }
+
     func resolvedSharedSettings(defaults: SharedAlarmSettings) -> SharedAlarmSettings {
         switch settingsMode {
         case .useDefault: return defaults
