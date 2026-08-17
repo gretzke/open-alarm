@@ -636,8 +636,8 @@ struct AlarmDraft: Equatable {
         }
     }
 
-    mutating func setRepeatDays(_ days: Set<AlarmWeekday>) {
-        repeatDays = days
+    mutating func toggleRepeatDaysPreset(_ days: Set<AlarmWeekday>) {
+        repeatDays = repeatDays == days ? [] : days
         if !repeatDays.isEmpty {
             deleteAfterUse = false
         }

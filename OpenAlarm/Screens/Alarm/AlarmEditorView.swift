@@ -247,12 +247,6 @@ struct AlarmEditorView: View {
                 .foregroundStyle(OAColor.textSecondary)
 
             HStack(spacing: 8) {
-                ForEach(AlarmWeekday.orderedForCurrentLocale()) { day in
-                    dayChip(for: day)
-                }
-            }
-
-            HStack(spacing: 8) {
                 repeatDayPresetChip(
                     title: L10n.alarmEditorRepeatEveryDay,
                     days: AlarmDraft.everyDayRepeatDays
@@ -265,6 +259,12 @@ struct AlarmEditorView: View {
                     title: L10n.alarmEditorRepeatWeekend,
                     days: AlarmDraft.weekendRepeatDays
                 )
+            }
+
+            HStack(spacing: 8) {
+                ForEach(AlarmWeekday.orderedForCurrentLocale()) { day in
+                    dayChip(for: day)
+                }
             }
         }
     }
@@ -313,7 +313,7 @@ struct AlarmEditorView: View {
             isSelected: draft.repeatDaysMatch(days)
         ) {
             Haptics.selection()
-            draft.setRepeatDays(days)
+            draft.toggleRepeatDaysPreset(days)
         }
     }
 

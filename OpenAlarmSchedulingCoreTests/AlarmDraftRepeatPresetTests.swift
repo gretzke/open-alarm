@@ -8,9 +8,21 @@ struct AlarmDraftRepeatPresetTests {
             deleteAfterUse: true
         )
 
-        draft.setRepeatDays(AlarmDraft.weekendRepeatDays)
+        draft.toggleRepeatDaysPreset(AlarmDraft.weekendRepeatDays)
 
         #expect(draft.repeatDays == [.saturday, .sunday])
+        #expect(draft.deleteAfterUse == false)
+    }
+
+    @Test func activePresetClearsRepeatDays() {
+        var draft = AlarmDraft(
+            repeatDays: AlarmDraft.weekendRepeatDays,
+            deleteAfterUse: false
+        )
+
+        draft.toggleRepeatDaysPreset(AlarmDraft.weekendRepeatDays)
+
+        #expect(draft.repeatDays.isEmpty)
         #expect(draft.deleteAfterUse == false)
     }
 
