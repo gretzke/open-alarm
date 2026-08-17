@@ -3,7 +3,7 @@ import XCTest
 
 final class RingtoneResourceTests: XCTestCase {
     func testEveryCatalogRingtoneResourceExistsInAppBundle() {
-        for ringtone in RingtoneCatalog.all where !ringtone.isDefault {
+        for ringtone in RingtoneCatalog.all {
             XCTAssertNotNil(resourceURL(for: ringtone.excerptFileName), "Missing excerpt for \(ringtone.id)")
             XCTAssertNotNil(resourceURL(for: ringtone.fullTrackFileName), "Missing full track for \(ringtone.id)")
         }

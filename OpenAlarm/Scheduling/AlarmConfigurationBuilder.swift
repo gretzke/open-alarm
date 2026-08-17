@@ -215,7 +215,6 @@ enum AlarmConfigurationBuilder {
         ringtoneID: String?
     ) -> AlertConfiguration.AlertSound {
         let ringtone = RingtoneCatalog.resolve(ringtoneID ?? settings.ringtoneID)
-        guard !ringtone.isDefault else { return .default }
 
         let fileURL = URL(fileURLWithPath: ringtone.excerptFileName)
         let resourceName = fileURL.deletingPathExtension().lastPathComponent

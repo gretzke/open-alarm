@@ -296,6 +296,13 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
     var ringtoneShuffleEnabled: Bool
     var ringtoneIDs: [String]
 
+    private static func canonicalRingtoneIDs(_ ids: [String]) -> [String] {
+        var seen = Set<String>()
+        return ids
+            .map(RingtoneCatalog.canonicalPersistedID)
+            .filter { seen.insert($0).inserted }
+    }
+
     static let featureDefaults = SharedAlarmSettings(
         snoozeEnabled: false,
         snoozeDurationMinutes: 5,
@@ -330,18 +337,19 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
     }
 
     mutating func selectRingtone(_ id: String) {
+        let canonicalID = RingtoneCatalog.canonicalPersistedID(id)
         if ringtoneShuffleEnabled {
-            if let index = ringtoneIDs.firstIndex(of: id) {
+            if let index = ringtoneIDs.firstIndex(of: canonicalID) {
                 guard ringtoneIDs.count > 1 else { return }
                 ringtoneIDs.remove(at: index)
                 ringtoneID = ringtoneIDs.last ?? RingtoneCatalog.defaultToneID
             } else {
-                ringtoneIDs.append(id)
-                ringtoneID = id
+                ringtoneIDs.append(canonicalID)
+                ringtoneID = canonicalID
             }
         } else {
-            ringtoneID = id
-            ringtoneIDs = [id]
+            ringtoneID = canonicalID
+            ringtoneIDs = [canonicalID]
         }
     }
 
@@ -409,15 +417,16 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         self.tasksEnabled = tasksEnabled
         self.tasks = tasks
         self.volume = volume
-        self.ringtoneID = ringtoneID
+        let canonicalRingtoneID = RingtoneCatalog.canonicalPersistedID(ringtoneID)
+        self.ringtoneID = canonicalRingtoneID
         self.ringtoneShuffleEnabled = ringtoneShuffleEnabled
         if let ringtoneIDs, !ringtoneIDs.isEmpty {
-            self.ringtoneIDs = ringtoneIDs
+            self.ringtoneIDs = Self.canonicalRingtoneIDs(ringtoneIDs)
         } else {
-            self.ringtoneIDs = [ringtoneID]
+            self.ringtoneIDs = [canonicalRingtoneID]
         }
-        if !self.ringtoneIDs.contains(ringtoneID) {
-            self.ringtoneIDs.append(ringtoneID)
+        if !self.ringtoneIDs.contains(canonicalRingtoneID) {
+            self.ringtoneIDs.append(canonicalRingtoneID)
         }
     }
 
@@ -436,10 +445,13 @@ struct SharedAlarmSettings: Codable, Equatable, Sendable {
         tasksEnabled = try container.decodeIfPresent(Bool.self, forKey: .tasksEnabled) ?? true
         tasks = try container.decodeIfPresent([AlarmTask].self, forKey: .tasks) ?? []
         volume = try container.decodeIfPresent(AlarmVolumeSettings.self, forKey: .volume) ?? .default
-        ringtoneID = try container.decodeIfPresent(String.self, forKey: .ringtoneID) ?? RingtoneCatalog.defaultToneID
+        let decodedRingtoneID = try container.decodeIfPresent(String.self, forKey: .ringtoneID) ?? RingtoneCatalog.defaultToneID
+        ringtoneID = RingtoneCatalog.canonicalPersistedID(decodedRingtoneID)
         ringtoneShuffleEnabled = try container.decodeIfPresent(Bool.self, forKey: .ringtoneShuffleEnabled) ?? false
         let decodedRingtoneIDs = try container.decodeIfPresent([String].self, forKey: .ringtoneIDs) ?? []
-        ringtoneIDs = decodedRingtoneIDs.isEmpty ? [ringtoneID] : decodedRingtoneIDs
+        ringtoneIDs = decodedRingtoneIDs.isEmpty
+            ? [ringtoneID]
+            : Self.canonicalRingtoneIDs(decodedRingtoneIDs)
         if !ringtoneIDs.contains(ringtoneID) {
             ringtoneIDs.append(ringtoneID)
         }

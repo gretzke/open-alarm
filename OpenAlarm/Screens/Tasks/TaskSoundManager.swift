@@ -100,18 +100,14 @@ final class TaskSoundManager: ObservableObject {
     }
 
     private func resolveAlarmSoundURL() -> URL {
-        if !ringtone.isDefault {
-            let fileURL = URL(fileURLWithPath: ringtone.fullTrackFileName)
-            let resourceName = fileURL.deletingPathExtension().lastPathComponent
-            let fileExtension = fileURL.pathExtension
-            if let resourceURL = Bundle.main.url(forResource: resourceName, withExtension: fileExtension) {
-                return resourceURL
-            }
+        let fileURL = URL(fileURLWithPath: ringtone.fullTrackFileName)
+        let resourceName = fileURL.deletingPathExtension().lastPathComponent
+        let fileExtension = fileURL.pathExtension
+        if let resourceURL = Bundle.main.url(forResource: resourceName, withExtension: fileExtension) {
+            return resourceURL
         }
 
-        return Bundle.main.url(forResource: "alarm_sound", withExtension: "caf")
-            ?? Bundle.main.url(forResource: "alarm_sound", withExtension: "mp3")
-            ?? URL(fileURLWithPath: "/System/Library/Audio/UISounds/alarm.caf")
+        return URL(fileURLWithPath: "/System/Library/Audio/UISounds/alarm.caf")
     }
 
     private func ensurePlaybackActive(forceRestart: Bool = false) {
@@ -327,8 +323,6 @@ final class TaskSoundManager: ObservableObject {
         } else if isTemporaryMuteRestoring {
             player.volume = 0
             player.setVolume(normalPlayerVolume, fadeDuration: temporaryMuteFadeDuration)
-        } else if ringtone.isDefault {
-            player.volume = normalPlayerVolume
         } else {
             player.volume = 0
             player.setVolume(normalPlayerVolume, fadeDuration: 0.5)
@@ -336,7 +330,6 @@ final class TaskSoundManager: ObservableObject {
     }
 
     private func seekToCurrentOffset(in player: AVAudioPlayer) {
-        guard !ringtone.isDefault else { return }
         player.currentTime = RingtonePlayback.offset(
             alertStartedAt: alertStartedAt,
             now: .now,

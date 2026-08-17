@@ -55,20 +55,12 @@ private final class RingtonePreviewPlayer: ObservableObject {
     func play(_ ringtone: Ringtone) {
         stop()
 
-        let url: URL
-        if ringtone.isDefault {
-            url = Bundle.main.url(forResource: "alarm_sound", withExtension: "caf")
-                ?? Bundle.main.url(forResource: "alarm_sound", withExtension: "mp3")
-                ?? URL(fileURLWithPath: "/System/Library/Audio/UISounds/alarm.caf")
-        } else {
-            let fileURL = URL(fileURLWithPath: ringtone.excerptFileName)
-            guard let bundledURL = Bundle.main.url(
-                forResource: fileURL.deletingPathExtension().lastPathComponent,
-                withExtension: fileURL.pathExtension
-            ) else {
-                return
-            }
-            url = bundledURL
+        let fileURL = URL(fileURLWithPath: ringtone.excerptFileName)
+        guard let url = Bundle.main.url(
+            forResource: fileURL.deletingPathExtension().lastPathComponent,
+            withExtension: fileURL.pathExtension
+        ) else {
+            return
         }
 
         let session = AVAudioSession.sharedInstance()
