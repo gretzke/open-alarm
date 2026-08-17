@@ -251,6 +251,21 @@ struct AlarmEditorView: View {
                     dayChip(for: day)
                 }
             }
+
+            HStack(spacing: 8) {
+                repeatDayPresetChip(
+                    title: L10n.alarmEditorRepeatEveryDay,
+                    days: AlarmDraft.everyDayRepeatDays
+                )
+                repeatDayPresetChip(
+                    title: L10n.alarmEditorRepeatWeekdays,
+                    days: AlarmDraft.weekdayRepeatDays
+                )
+                repeatDayPresetChip(
+                    title: L10n.alarmEditorRepeatWeekend,
+                    days: AlarmDraft.weekendRepeatDays
+                )
+            }
         }
     }
 
@@ -280,14 +295,37 @@ struct AlarmEditorView: View {
     private func dayChip(for day: AlarmWeekday) -> some View {
         let isSelected = draft.repeatDays.contains(day)
 
-        return Button {
+        return repeatDayChip(
+            label: Text(day.veryShortSymbol()),
+            isSelected: isSelected
+        ) {
             Haptics.selection()
             draft.toggleRepeatDay(day)
-        } label: {
-            Text(day.veryShortSymbol())
+        }
+    }
+
+    private func repeatDayPresetChip(
+        title: LocalizedStringKey,
+        days: Set<AlarmWeekday>
+    ) -> some View {
+        repeatDayChip(
+            label: Text(title),
+            isSelected: draft.repeatDaysMatch(days)
+        ) {
+            Haptics.selection()
+            draft.setRepeatDays(days)
+        }
+    }
+
+    private func repeatDayChip(
+        label: Text,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            label
                 .font(.subheadline.weight(.semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity, minHeight: OASize.minTouchTarget)
                 .foregroundStyle(isSelected ? OAColor.background : OAColor.textPrimary)
                 .background(
                     RoundedRectangle(cornerRadius: OARadius.chip, style: .continuous)
@@ -296,6 +334,7 @@ struct AlarmEditorView: View {
                 .contentShape(RoundedRectangle(cornerRadius: OARadius.chip, style: .continuous))
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     private func saveScopeActionButton(title: LocalizedStringKey, action: @escaping () -> Void) -> some View {

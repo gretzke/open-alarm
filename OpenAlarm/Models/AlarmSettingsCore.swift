@@ -541,6 +541,12 @@ struct NapDraft: Equatable {
 // MARK: - AlarmDraft
 
 struct AlarmDraft: Equatable {
+    static let everyDayRepeatDays = Set(AlarmWeekday.allCases)
+    static let weekdayRepeatDays: Set<AlarmWeekday> = [
+        .monday, .tuesday, .wednesday, .thursday, .friday
+    ]
+    static let weekendRepeatDays: Set<AlarmWeekday> = [.saturday, .sunday]
+
     var name: String
     var time: Date
     var repeatDays: Set<AlarmWeekday>
@@ -628,6 +634,17 @@ struct AlarmDraft: Equatable {
         if !repeatDays.isEmpty {
             deleteAfterUse = false
         }
+    }
+
+    mutating func setRepeatDays(_ days: Set<AlarmWeekday>) {
+        repeatDays = days
+        if !repeatDays.isEmpty {
+            deleteAfterUse = false
+        }
+    }
+
+    func repeatDaysMatch(_ days: Set<AlarmWeekday>) -> Bool {
+        repeatDays == days
     }
 
     mutating func setDeleteAfterUse(_ value: Bool) {
