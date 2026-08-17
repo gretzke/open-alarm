@@ -93,6 +93,60 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
         XCTAssertTrue(manager.cancelIDs.isEmpty)
     }
 
+    @MainActor
+    func testForceCloseStopClearsSlotWhenStopThrowsButCancelSucceeds() throws {
+        let alarm = makeAlarm()
+        let manager = FakeAlarmManager()
+        let suiteName = "forceclose-cancel-tests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let forceCloseID = UUID()
+        // A scheduled (non-alerting) registration: stop() throws, cancel() works.
+        manager.stopFailureIDs = [forceCloseID]
+        BackstopSlotStore.set(backstopID: forceCloseID, forParent: alarm.id, defaults: defaults)
+
+        let forceClose = ForceCloseAlarmManager(
+            alarm: alarm,
+            resolvedSettings: .featureDefaults,
+            alarmManager: manager,
+            defaults: defaults
+        )
+        forceClose.adoptForTesting(currentID: forceCloseID, fireDate: .now.addingTimeInterval(20))
+
+        forceClose.stop()
+
+        XCTAssertTrue(manager.cancelIDs.contains(forceCloseID))
+        XCTAssertNil(BackstopSlotStore.backstopID(forParent: alarm.id, defaults: defaults))
+    }
+
+    @MainActor
+    func testForceCloseStopRetainsSlotWhenRuntimeReadFails() throws {
+        let alarm = makeAlarm()
+        let manager = FakeAlarmManager()
+        let suiteName = "forceclose-cancel-tests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let forceCloseID = UUID()
+        manager.stopFailureIDs = [forceCloseID]
+        manager.alarmsReadFails = true
+        BackstopSlotStore.set(backstopID: forceCloseID, forParent: alarm.id, defaults: defaults)
+
+        let forceClose = ForceCloseAlarmManager(
+            alarm: alarm,
+            resolvedSettings: .featureDefaults,
+            alarmManager: manager,
+            defaults: defaults
+        )
+        forceClose.adoptForTesting(currentID: forceCloseID, fireDate: .now.addingTimeInterval(20))
+
+        forceClose.stop()
+
+        // Removal cannot be verified, so the slot stays owned for the sweep.
+        XCTAssertEqual(BackstopSlotStore.backstopID(forParent: alarm.id, defaults: defaults), forceCloseID)
+    }
+
     func testDisableMidSessionThenConfirmDoesNotSchedule() async throws {
         let alarm = makeAlarm()
         let (store, manager, _) = makeStore(alarm: alarm, withSession: true)
@@ -593,6 +647,8 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
         defer { BackstopSlotStore.clear(forParent: alarm.id) }
         manager.stopFailureIDs.insert(backstopID)
         manager.cancelFailureIDs.insert(backstopID)
+        // Removal cannot be verified when the runtime read fails, so the slot must be retained.
+        manager.alarmsReadFails = true
 
         await store.completeDisarmChallenge(for: alarm.id)
 

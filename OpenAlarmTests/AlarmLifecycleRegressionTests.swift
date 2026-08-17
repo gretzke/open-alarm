@@ -133,7 +133,8 @@ final class AlarmLifecycleRegressionTests: XCTestCase {
         let alarm = makeAlarm()
         let backstopID = UUID()
         BackstopSlotStore.set(backstopID: backstopID, forParent: alarm.id, defaults: defaults)
-        let manager = LifecycleFakeAlarmManager(stopFails: true, cancelFails: true)
+        // Removal cannot be verified when the runtime read fails, so the slot must be retained.
+        let manager = LifecycleFakeAlarmManager(stopFails: true, cancelFails: true, alarmsReadFails: true)
         let forceClose = ForceCloseAlarmManager(
             alarm: alarm,
             resolvedSettings: settings(),
@@ -238,7 +239,7 @@ final class AlarmLifecycleRegressionTests: XCTestCase {
 
 @MainActor
 private final class LifecycleFakeAlarmManager: AlarmManagerScheduling {
-    private enum Failure: Error { case schedule, stop, cancel }
+    private enum Failure: Error { case schedule, stop, cancel, alarmsRead }
 
     var scheduledIDs: [UUID] = []
     var stopIDs: [UUID] = []
@@ -246,14 +247,26 @@ private final class LifecycleFakeAlarmManager: AlarmManagerScheduling {
     private let scheduleFails: Bool
     private let stopFails: Bool
     private let cancelFails: Bool
+    private let alarmsReadFails: Bool
 
-    init(scheduleFails: Bool = false, stopFails: Bool = false, cancelFails: Bool = false) {
+    init(
+        scheduleFails: Bool = false,
+        stopFails: Bool = false,
+        cancelFails: Bool = false,
+        alarmsReadFails: Bool = false
+    ) {
         self.scheduleFails = scheduleFails
         self.stopFails = stopFails
         self.cancelFails = cancelFails
+        self.alarmsReadFails = alarmsReadFails
     }
 
-    var alarms: [Alarm] { get throws { [] } }
+    var alarms: [Alarm] {
+        get throws {
+            if alarmsReadFails { throw Failure.alarmsRead }
+            return []
+        }
+    }
 
     func alarmUpdatesForStore() -> AsyncStream<[Alarm]>? { nil }
 

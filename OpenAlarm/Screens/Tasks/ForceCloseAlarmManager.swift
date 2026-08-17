@@ -189,23 +189,23 @@ final class ForceCloseAlarmManager {
     }
 
     private func cancelRegistration(id: UUID) -> Bool {
-        func attempt() -> Bool {
-            var succeeded = true
-            do {
-                try alarmManager.stop(id: id)
-            } catch {
-                succeeded = false
-            }
-            do {
-                try alarmManager.cancel(id: id)
-            } catch {
-                succeeded = false
-            }
-            return succeeded
+        // stop() throws for registrations that are not alerting, and cancel()
+        // throws for ids already removed — neither throw proves the
+        // registration survived. Success is judged by the runtime read; a
+        // failed read counts as retained so the sweep keeps ownership.
+        func attempt() {
+            try? alarmManager.stop(id: id)
+            try? alarmManager.cancel(id: id)
+        }
+        func isRemoved() -> Bool {
+            guard let runtime = try? alarmManager.alarms else { return false }
+            return !runtime.contains { $0.id == id }
         }
 
-        guard !attempt() else { return true }
-        guard !attempt() else { return true }
+        attempt()
+        if isRemoved() { return true }
+        attempt()
+        if isRemoved() { return true }
         IntentDiagnostics.log("ForceClose cancel failed retained id=\(id.uuidString) parent=\(mainAlarm.id.uuidString)")
         return false
     }
