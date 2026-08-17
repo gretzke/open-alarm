@@ -10,7 +10,7 @@ enum TaskEvent {
     case completed
 }
 
-enum TaskPermission: Equatable {
+enum TaskPermission: Hashable {
     case camera
     case motion
 }

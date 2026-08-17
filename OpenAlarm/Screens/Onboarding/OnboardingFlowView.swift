@@ -37,10 +37,86 @@ struct OnboardingFlowView: View {
                     }
                 )
 
+            case .reusable(.notificationPermissionPrePrompt):
+                WakeCheckPermissionPrePromptStepView(
+                    onRequestPermission: requestNotificationPermission,
+                    onCancel: engine.dismissActivePermissionReconciliation
+                )
+
+            case let .reusable(.taskPermissionPrePrompt(permission)):
+                TaskPermissionPrePromptView(
+                    permission: permission,
+                    onRequestPermission: {
+                        TaskPermissionAuthorizer.request(permission) { _ in
+                            engine.completeActivePermissionReconciliation()
+                            engine.recheckReusableScreens()
+                        }
+                    },
+                    onCancel: engine.dismissActivePermissionReconciliation
+                )
+
             case .none:
                 Color.clear
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(OAColor.background.ignoresSafeArea())
+    }
+
+    private func requestNotificationPermission() {
+        Task {
+            _ = await alarmStore.requestNotificationPermissionIfNeeded()
+            engine.completeActivePermissionReconciliation()
+            engine.recheckReusableScreens()
+        }
+    }
+}
+
+private struct WakeCheckPermissionPrePromptStepView: View {
+    let onRequestPermission: () -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        VStack(spacing: 24) {
+            VStack(spacing: 16) {
+                Image(systemName: "checkmark.bubble")
+                    .font(.system(size: 52, weight: .semibold))
+                    .foregroundStyle(OAColor.actionCyan)
+
+                Text(L10n.alarmEditorWakeCheckPermissionPromptTitle)
+                    .font(.title.bold())
+                    .foregroundStyle(OAColor.textPrimary)
+                    .multilineTextAlignment(.center)
+
+                Text(L10n.alarmEditorWakeCheckPermissionPromptBody)
+                    .font(.body)
+                    .foregroundStyle(OAColor.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(OASpacing.onboardingMargin)
+            .oaGlassCard()
+
+            VStack(spacing: 12) {
+                Button(action: onRequestPermission) {
+                    Text(L10n.actionNext)
+                        .font(OAType.buttonLabel)
+                        .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+                }
+                .buttonStyle(.glassProminent)
+                .tint(OAColor.actionCyan)
+                .accessibilityIdentifier("onboarding_wake_check_permission_next")
+
+                Button(action: onCancel) {
+                    Text(L10n.actionCancel)
+                        .font(OAType.buttonLabel)
+                        .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+                }
+                .buttonStyle(.glass)
+                .foregroundStyle(OAColor.textPrimary)
+                .accessibilityIdentifier("onboarding_wake_check_permission_cancel")
+            }
+        }
+        .padding(OASpacing.onboardingMargin)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(OAColor.background.ignoresSafeArea())
     }

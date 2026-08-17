@@ -2,7 +2,9 @@ import SwiftUI
 
 struct AppRootView: View {
     @Environment(\.scenePhase) private var scenePhase
-    @StateObject private var onboardingEngine = OnboardingEngine()
+    // The engine's default alarms provider reads the persisted blob, so it
+    // stays current with intent-driven writes without a store reference.
+    @StateObject private var onboardingEngine = OnboardingEngine(alarmPersistence: .shared)
     @StateObject private var alarmStore = AlarmStore()
     @State private var showWakeCheckPermissionDeniedPrompt = false
 
@@ -19,6 +21,9 @@ struct AppRootView: View {
         .fontDesign(.rounded)
         .preferredColorScheme(.dark)
         .onAppear {
+            onboardingEngine.attachNotificationPermissionStatusProvider { [weak alarmStore] in
+                alarmStore?.notificationPermissionStatus ?? .notDetermined
+            }
             completeRestoredSettingsOnboardingIfNeeded()
             onboardingEngine.handleAppOpened()
             Task { await alarmStore.handleAppOpened() }
@@ -30,6 +35,12 @@ struct AppRootView: View {
             }
             completeRestoredSettingsOnboardingIfNeeded()
             evaluateWakeCheckPermissionGuard()
+        }
+        .onChange(of: alarmStore.notificationPermissionStatus) { _, _ in
+            onboardingEngine.recheckReusableScreens()
+        }
+        .onChange(of: alarmStore.alarms) { _, _ in
+            onboardingEngine.recheckReusableScreens()
         }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else {
