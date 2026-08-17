@@ -77,6 +77,39 @@ struct RingtoneShuffleTests {
         }
     }
 
+    @Test func initialToneIsARegularBundledCatalogEntry() {
+        let ringtone = RingtoneCatalog.defaultTone
+
+        #expect(ringtone.id == "classic.twinbell")
+        #expect(ringtone.excerptFileName == "ringtone_classic_twinbell.caf")
+        #expect(ringtone.fullTrackFileName == ringtone.excerptFileName)
+        #expect(ringtone.excerptDuration > 0)
+    }
+
+    @Test func legacyDefaultToneMigratesToInitialCatalogTone() throws {
+        let encoded = try JSONEncoder().encode(SharedAlarmSettings.featureDefaults)
+        var payload = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        payload["ringtoneID"] = RingtoneCatalog.legacyDefaultToneID
+        payload["ringtoneIDs"] = [RingtoneCatalog.legacyDefaultToneID]
+
+        let data = try JSONSerialization.data(withJSONObject: payload)
+        let decoded = try JSONDecoder().decode(SharedAlarmSettings.self, from: data)
+
+        #expect(decoded.ringtoneID == RingtoneCatalog.defaultToneID)
+        #expect(decoded.ringtoneIDs == [RingtoneCatalog.defaultToneID])
+    }
+
+    @Test func legacyLastToneStillExcludesInitialToneFromShuffle() {
+        var generator = SeededGenerator(seed: 1)
+        let selection = RingtoneCatalog.randomSelectionID(
+            from: [RingtoneCatalog.defaultToneID, "nature.rain"],
+            excluding: RingtoneCatalog.legacyDefaultToneID,
+            using: &generator
+        )
+
+        #expect(selection == "nature.rain")
+    }
+
     @Test func wakeCheckSessionKeepsOccurrenceTone() throws {
         let ringtoneID = "dawn.morning"
         let session = WakeCheckSession(

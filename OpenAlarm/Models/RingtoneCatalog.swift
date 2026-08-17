@@ -26,24 +26,13 @@ struct Ringtone: Equatable, Sendable {
     let excerptFileName: String
     let fullTrackFileName: String
     let excerptDuration: TimeInterval
-
-    var isDefault: Bool {
-        id == RingtoneCatalog.defaultToneID
-    }
 }
 
 enum RingtoneCatalog {
-    static let defaultToneID = "classic.default"
+    static let defaultToneID = "classic.twinbell"
+    static let legacyDefaultToneID = "classic.default"
 
     static let all: [Ringtone] = [
-        Ringtone(
-            id: defaultToneID,
-            displayNameKey: "ringtone_classic_default",
-            section: .classicAlarms,
-            excerptFileName: "",
-            fullTrackFileName: "",
-            excerptDuration: 0
-        ),
         Ringtone(
             id: "classical.valkyries",
             displayNameKey: "ringtone_classical_valkyries",
@@ -84,7 +73,7 @@ enum RingtoneCatalog {
             fullTrackFileName: "ringtone_classical_russiandance_full.m4a",
             excerptDuration: 28.993
         ),
-        Ringtone(id: "classic.twinbell", displayNameKey: "ringtone_classic_twinbell", section: .classicAlarms, excerptFileName: "ringtone_classic_twinbell.caf", fullTrackFileName: "ringtone_classic_twinbell.caf", excerptDuration: 29.0),
+        Ringtone(id: defaultToneID, displayNameKey: "ringtone_classic_twinbell", section: .classicAlarms, excerptFileName: "ringtone_classic_twinbell.caf", fullTrackFileName: "ringtone_classic_twinbell.caf", excerptDuration: 29.0),
         Ringtone(id: "classic.churchbells", displayNameKey: "ringtone_classic_churchbells", section: .classicAlarms, excerptFileName: "ringtone_classic_churchbells.caf", fullTrackFileName: "ringtone_classic_churchbells.caf", excerptDuration: 29.0),
         Ringtone(id: "classic.ghanta", displayNameKey: "ringtone_classic_ghanta", section: .classicAlarms, excerptFileName: "ringtone_classic_ghanta.caf", fullTrackFileName: "ringtone_classic_ghanta.caf", excerptDuration: 29.0),
         Ringtone(id: "classic.koshichime", displayNameKey: "ringtone_classic_koshichime", section: .classicAlarms, excerptFileName: "ringtone_classic_koshichime.caf", fullTrackFileName: "ringtone_classic_koshichime.caf", excerptDuration: 28.989),
@@ -119,10 +108,15 @@ enum RingtoneCatalog {
     }
 
     static func resolve(_ id: String?) -> Ringtone {
-        guard let id, let ringtone = all.first(where: { $0.id == id }) else {
+        guard let id,
+              let ringtone = all.first(where: { $0.id == canonicalPersistedID(id) }) else {
             return defaultTone
         }
         return ringtone
+    }
+
+    static func canonicalPersistedID(_ id: String) -> String {
+        id == legacyDefaultToneID ? defaultToneID : id
     }
 
     static func randomSelectionID(
@@ -147,8 +141,9 @@ enum RingtoneCatalog {
             return defaultToneID
         }
 
+        let canonicalPreviousID = previousID.map(canonicalPersistedID)
         let eligible = candidates.count > 1
-            ? candidates.filter { $0 != previousID }
+            ? candidates.filter { $0 != canonicalPreviousID }
             : candidates
         return eligible.randomElement(using: &generator) ?? candidates[0]
     }

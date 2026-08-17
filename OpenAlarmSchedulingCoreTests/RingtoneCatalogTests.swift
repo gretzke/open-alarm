@@ -28,7 +28,6 @@ final class RingtoneCatalogTests: XCTestCase {
             "classical.russiandance"
         ]))
         XCTAssertEqual(ids(in: .classicAlarms), Set([
-            "classic.default",
             "classic.twinbell",
             "classic.churchbells",
             "classic.ghanta",
@@ -64,8 +63,8 @@ final class RingtoneCatalogTests: XCTestCase {
         ]))
     }
 
-    func testNonDefaultEntriesHaveValidResourcesAndDurations() {
-        for ringtone in RingtoneCatalog.all where !ringtone.isDefault {
+    func testEntriesHaveValidResourcesAndDurations() {
+        for ringtone in RingtoneCatalog.all {
             XCTAssertFalse(ringtone.excerptFileName.isEmpty)
             XCTAssertFalse(ringtone.fullTrackFileName.isEmpty)
             XCTAssertGreaterThan(ringtone.excerptDuration, 0)
@@ -73,7 +72,7 @@ final class RingtoneCatalogTests: XCTestCase {
     }
 
     func testClassicAlarmTonesUseTheirExcerptAsTheFullTrack() {
-        for ringtone in RingtoneCatalog.all where ringtone.section == .classicAlarms && !ringtone.isDefault {
+        for ringtone in RingtoneCatalog.all where ringtone.section == .classicAlarms {
             XCTAssertEqual(ringtone.excerptFileName, ringtone.fullTrackFileName)
         }
     }
