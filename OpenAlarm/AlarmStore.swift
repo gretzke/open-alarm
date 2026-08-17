@@ -460,6 +460,21 @@ final class AlarmStore: ObservableObject {
         }
     }
 
+    func removeNextOccurrenceOverride(_ alarm: UserAlarm) async throws {
+        if permissionStatus != .authorized {
+            let status = await requestPermissionIfNeeded()
+            guard status == .authorized else {
+                throw AlarmStoreError.permissionDenied
+            }
+        }
+
+        guard let index = alarms.firstIndex(where: { $0.id == alarm.id }) else { return }
+        guard alarms[index].activeOverride?.kind == .modifyNext else { return }
+
+        await clearOverrideAndRestore(alarmIndex: index)
+        backUpAlarmSettingsAfterLocalChange()
+    }
+
     // MARK: - Delete Alarm
 
     func deleteAlarm(_ alarm: UserAlarm) {

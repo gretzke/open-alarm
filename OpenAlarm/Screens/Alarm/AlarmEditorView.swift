@@ -368,8 +368,24 @@ struct AlarmEditorView: View {
             return
         }
 
-        if route.existingAlarm != nil, let baselineDraft, draft == baselineDraft {
-            dismiss()
+        if let existing = route.existingAlarm, let baselineDraft, draft == baselineDraft {
+            guard existing.activeOverride?.kind == .modifyNext else {
+                dismiss()
+                return
+            }
+
+            errorMessage = nil
+            isSaving = true
+            Task {
+                do {
+                    try await alarmStore.removeNextOccurrenceOverride(existing)
+                    Haptics.success()
+                    dismiss()
+                } catch {
+                    errorMessage = alarmStore.userFacingErrorMessage(for: error)
+                }
+                isSaving = false
+            }
             return
         }
 

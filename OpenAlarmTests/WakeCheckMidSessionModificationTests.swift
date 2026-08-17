@@ -67,6 +67,32 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
         XCTAssertTrue(Set(oldBridgeIDs).isSubset(of: Set(manager.cancelIDs)))
     }
 
+    func testRemoveNextOccurrenceOverrideRestoresCanonicalSchedule() async throws {
+        var alarm = makeAlarm(overrideKind: .modifyNext, lifecycleState: .scheduled)
+        alarm.nextTriggerOverrideDate = .now.addingTimeInterval(3_600)
+        let oldBridgeIDs = try XCTUnwrap(alarm.activeOverride?.bridgeAlarmIDs)
+        let (store, manager, _) = makeStore(alarm: alarm, withSession: false)
+
+        try await store.removeNextOccurrenceOverride(alarm)
+
+        let updatedAlarm = try XCTUnwrap(store.alarms.first)
+        XCTAssertNil(updatedAlarm.activeOverride)
+        XCTAssertNil(updatedAlarm.nextTriggerOverrideDate)
+        XCTAssertTrue(updatedAlarm.isEnabled)
+        XCTAssertTrue(Set(oldBridgeIDs).isSubset(of: Set(manager.cancelIDs)))
+        XCTAssertTrue(manager.scheduledIDs.contains(alarm.id))
+    }
+
+    func testRemoveNextOccurrenceOverrideLeavesSkipNextUntouched() async throws {
+        let alarm = makeAlarm(overrideKind: .skipNext, lifecycleState: .scheduled)
+        let (store, manager, _) = makeStore(alarm: alarm, withSession: false)
+
+        try await store.removeNextOccurrenceOverride(alarm)
+
+        XCTAssertEqual(store.alarms.first?.activeOverride, alarm.activeOverride)
+        XCTAssertTrue(manager.cancelIDs.isEmpty)
+    }
+
     func testDisableMidSessionThenConfirmDoesNotSchedule() async throws {
         let alarm = makeAlarm()
         let (store, manager, _) = makeStore(alarm: alarm, withSession: true)
