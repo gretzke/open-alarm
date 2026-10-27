@@ -20,6 +20,8 @@ Website: [tryopenalarm.com](https://tryopenalarm.com)
 - Math, memory, shake, step-counting, and object-scanning disarm challenges
 - A wake-up check that can re-trigger an alarm when it is not confirmed
 - Nap timers with pause, resume, extend, and Live Activity controls
+- A bedside nap countdown with a dawn glow during the final five minutes
+- Landscape layouts and fold-aware full-screen content on iPhone Duo
 - Per-alarm settings layered over global alarm and nap defaults
 - iCloud restoration for global alarm and nap defaults after reinstalling
 - English and German localization
@@ -43,7 +45,7 @@ versioned merge strategy.
 
 ## Requirements
 
-- macOS with Xcode and the iOS 26 SDK
+- macOS with Xcode 27.1 or newer (the app still runs on iOS 26)
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen) 2.44.1 or newer
 - An iOS 26 simulator or device
 - Swift 6 for the headless scheduling-core tests
@@ -89,7 +91,7 @@ account.
 Run the Foundation-only scheduling suite without a simulator:
 
 ```bash
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test --build-system native
 ```
 
 Run the app-level resource and task-registry tests:
@@ -131,6 +133,7 @@ Useful design references:
 - [`docs/design-spec.md`](docs/design-spec.md)
 - [`docs/onboarding-architecture.md`](docs/onboarding-architecture.md)
 - [`docs/alarm-exception-edge-cases.md`](docs/alarm-exception-edge-cases.md)
+- [`docs/iphone-duo.md`](docs/iphone-duo.md)
 
 ## Repository layout
 

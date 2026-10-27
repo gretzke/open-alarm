@@ -1,5 +1,6 @@
 name: OpenAlarm
 options:
+  xcodeVersion: "27.1"
   minimumXcodeGenVersion: 2.44.1
   createIntermediateGroups: true
 settings:

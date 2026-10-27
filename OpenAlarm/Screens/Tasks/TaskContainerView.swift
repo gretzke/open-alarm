@@ -49,12 +49,14 @@ struct TaskContainerView: View {
         ZStack {
             DawnBackground(progress: dawnProgress)
 
-            if !isDismissed {
-                dismissScreen
-            } else if tasks.isEmpty {
-                Color.clear.onAppear { complete() }
-            } else {
-                challengeScreen
+            FoldAwareContent {
+                if !isDismissed {
+                    dismissScreen
+                } else if tasks.isEmpty {
+                    Color.clear.onAppear { complete() }
+                } else {
+                    challengeScreen
+                }
             }
         }
         .interactiveDismissDisabled()
@@ -89,51 +91,53 @@ struct TaskContainerView: View {
     }
 
     private var dismissScreen: some View {
-        VStack {
-            soundControlHeader
+        AdaptiveScreenScrollView {
+            VStack {
+                soundControlHeader
 
-            Spacer()
+                Spacer()
 
-            VStack(spacing: OASpacing.m) {
-                Text(alarm.name.isEmpty ? String(localized: "task_dismiss_title") : alarm.name)
-                    .font(OADawnType.chip)
-                    .foregroundStyle(dawnInk)
-                    .padding(.horizontal, OASpacing.m)
-                    .padding(.vertical, OASpacing.s)
-                    .background(dawnInk.opacity(0.18), in: Capsule())
+                VStack(spacing: OASpacing.m) {
+                    Text(alarm.name.isEmpty ? String(localized: "task_dismiss_title") : alarm.name)
+                        .font(OADawnType.chip)
+                        .foregroundStyle(dawnInk)
+                        .padding(.horizontal, OASpacing.m)
+                        .padding(.vertical, OASpacing.s)
+                        .background(dawnInk.opacity(0.18), in: Capsule())
 
-                Text(alarmTime)
-                    .font(OADawnType.display(dismissTimeFontSize))
-                    .monospacedDigit()
-                    .foregroundStyle(dawnInk)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
+                    Text(alarmTime)
+                        .font(OADawnType.display(dismissTimeFontSize))
+                        .monospacedDigit()
+                        .foregroundStyle(dawnInk)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
 
-                if !tasks.isEmpty {
-                    Text(L10n.taskDismissTasksHint(tasks.count))
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(dawnInk.opacity(0.82))
-                        .multilineTextAlignment(.center)
+                    if !tasks.isEmpty {
+                        Text(L10n.taskDismissTasksHint(tasks.count))
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(dawnInk.opacity(0.82))
+                            .multilineTextAlignment(.center)
+                    }
                 }
+
+                Spacer()
+
+                Button {
+                    isDismissed = true
+                } label: {
+                    Text(String(localized: "task_dismiss_alarm_button"))
+                        .font(OADawnType.button)
+                        .foregroundStyle(DawnPalette.inkDark)
+                        .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+                        .contentShape(Rectangle())
+                }
+                .background(Color.white, in: Capsule())
+                .buttonStyle(.plain)
+
+                Spacer()
             }
-
-            Spacer()
-
-            Button {
-                isDismissed = true
-            } label: {
-                Text(String(localized: "task_dismiss_alarm_button"))
-                    .font(OADawnType.button)
-                    .foregroundStyle(DawnPalette.inkDark)
-                    .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
-                    .contentShape(Rectangle())
-            }
-            .background(Color.white, in: Capsule())
-            .buttonStyle(.plain)
-
-            Spacer()
+            .padding()
         }
-        .padding()
     }
 
     @ViewBuilder

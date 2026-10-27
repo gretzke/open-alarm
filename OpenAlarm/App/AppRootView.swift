@@ -7,6 +7,8 @@ struct AppRootView: View {
     @StateObject private var onboardingEngine = OnboardingEngine(alarmPersistence: .shared)
     @StateObject private var alarmStore = AlarmStore()
     @State private var showWakeCheckPermissionDeniedPrompt = false
+    @State private var bedsideNapID: UUID?
+    @State private var bedsideDisplaySession = BedsideDisplaySession()
 
     var body: some View {
         Group {
@@ -14,15 +16,38 @@ struct AppRootView: View {
                 OnboardingFlowView(engine: onboardingEngine)
                     .environmentObject(alarmStore)
             } else {
-                MainTabView()
+                MainTabView(onPresentNapBedside: { bedsideNapID = $0 })
                     .environmentObject(alarmStore)
             }
         }
         .fontDesign(.rounded)
         .preferredColorScheme(.dark)
+        .accessibilityHidden(bedsideNap != nil)
+        .allowsHitTesting(bedsideNap == nil)
+        .overlay {
+            if let nap = bedsideNap {
+                NapBedsideView(nap: nap, onClose: { bedsideNapID = nil })
+                    .environmentObject(alarmStore)
+            }
+        }
+        .onChange(of: bedsideNap != nil && scenePhase == .active, initial: true) { _, active in
+            bedsideDisplaySession.setActive(active)
+        }
+        .onDisappear {
+            bedsideDisplaySession.setActive(false)
+        }
+        .onChange(of: alarmStore.activeNap?.id) { _, id in
+            if id != bedsideNapID { bedsideNapID = nil }
+        }
+        .onChange(of: alarmStore.disarmPresentation?.id) { _, id in
+            if id != nil { bedsideNapID = nil }
+        }
+        .onChange(of: alarmStore.wakeUpCheckConfirmationPresentation?.id) { _, id in
+            if id != nil { bedsideNapID = nil }
+        }
         .onAppear {
-            onboardingEngine.attachNotificationPermissionStatusProvider { [weak alarmStore] in
-                alarmStore?.notificationPermissionStatus ?? .notDetermined
+            onboardingEngine.attachNotificationPermissionStatusProvider { [weak store = alarmStore] in
+                store?.notificationPermissionStatus ?? .notDetermined
             }
             completeRestoredSettingsOnboardingIfNeeded()
             onboardingEngine.handleAppOpened()
@@ -90,6 +115,15 @@ struct AppRootView: View {
             WakeUpCheckConfirmationView(alarmID: presentation.id)
                 .environmentObject(alarmStore)
         }
+    }
+
+    private var bedsideNap: UserAlarm? {
+        guard !onboardingEngine.isPresentingOnboarding,
+              alarmStore.disarmPresentation == nil,
+              alarmStore.wakeUpCheckConfirmationPresentation == nil,
+              !showWakeCheckPermissionDeniedPrompt,
+              let nap = alarmStore.activeNap, nap.id == bedsideNapID else { return nil }
+        return nap
     }
 
     private func evaluateWakeCheckPermissionGuard() {

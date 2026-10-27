@@ -51,6 +51,7 @@ struct ActiveNapRowView: View {
     let onAddFiveMinutes: () -> Void
     let onAddTenMinutes: () -> Void
     let onDelete: () -> Void
+    let onBedside: () -> Void
 
     @ScaledMetric(relativeTo: .largeTitle) private var countdownFontSize: CGFloat = 38
 
@@ -69,64 +70,91 @@ struct ActiveNapRowView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .center, spacing: OASpacing.s) {
-                Text(nap.snoozeCount > 0 ? L10n.napActiveSnoozingTitle : L10n.napActiveTitle)
-                    .font(OAType.cardTitle)
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .center, spacing: OASpacing.s) {
+                    napTitle
+                    Spacer(minLength: OASpacing.s)
+                    extraTimeButtons
+                }
+                VStack(alignment: .leading, spacing: OASpacing.s) {
+                    napTitle
+                    extraTimeButtons
+                }
+            }
+
+            HStack {
+                Text(remainingTimeString)
+                    .font(OAType.display(countdownFontSize).monospacedDigit())
                     .foregroundStyle(OAColor.textPrimary)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+                    .minimumScaleFactor(0.5)
 
                 Spacer(minLength: OASpacing.s)
 
-                if !nap.isPaused {
-                    HStack(spacing: OASpacing.s) {
-                        extraTimeButton("+1", accessibilityLabel: L10n.napActiveAddOneMinute, action: onAddOneMinute)
-                        extraTimeButton("+5", accessibilityLabel: L10n.napActiveAddFiveMinutes, action: onAddFiveMinutes)
-                        extraTimeButton("+10", accessibilityLabel: L10n.napActiveAddTenMinutes, action: onAddTenMinutes)
-                    }
-                    .layoutPriority(1)
-                }
+                Button(L10n.napBedsideTitle, systemImage: "moon.stars", action: onBedside)
+                    .labelStyle(.iconOnly)
+                    .frame(minWidth: OASize.minTouchTarget, minHeight: OASize.minTouchTarget)
+                    .buttonStyle(.glass)
+                    .accessibilityIdentifier("nap_bedside_open")
             }
 
-            Text(remainingTimeString)
-                .font(OAType.display(countdownFontSize).monospacedDigit())
-                .foregroundStyle(OAColor.textPrimary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
-
-            HStack(spacing: 10) {
-                Button {
-                    Haptics.impact()
-                    if nap.isPaused {
-                        onContinue()
-                    } else {
-                        onPause()
-                    }
-                } label: {
-                    Label(nap.isPaused ? L10n.actionContinue : L10n.actionPause, systemImage: nap.isPaused ? "play.fill" : "pause.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(OAColor.textPrimary)
-                        .frame(maxWidth: .infinity, minHeight: OASize.rowHeight)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.glass)
-
-                Button {
-                    Haptics.impact(.rigid)
-                    onDelete()
-                } label: {
-                    Label(L10n.actionDelete, systemImage: "xmark")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(OAColor.danger)
-                        .frame(maxWidth: .infinity, minHeight: OASize.rowHeight)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.glass)
-            }
+            napControls
         }
         .padding(OASpacing.cardPadding)
         .oaGlassCard()
         .padding(.vertical, 6)
+    }
+
+    private var napTitle: some View {
+        Text(nap.snoozeCount > 0 ? L10n.napActiveSnoozingTitle : L10n.napActiveTitle)
+            .font(OAType.cardTitle)
+            .foregroundStyle(OAColor.textPrimary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
+    }
+
+    @ViewBuilder
+    private var extraTimeButtons: some View {
+        if !nap.isPaused {
+            HStack(spacing: OASpacing.s) {
+                extraTimeButton("+1", accessibilityLabel: L10n.napActiveAddOneMinute, action: onAddOneMinute)
+                extraTimeButton("+5", accessibilityLabel: L10n.napActiveAddFiveMinutes, action: onAddFiveMinutes)
+                extraTimeButton("+10", accessibilityLabel: L10n.napActiveAddTenMinutes, action: onAddTenMinutes)
+            }
+            .layoutPriority(1)
+        }
+    }
+
+    private var napControls: some View {
+        HStack(spacing: 10) {
+            Button {
+                Haptics.impact()
+                if nap.isPaused {
+                    onContinue()
+                } else {
+                    onPause()
+                }
+            } label: {
+                Label(nap.isPaused ? L10n.actionContinue : L10n.actionPause, systemImage: nap.isPaused ? "play.fill" : "pause.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(OAColor.textPrimary)
+                    .frame(maxWidth: .infinity, minHeight: OASize.rowHeight)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.glass)
+
+            Button {
+                Haptics.impact(.rigid)
+                onDelete()
+            } label: {
+                Label(L10n.actionDelete, systemImage: "xmark")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(OAColor.danger)
+                    .frame(maxWidth: .infinity, minHeight: OASize.rowHeight)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.glass)
+        }
     }
 
     private func extraTimeButton(

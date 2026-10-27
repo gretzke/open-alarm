@@ -8,6 +8,8 @@
 "alarm_list_empty_subtitle" = "Tap + to create your first alarm.";
 
 "nap_banner_title" = "Take a nap";
+"nap_bedside_title" = "Bedside";
+"nap_bedside_glow" = "Dawn glow";
 "nap_active_title" = "Napping";
 "nap_active_paused" = "Paused";
 "nap_active_snoozing_title" = "Snoozing";
@@ -314,3 +316,5 @@
 
 /* Accessibility */
 "a11y_math_answer_field" = "Answer";
+
+"action_close" = "Close";

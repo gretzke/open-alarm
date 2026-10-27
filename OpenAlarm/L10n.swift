@@ -1,6 +1,7 @@
 import SwiftUI
 
 enum L10n {
+    static let actionClose: LocalizedStringKey = "action_close"
 
     static let tabAlarm: LocalizedStringKey = "tab_alarm"
     static let tabSettings: LocalizedStringKey = "tab_settings"
@@ -10,6 +11,8 @@ enum L10n {
     static let alarmListEmptySubtitle: LocalizedStringKey = "alarm_list_empty_subtitle"
 
     static let napBannerTitle: LocalizedStringKey = "nap_banner_title"
+    static let napBedsideTitle: LocalizedStringKey = "nap_bedside_title"
+    static let napBedsideGlow: LocalizedStringKey = "nap_bedside_glow"
     static let napActiveTitle: LocalizedStringKey = "nap_active_title"
     static let napActiveSnoozingTitle: LocalizedStringKey = "nap_active_snoozing_title"
     static let napActivePaused: LocalizedStringKey = "nap_active_paused"

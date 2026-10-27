@@ -36,27 +36,29 @@ struct MemoryTaskView: View {
     }
 
     var body: some View {
-        VStack(spacing: OASpacing.xl) {
-            Spacer(minLength: 0)
+        AdaptiveScreenScrollView {
+            VStack(spacing: OASpacing.xl) {
+                Spacer(minLength: 0)
 
-            Text(L10n.taskMemoryInstruction)
-                .font(OADawnType.chip)
-                .foregroundStyle(.white)
+                Text(L10n.taskMemoryInstruction)
+                    .font(OADawnType.chip)
+                    .foregroundStyle(.white)
 
-            grid
-                .frame(maxWidth: 420)
+                grid
+                    .frame(maxWidth: 420)
 
-            HStack(spacing: OASpacing.s) {
-                ForEach(0..<rounds, id: \.self) { index in
-                    Circle()
-                        .fill(index < roundsDone ? Color.white : Color.white.opacity(0.35))
-                        .frame(width: OASpacing.s, height: OASpacing.s)
+                HStack(spacing: OASpacing.s) {
+                    ForEach(0..<rounds, id: \.self) { index in
+                        Circle()
+                            .fill(index < roundsDone ? Color.white : Color.white.opacity(0.35))
+                            .frame(width: OASpacing.s, height: OASpacing.s)
+                    }
                 }
-            }
 
-            Spacer(minLength: 0)
+                Spacer(minLength: 0)
+            }
+            .padding(OASpacing.screenMargin)
         }
-        .padding(OASpacing.screenMargin)
         .onAppear(perform: startPlayback)
         .onDisappear {
             roundAdvanceTask?.cancel()

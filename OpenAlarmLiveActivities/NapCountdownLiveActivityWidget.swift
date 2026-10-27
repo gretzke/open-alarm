@@ -19,6 +19,8 @@ struct NapCountdownLiveActivityWidget: Widget {
         ActivityConfiguration(for: NapCountdownLiveActivityAttributes.self) { context in
             NapCountdownExpandedContent(context: context, showsButtons: true)
                 .widgetURL(openAlarmNapURL)
+                .activityBackgroundTint(Color(red: 0x1c / 255, green: 0x0b / 255, blue: 0x38 / 255))
+                .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.bottom) {
@@ -43,23 +45,33 @@ struct NapCountdownLiveActivityWidget: Widget {
 private struct NapCountdownExpandedContent: View {
     let context: ActivityViewContext<NapCountdownLiveActivityAttributes>
     let showsButtons: Bool
+    @Environment(\.isActivityFullscreen) private var isFullscreen
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                NapCountdownGlyph()
-
-                VStack(alignment: .leading, spacing: 3) {
+            if isFullscreen {
+                VStack(spacing: 8) {
                     Text(titleKey)
                         .font(.headline)
-                        .lineLimit(1)
-
-                    subtitleView
+                    NapPrimaryTimeText(state: context.state, isFullscreen: true)
                 }
+                .frame(maxWidth: .infinity)
+            } else {
+                HStack(spacing: 12) {
+                    NapCountdownGlyph()
 
-                Spacer(minLength: 0)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(titleKey)
+                            .font(.headline)
+                            .lineLimit(1)
 
-                NapPrimaryTimeText(state: context.state)
+                        subtitleView
+                    }
+
+                    Spacer(minLength: 0)
+
+                    NapPrimaryTimeText(state: context.state)
+                }
             }
 
             if showsButtons {
@@ -133,7 +145,7 @@ private struct NapExtendButton: View {
                 .font(.footnote.weight(.bold))
                 .foregroundStyle(napLiveActivityAccent)
                 .padding(.horizontal, 12)
-                .frame(minWidth: 48, minHeight: 34)
+                .frame(minWidth: 44, minHeight: 44)
                 .background {
                     RoundedRectangle(cornerRadius: napLiveActivityCornerRadius, style: .continuous)
                         .fill(napLiveActivityAccent.opacity(0.14))
@@ -155,7 +167,7 @@ private struct NapIconActionButton<Intent: AppIntent>: View {
             Image(systemName: systemImage)
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(tint)
-                .frame(width: 34, height: 34)
+                .frame(width: 44, height: 44)
                 .background {
                     RoundedRectangle(cornerRadius: napLiveActivityCornerRadius, style: .continuous)
                         .fill(tint.opacity(0.14))
@@ -204,7 +216,7 @@ private struct TextTimer: View {
     }
 
     var body: some View {
-        Text(timerInterval: Date.now...date)
+        Text(timerInterval: min(Date.now, date)...date)
             .font(Font(font))
             .frame(width: width > 0 ? width : nil)
             .minimumScaleFactor(0.5)
@@ -227,16 +239,17 @@ private struct TextTimer: View {
 
 private struct NapPrimaryTimeText: View {
     let state: NapCountdownLiveActivityAttributes.ContentState
+    var isFullscreen = false
 
     var body: some View {
         Group {
             if let endDate = state.endDate {
-                Text(endDate, style: .timer)
+                Text(timerInterval: min(Date.now, endDate)...endDate, countsDown: true)
             } else {
                 Text(formattedDuration(state.pausedRemainingSeconds ?? 0))
             }
         }
-        .font(.system(size: 28, weight: .bold, design: .rounded).monospacedDigit())
+        .font(.system(size: isFullscreen ? 44 : 28, weight: .bold, design: .rounded).monospacedDigit())
         .foregroundStyle(.primary)
         .multilineTextAlignment(.trailing)
         .lineLimit(1)

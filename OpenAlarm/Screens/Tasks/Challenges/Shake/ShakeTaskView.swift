@@ -30,18 +30,20 @@ struct ShakeTaskView: View {
     }
 
     var body: some View {
-        VStack(spacing: OASpacing.l) {
-            Spacer()
+        AdaptiveScreenScrollView {
+            VStack(spacing: OASpacing.l) {
+                Spacer()
 
-            if showingFallback {
-                fallbackControl
-            } else {
-                shakeContent
+                if showingFallback {
+                    fallbackControl
+                } else {
+                    shakeContent
+                }
+
+                Spacer()
             }
-
-            Spacer()
+            .padding(OASpacing.screenMargin)
         }
-        .padding(OASpacing.screenMargin)
         .onAppear(perform: beginMotion)
         .onDisappear(perform: stopEverything)
     }

@@ -19,18 +19,20 @@ struct StepsTaskView: View {
     }
 
     var body: some View {
-        VStack(spacing: OASpacing.l) {
-            Spacer()
+        AdaptiveScreenScrollView {
+            VStack(spacing: OASpacing.l) {
+                Spacer()
 
-            if showingFallback {
-                fallbackControl
-            } else {
-                stepsContent
+                if showingFallback {
+                    fallbackControl
+                } else {
+                    stepsContent
+                }
+
+                Spacer()
             }
-
-            Spacer()
+            .padding(OASpacing.screenMargin)
         }
-        .padding(OASpacing.screenMargin)
         .onAppear(perform: beginPedometer)
         .onDisappear(perform: stopEverything)
     }

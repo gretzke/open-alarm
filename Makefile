@@ -4,7 +4,7 @@ generate:
 	xcodegen generate
 
 test:
-	swift test
+	swift test --build-system native
 
 check: check-no-literals check-i18n check-glass-buttons
 

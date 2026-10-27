@@ -314,3 +314,7 @@
 
 /* Accessibility */
 "a11y_math_answer_field" = "Antwort";
+
+"nap_bedside_title" = "Nachttisch";
+"nap_bedside_glow" = "Morgenlicht";
+"action_close" = "Schließen";

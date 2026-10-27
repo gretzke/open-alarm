@@ -506,36 +506,39 @@ private struct WakeCheckPermissionPrePromptView: View {
     let onRequestPermission: () -> Void
 
     var body: some View {
-        VStack(spacing: 24) {
-            VStack(spacing: 16) {
-                Image(systemName: "checkmark.bubble")
-                    .font(.system(size: 52, weight: .semibold))
-                    .foregroundStyle(OAColor.actionCyan)
+        FoldAwareContent {
+            AdaptiveScreenScrollView {
+                VStack(spacing: 24) {
+                    VStack(spacing: 16) {
+                        Image(systemName: "checkmark.bubble")
+                            .font(.system(size: 52, weight: .semibold))
+                            .foregroundStyle(OAColor.actionCyan)
 
-                Text(L10n.alarmEditorWakeCheckPermissionPromptTitle)
-                    .font(.title.bold())
-                    .foregroundStyle(OAColor.textPrimary)
-                    .multilineTextAlignment(.center)
+                        Text(L10n.alarmEditorWakeCheckPermissionPromptTitle)
+                            .font(.title.bold())
+                            .foregroundStyle(OAColor.textPrimary)
+                            .multilineTextAlignment(.center)
 
-                Text(L10n.alarmEditorWakeCheckPermissionPromptBody)
-                    .font(.body)
-                    .foregroundStyle(OAColor.textSecondary)
-                    .multilineTextAlignment(.center)
+                        Text(L10n.alarmEditorWakeCheckPermissionPromptBody)
+                            .font(.body)
+                            .foregroundStyle(OAColor.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(OASpacing.onboardingMargin)
+                    .oaGlassCard()
+
+                    Button(action: onRequestPermission) {
+                        Text(L10n.actionNext)
+                            .font(OAType.buttonLabel)
+                            .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+                    }
+                    .buttonStyle(.glassProminent)
+                        .tint(OAColor.actionCyan)
+                        .accessibilityIdentifier("wake_check_permission_next")
+                }
+                .padding(OASpacing.onboardingMargin)
             }
-            .padding(OASpacing.onboardingMargin)
-            .oaGlassCard()
-
-            Button(action: onRequestPermission) {
-                Text(L10n.actionNext)
-                    .font(OAType.buttonLabel)
-                    .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
-            }
-            .buttonStyle(.glassProminent)
-                .tint(OAColor.actionCyan)
-                .accessibilityIdentifier("wake_check_permission_next")
         }
-        .padding(OASpacing.onboardingMargin)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(OAColor.background.ignoresSafeArea())
     }
 }
@@ -545,47 +548,50 @@ struct WakeCheckPermissionDeniedView: View {
     let onDisableFeature: () -> Void
 
     var body: some View {
-        VStack(spacing: 24) {
-            VStack(spacing: 16) {
-                Image(systemName: "bell.slash.fill")
-                    .font(.system(size: 52, weight: .semibold))
-                    .foregroundStyle(OAColor.danger)
+        FoldAwareContent {
+            AdaptiveScreenScrollView {
+                VStack(spacing: 24) {
+                    VStack(spacing: 16) {
+                        Image(systemName: "bell.slash.fill")
+                            .font(.system(size: 52, weight: .semibold))
+                            .foregroundStyle(OAColor.danger)
 
-                Text(L10n.alarmEditorWakeCheckPermissionDeniedTitle)
-                    .font(.title.bold())
-                    .foregroundStyle(OAColor.textPrimary)
-                    .multilineTextAlignment(.center)
+                        Text(L10n.alarmEditorWakeCheckPermissionDeniedTitle)
+                            .font(.title.bold())
+                            .foregroundStyle(OAColor.textPrimary)
+                            .multilineTextAlignment(.center)
 
-                Text(L10n.alarmEditorWakeCheckPermissionDeniedBody)
-                    .font(.body)
-                    .foregroundStyle(OAColor.textSecondary)
-                    .multilineTextAlignment(.center)
-            }
-            .padding(OASpacing.onboardingMargin)
-            .oaGlassCard()
+                        Text(L10n.alarmEditorWakeCheckPermissionDeniedBody)
+                            .font(.body)
+                            .foregroundStyle(OAColor.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(OASpacing.onboardingMargin)
+                    .oaGlassCard()
 
-            VStack(spacing: 12) {
-                Button(action: onOpenSettings) {
-                    Text(L10n.actionOpenSettings)
-                        .font(OAType.buttonLabel)
-                        .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+                    VStack(spacing: 12) {
+                        Button(action: onOpenSettings) {
+                            Text(L10n.actionOpenSettings)
+                                .font(OAType.buttonLabel)
+                                .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+                        }
+                        .buttonStyle(.glassProminent)
+                        .tint(OAColor.actionCyan)
+                        .accessibilityIdentifier("wake_check_permission_open_settings")
+
+                        Button(action: onDisableFeature) {
+                            Text(L10n.alarmEditorWakeCheckDisableFeatureAction)
+                                .font(OAType.buttonLabel)
+                                .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+                        }
+                        .buttonStyle(.glass)
+                        .foregroundStyle(OAColor.textPrimary)
+                        .accessibilityIdentifier("wake_check_permission_disable_feature")
+                    }
                 }
-                .buttonStyle(.glassProminent)
-                .tint(OAColor.actionCyan)
-                .accessibilityIdentifier("wake_check_permission_open_settings")
-
-                Button(action: onDisableFeature) {
-                    Text(L10n.alarmEditorWakeCheckDisableFeatureAction)
-                        .font(OAType.buttonLabel)
-                        .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
-                }
-                .buttonStyle(.glass)
-                .foregroundStyle(OAColor.textPrimary)
-                .accessibilityIdentifier("wake_check_permission_disable_feature")
+                .padding(OASpacing.onboardingMargin)
             }
         }
-        .padding(OASpacing.onboardingMargin)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(OAColor.background.ignoresSafeArea())
     }
 }

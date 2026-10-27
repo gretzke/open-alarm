@@ -1,6 +1,8 @@
+import Combine
 import SwiftUI
 
 struct AlarmHomeView: View {
+    var onPresentNapBedside: (UUID) -> Void = { _ in }
     @EnvironmentObject private var alarmStore: AlarmStore
     @State private var editorRoute: AlarmEditorRoute?
     @State private var editorDetent: PresentationDetent = .fraction(0.82)
@@ -92,6 +94,9 @@ struct AlarmHomeView: View {
                     },
                     onDelete: {
                         alarmStore.deleteNap()
+                    },
+                    onBedside: {
+                        onPresentNapBedside(nap.id)
                     }
                 )
                 .listRowSeparator(.hidden)
@@ -118,7 +123,8 @@ struct AlarmHomeView: View {
                 Button {
                     presentEditor(.create)
                 } label: {
-                    Image(systemName: "plus")
+                    Label(L10n.alarmEditorNewTitle, systemImage: "plus")
+                        .labelStyle(.iconOnly)
                         .font(.title2.weight(.bold))
                         .foregroundStyle(OAColor.actionCyan)
                         .frame(width: 40, height: 40)

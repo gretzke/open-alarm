@@ -81,47 +81,50 @@ struct TaskPermissionPrePromptView: View {
     let onCancel: () -> Void
 
     var body: some View {
-        VStack(spacing: 24) {
-            VStack(spacing: 16) {
-                Image(systemName: permission.systemImage)
-                    .font(.system(size: 52, weight: .semibold))
-                    .foregroundStyle(OAColor.actionCyan)
+        FoldAwareContent {
+            AdaptiveScreenScrollView {
+                VStack(spacing: 24) {
+                    VStack(spacing: 16) {
+                        Image(systemName: permission.systemImage)
+                            .font(.system(size: 52, weight: .semibold))
+                            .foregroundStyle(OAColor.actionCyan)
 
-                Text(permission.prePromptTitle)
-                    .font(.title.bold())
-                    .foregroundStyle(OAColor.textPrimary)
-                    .multilineTextAlignment(.center)
+                        Text(permission.prePromptTitle)
+                            .font(.title.bold())
+                            .foregroundStyle(OAColor.textPrimary)
+                            .multilineTextAlignment(.center)
 
-                Text(permission.prePromptBody)
-                    .font(.body)
-                    .foregroundStyle(OAColor.textSecondary)
-                    .multilineTextAlignment(.center)
-            }
-            .padding(OASpacing.onboardingMargin)
-            .oaGlassCard()
+                        Text(permission.prePromptBody)
+                            .font(.body)
+                            .foregroundStyle(OAColor.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(OASpacing.onboardingMargin)
+                    .oaGlassCard()
 
-            VStack(spacing: 12) {
-                Button(action: onRequestPermission) {
-                    Text(L10n.actionNext)
-                        .font(OAType.buttonLabel)
-                        .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+                    VStack(spacing: 12) {
+                        Button(action: onRequestPermission) {
+                            Text(L10n.actionNext)
+                                .font(OAType.buttonLabel)
+                                .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+                        }
+                        .buttonStyle(.glassProminent)
+                        .tint(OAColor.actionCyan)
+                        .accessibilityIdentifier(permission.nextAccessibilityIdentifier)
+
+                        Button(action: onCancel) {
+                            Text(L10n.actionCancel)
+                                .font(OAType.buttonLabel)
+                                .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+                        }
+                        .buttonStyle(.glass)
+                        .foregroundStyle(OAColor.textPrimary)
+                        .accessibilityIdentifier(permission.cancelAccessibilityIdentifier)
+                    }
                 }
-                .buttonStyle(.glassProminent)
-                .tint(OAColor.actionCyan)
-                .accessibilityIdentifier(permission.nextAccessibilityIdentifier)
-
-                Button(action: onCancel) {
-                    Text(L10n.actionCancel)
-                        .font(OAType.buttonLabel)
-                        .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
-                }
-                .buttonStyle(.glass)
-                .foregroundStyle(OAColor.textPrimary)
-                .accessibilityIdentifier(permission.cancelAccessibilityIdentifier)
+                .padding(OASpacing.onboardingMargin)
             }
         }
-        .padding(OASpacing.onboardingMargin)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(OAColor.background.ignoresSafeArea())
     }
 }
@@ -132,47 +135,50 @@ struct TaskPermissionDeniedView: View {
     let onCancel: () -> Void
 
     var body: some View {
-        VStack(spacing: 24) {
-            VStack(spacing: 16) {
-                Image(systemName: permission.systemImage)
-                    .font(.system(size: 52, weight: .semibold))
-                    .foregroundStyle(OAColor.danger)
+        FoldAwareContent {
+            AdaptiveScreenScrollView {
+                VStack(spacing: 24) {
+                    VStack(spacing: 16) {
+                        Image(systemName: permission.systemImage)
+                            .font(.system(size: 52, weight: .semibold))
+                            .foregroundStyle(OAColor.danger)
 
-                Text(permission.deniedTitle)
-                    .font(.title.bold())
-                    .foregroundStyle(OAColor.textPrimary)
-                    .multilineTextAlignment(.center)
+                        Text(permission.deniedTitle)
+                            .font(.title.bold())
+                            .foregroundStyle(OAColor.textPrimary)
+                            .multilineTextAlignment(.center)
 
-                Text(permission.deniedBody)
-                    .font(.body)
-                    .foregroundStyle(OAColor.textSecondary)
-                    .multilineTextAlignment(.center)
-            }
-            .padding(OASpacing.onboardingMargin)
-            .oaGlassCard()
+                        Text(permission.deniedBody)
+                            .font(.body)
+                            .foregroundStyle(OAColor.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(OASpacing.onboardingMargin)
+                    .oaGlassCard()
 
-            VStack(spacing: 12) {
-                Button(action: onOpenSettings) {
-                    Text(L10n.actionOpenSettings)
-                        .font(OAType.buttonLabel)
-                        .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+                    VStack(spacing: 12) {
+                        Button(action: onOpenSettings) {
+                            Text(L10n.actionOpenSettings)
+                                .font(OAType.buttonLabel)
+                                .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+                        }
+                        .buttonStyle(.glassProminent)
+                        .tint(OAColor.actionCyan)
+                        .accessibilityIdentifier(permission.openSettingsAccessibilityIdentifier)
+
+                        Button(action: onCancel) {
+                            Text(L10n.actionCancel)
+                                .font(OAType.buttonLabel)
+                                .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+                        }
+                        .buttonStyle(.glass)
+                        .foregroundStyle(OAColor.textPrimary)
+                        .accessibilityIdentifier(permission.deniedCancelAccessibilityIdentifier)
+                    }
                 }
-                .buttonStyle(.glassProminent)
-                .tint(OAColor.actionCyan)
-                .accessibilityIdentifier(permission.openSettingsAccessibilityIdentifier)
-
-                Button(action: onCancel) {
-                    Text(L10n.actionCancel)
-                        .font(OAType.buttonLabel)
-                        .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
-                }
-                .buttonStyle(.glass)
-                .foregroundStyle(OAColor.textPrimary)
-                .accessibilityIdentifier(permission.deniedCancelAccessibilityIdentifier)
+                .padding(OASpacing.onboardingMargin)
             }
         }
-        .padding(OASpacing.onboardingMargin)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(OAColor.background.ignoresSafeArea())
     }
 }

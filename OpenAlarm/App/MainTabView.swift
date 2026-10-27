@@ -6,29 +6,22 @@ enum MainTab: Hashable {
 }
 
 struct MainTabView: View {
+    var onPresentNapBedside: (UUID) -> Void = { _ in }
     @State private var selectedTab: MainTab = .alarm
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            AlarmHomeView()
-                .tag(MainTab.alarm)
-                .tabItem {
-                    Label {
-                        Text(L10n.tabAlarm)
-                    } icon: {
-                        Image(systemName: "alarm.fill")
-                    }
-                }
+            Tab(value: MainTab.alarm) {
+                AlarmHomeView(onPresentNapBedside: onPresentNapBedside)
+            } label: {
+                Label(L10n.tabAlarm, systemImage: "alarm.fill")
+            }
 
-            SettingsHomeView()
-                .tag(MainTab.settings)
-                .tabItem {
-                    Label {
-                        Text(L10n.tabSettings)
-                    } icon: {
-                        Image(systemName: "gearshape.fill")
-                    }
-                }
+            Tab(value: MainTab.settings) {
+                SettingsHomeView()
+            } label: {
+                Label(L10n.tabSettings, systemImage: "gearshape.fill")
+            }
         }
         .tint(OAColor.actionCyan)
         .background(OAColor.background.ignoresSafeArea())

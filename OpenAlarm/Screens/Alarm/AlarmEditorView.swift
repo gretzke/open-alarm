@@ -92,18 +92,18 @@ struct AlarmEditorView: View {
             .navigationTitle(route.existingAlarm == nil ? L10n.alarmEditorNewTitle : L10n.alarmEditorEditTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button {
                         dismiss()
                     } label: {
-                        Image(systemName: "xmark")
+                        Label(L10n.actionCancel, systemImage: "xmark")
                             .font(OAType.buttonLabel)
                     }
                     .tint(OAColor.textPrimary)
                     .accessibilityLabel(L10n.actionCancel)
                 }
 
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .confirmationAction) {
                     if isSaving {
                         ProgressView()
                             .tint(OAColor.actionCyan)
@@ -115,7 +115,7 @@ struct AlarmEditorView: View {
                                 saveAlarm(scope: .schedule)
                             }
                         } label: {
-                            Image(systemName: "checkmark")
+                            Label(L10n.actionSave, systemImage: "checkmark")
                                 .font(.headline.weight(.bold))
                         }
                         .tint(OAColor.actionCyan)

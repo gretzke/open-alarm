@@ -41,18 +41,18 @@ struct NapEditorView: View {
             .navigationTitle(L10n.napEditorTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button {
                         dismiss()
                     } label: {
-                        Image(systemName: "xmark")
+                        Label(L10n.actionCancel, systemImage: "xmark")
                             .font(OAType.buttonLabel)
                     }
                     .tint(OAColor.textPrimary)
                     .accessibilityLabel(L10n.actionCancel)
                 }
 
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .confirmationAction) {
                     if isSaving {
                         ProgressView()
                             .tint(OAColor.actionCyan)
@@ -60,7 +60,7 @@ struct NapEditorView: View {
                         Button {
                             startNap()
                         } label: {
-                            Image(systemName: "checkmark")
+                            Label(L10n.napEditorStartButton, systemImage: "checkmark")
                                 .font(.headline.weight(.bold))
                         }
                         .tint(OAColor.actionCyan)

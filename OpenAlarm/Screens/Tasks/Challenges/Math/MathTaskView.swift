@@ -44,43 +44,45 @@ struct MathTaskView: View {
     }
 
     private var taskContent: some View {
-        VStack(spacing: OASpacing.l) {
-            Spacer()
+        AdaptiveScreenScrollView {
+            VStack(spacing: OASpacing.l) {
+                Spacer()
 
-            Text(currentProblem.displayString)
-                .font(OADawnType.display(problemFontSize))
-                .foregroundStyle(.white)
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
-
-            Text(userAnswer.isEmpty ? "?" : userAnswer)
-                .accessibilityLabel(String(localized: "a11y_math_answer_field"))
-                .font(OADawnType.display(answerFontSize))
-                .foregroundStyle(.white)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: .infinity, minHeight: 64)
-                .background(Color.white.opacity(0.24), in: RoundedRectangle(cornerRadius: OARadius.chip, style: .continuous))
-
-            if showWrongAnswer {
-                Text(String(localized: "task_math_wrong_answer"))
-                    .font(.subheadline)
+                Text(currentProblem.displayString)
+                    .font(OADawnType.display(problemFontSize))
                     .foregroundStyle(.white)
-            }
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
 
-            keypad
+                Text(userAnswer.isEmpty ? "?" : userAnswer)
+                    .accessibilityLabel(String(localized: "a11y_math_answer_field"))
+                    .font(OADawnType.display(answerFontSize))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity, minHeight: 64)
+                    .background(Color.white.opacity(0.24), in: RoundedRectangle(cornerRadius: OARadius.chip, style: .continuous))
 
-            HStack(spacing: OASpacing.s) {
-                ForEach(0..<totalCount, id: \.self) { index in
-                    Circle()
-                        .fill(index < solvedCount ? Color.white : Color.white.opacity(0.35))
-                        .frame(width: 8, height: 8)
+                if showWrongAnswer {
+                    Text(String(localized: "task_math_wrong_answer"))
+                        .font(.subheadline)
+                        .foregroundStyle(.white)
                 }
-            }
-            .accessibilityLabel(String(localized: "task_math_progress \(solvedCount) \(totalCount)"))
 
-            Spacer()
+                keypad
+
+                HStack(spacing: OASpacing.s) {
+                    ForEach(0..<totalCount, id: \.self) { index in
+                        Circle()
+                            .fill(index < solvedCount ? Color.white : Color.white.opacity(0.35))
+                            .frame(width: 8, height: 8)
+                    }
+                }
+                .accessibilityLabel(String(localized: "task_math_progress \(solvedCount) \(totalCount)"))
+
+                Spacer()
+            }
+            .padding()
         }
-        .padding()
     }
 
     private var keypad: some View {
