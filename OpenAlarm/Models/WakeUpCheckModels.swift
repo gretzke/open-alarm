@@ -44,4 +44,3 @@ protocol WakeUpCheckNotificationServicing: AnyObject {
     func cancelNotification(id: String)
     func ensureCategoryRegistered()
 }
-
