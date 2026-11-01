@@ -2,12 +2,6 @@ import AVFoundation
 import CoreMotion
 import SwiftUI
 
-enum TaskPermissionStatus: Equatable {
-    case authorized
-    case notDetermined
-    case denied
-}
-
 enum TaskPermissionFlowStep: String, Identifiable {
     case prePrompt
     case denied

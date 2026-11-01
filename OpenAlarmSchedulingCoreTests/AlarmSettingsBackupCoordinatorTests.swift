@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-@testable import OpenAlarm
+@testable import OpenAlarmSchedulingCore
 
 @MainActor
 struct AlarmSettingsBackupCoordinatorTests {

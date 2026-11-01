@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-@testable import OpenAlarm
+@testable import OpenAlarmSchedulingCore
 
 @MainActor
 struct OnboardingPermissionReconciliationTests {
@@ -368,6 +368,8 @@ private final class PermissionReconciliationTestContext {
             alarmPermissionStatusProvider: { self.alarmPermissionStatus },
             notificationPermissionStatusProvider: { self.notificationPermissionStatus },
             taskPermissionStatusProvider: { self.taskPermissionStatuses[$0] ?? .authorized },
+            requestAlarmAuthorization: { self.alarmPermissionStatus },
+            openSystemSettings: {},
             shouldSkipOnboarding: { false }
         )
     }

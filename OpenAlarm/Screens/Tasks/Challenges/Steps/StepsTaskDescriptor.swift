@@ -1,21 +1,6 @@
 import SwiftUI
 
-struct StepsTaskDescriptor: TaskDescriptor {
-    let typeID = "steps"
-    let displayName = L10n.taskStepsName
-    let systemImage = "figure.walk"
-    let defaultTask: AlarmTask = .steps(count: 30)
-    let requiredPermission: TaskPermission? = .motion
-
-    func matches(_ task: AlarmTask) -> Bool {
-        if case .steps = task { return true }
-        return false
-    }
-
-    func isVisibleInPicker(testingMode: Bool) -> Bool {
-        true
-    }
-
+extension StepsTaskDescriptor {
     func makeTaskView(_ task: AlarmTask, mode: TaskMode, onEvent: @escaping (TaskEvent) -> Void) -> AnyView {
         guard case let .steps(count) = task else {
             preconditionFailure("StepsTaskDescriptor received a non-steps task")

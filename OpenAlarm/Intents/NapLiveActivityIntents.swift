@@ -273,10 +273,13 @@ struct NapDeleteIntent: LiveActivityIntent {
             return .result()
         }
 
-        await Self.delete(
+        await AlarmIntentLifecycle.deleteNap(
             napID: id,
             persistence: persistence,
-            alarmManager: AlarmManager.shared
+            alarmManager: AlarmKitScheduler(),
+            cancelNotification: {
+                UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [$0])
+            }
         )
 
         await MainActor.run {
@@ -286,48 +289,4 @@ struct NapDeleteIntent: LiveActivityIntent {
         return .result()
     }
 
-    @MainActor
-    static func delete(
-        napID: UUID,
-        persistence: AlarmPersistence,
-        alarmManager: any AlarmManagerScheduling,
-        defaults: UserDefaults = OpenAlarmSharedDefaults.userDefaults
-    ) async {
-        var alarms = persistence.loadUserAlarms()
-        alarms.removeAll { $0.id == napID }
-        persistence.saveUserAlarms(alarms)
-        LastRingtoneStore.clear(forAlarm: napID, defaults: defaults)
-
-        var pendingDisarm = persistence.loadPendingDisarmAlarmIDs()
-        if pendingDisarm.remove(napID) != nil {
-            persistence.savePendingDisarmAlarmIDs(pendingDisarm)
-            IntentDiagnostics.log("NapDelete pending removal id=\(napID.uuidString)")
-        }
-
-        var wakeCheckSessions = persistence.loadWakeCheckSessions()
-        if let session = wakeCheckSessions.removeValue(forKey: napID) {
-            persistence.saveWakeCheckSessions(wakeCheckSessions)
-            UNUserNotificationCenter.current().removePendingNotificationRequests(
-                withIdentifiers: [session.notificationID]
-            )
-            IntentDiagnostics.log(
-                "NapDelete wake-check session removed id=\(napID.uuidString) notification=\(session.notificationID)"
-            )
-        }
-
-        var pendingWakeCheckConfirmUIIDs = persistence.loadPendingWakeUpCheckShowConfirmUIIDs()
-        if pendingWakeCheckConfirmUIIDs.remove(napID) != nil {
-            persistence.savePendingWakeUpCheckShowConfirmUIIDs(pendingWakeCheckConfirmUIIDs)
-            IntentDiagnostics.log("NapDelete wake-check confirm removal id=\(napID.uuidString)")
-        }
-
-        if let backstopID = BackstopSlotStore.clear(forParent: napID, defaults: defaults) {
-            IntentDiagnostics.log("NapDelete backstop cleared parent=\(napID.uuidString) id=\(backstopID.uuidString)")
-            try? alarmManager.stop(id: backstopID)
-            try? alarmManager.cancel(id: backstopID)
-        }
-
-        try? alarmManager.stop(id: napID)
-        try? alarmManager.cancel(id: napID)
-    }
 }

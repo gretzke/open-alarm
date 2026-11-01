@@ -1,6 +1,6 @@
 import CryptoKit
 import Foundation
-import UIKit
+import Combine
 
 enum OneTimeOnboardingStep: String, CaseIterable {
     case welcome
@@ -81,7 +81,8 @@ final class OnboardingEngine: ObservableObject {
     @Published private(set) var activeStep: OnboardingStep?
 
     private let userDefaults: UserDefaults
-    private let alarmPermissionService: AlarmPermissionService
+    private let requestAlarmAuthorization: () async -> AlarmPermissionStatus
+    private let openSystemSettings: () -> Void
     private let alarmPersistence: AlarmPersistence
     private let alarmsProvider: () -> [UserAlarm]
     private let alarmPermissionStatusProvider: () -> AlarmPermissionStatus
@@ -97,12 +98,13 @@ final class OnboardingEngine: ObservableObject {
 
     init(
         userDefaults: UserDefaults = .standard,
-        alarmPermissionService: AlarmPermissionService? = nil,
         alarmPersistence: AlarmPersistence = .shared,
         alarmsProvider: (() -> [UserAlarm])? = nil,
-        alarmPermissionStatusProvider: (() -> AlarmPermissionStatus)? = nil,
+        alarmPermissionStatusProvider: @escaping () -> AlarmPermissionStatus,
         notificationPermissionStatusProvider: @escaping () -> NotificationPermissionStatus = { .notDetermined },
-        taskPermissionStatusProvider: @escaping (TaskPermission) -> TaskPermissionStatus = TaskPermissionAuthorizer.status(for:),
+        taskPermissionStatusProvider: @escaping (TaskPermission) -> TaskPermissionStatus,
+        requestAlarmAuthorization: @escaping () async -> AlarmPermissionStatus,
+        openSystemSettings: @escaping () -> Void,
         shouldSkipOnboarding: @escaping () -> Bool = {
 #if DEBUG
             ProcessInfo.processInfo.arguments.contains("uitestSkipOnboarding")
@@ -111,14 +113,12 @@ final class OnboardingEngine: ObservableObject {
 #endif
         }
     ) {
-        let alarmPermissionService = alarmPermissionService ?? AlarmPermissionService()
         self.userDefaults = userDefaults
-        self.alarmPermissionService = alarmPermissionService
+        self.requestAlarmAuthorization = requestAlarmAuthorization
+        self.openSystemSettings = openSystemSettings
         self.alarmPersistence = alarmPersistence
         self.alarmsProvider = alarmsProvider ?? { alarmPersistence.loadUserAlarms() }
-        self.alarmPermissionStatusProvider = alarmPermissionStatusProvider ?? {
-            alarmPermissionService.currentStatus()
-        }
+        self.alarmPermissionStatusProvider = alarmPermissionStatusProvider
         self.notificationPermissionStatusProvider = notificationPermissionStatusProvider
         self.taskPermissionStatusProvider = taskPermissionStatusProvider
         self.shouldSkipOnboarding = shouldSkipOnboarding
@@ -162,15 +162,12 @@ final class OnboardingEngine: ObservableObject {
     }
 
     func requestAlarmPermission() async {
-        _ = await alarmPermissionService.requestAuthorization()
+        _ = await requestAlarmAuthorization()
         refreshWorkflow()
     }
 
     func openSettings() {
-        guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else {
-            return
-        }
-        UIApplication.shared.open(settingsURL)
+        openSystemSettings()
     }
 
     func recheckReusableScreens() {

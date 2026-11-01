@@ -1,5 +1,3 @@
-import UIKit
-
 @MainActor
 final class BedsideDisplaySession {
     private let readIdleTimer: @MainActor () -> Bool
@@ -7,8 +5,8 @@ final class BedsideDisplaySession {
     private var previousValue: Bool?
 
     init(
-        readIdleTimer: @escaping @MainActor () -> Bool = { UIApplication.shared.isIdleTimerDisabled },
-        writeIdleTimer: @escaping @MainActor (Bool) -> Void = { UIApplication.shared.isIdleTimerDisabled = $0 }
+        readIdleTimer: @escaping @MainActor () -> Bool,
+        writeIdleTimer: @escaping @MainActor (Bool) -> Void
     ) {
         self.readIdleTimer = readIdleTimer
         self.writeIdleTimer = writeIdleTimer

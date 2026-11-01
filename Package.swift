@@ -1,4 +1,4 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.2
 
 import PackageDescription
 
@@ -19,6 +19,9 @@ let package = Package(
             name: "OpenAlarmSchedulingCore",
             path: "OpenAlarm",
             sources: [
+                "AlarmStore.swift",
+                "Scheduling/AlarmScheduling.swift",
+                "Scheduling/AlarmIntentLifecycle.swift",
                 "Scheduling/AlarmStateMachine.swift",
                 "Scheduling/BridgeDateCalculator.swift",
                 "Models/AlarmDefinition.swift",
@@ -31,6 +34,19 @@ let package = Package(
                 "Models/TaskLogic/MemoryPatternGenerator.swift",
                 "Models/TaskLogic/ScanObjectCatalog.swift",
                 "Models/AlarmPersistenceStore.swift",
+                "Models/PermissionModels.swift",
+                "Models/WakeUpCheckModels.swift",
+                "Services/AlarmStoreEnvironment.swift",
+                "Services/AlarmSettingsBackupCoordinator.swift",
+                "Services/BedsideDisplaySession.swift",
+                "Services/ICloudAlarmSettingsStore.swift",
+                "Services/ICloudKeyValueStore.swift",
+                "Screens/Components/FoldContentRegion.swift",
+                "Screens/Nap/NapDawnProgress.swift",
+                "Screens/Onboarding/OnboardingEngine.swift",
+                "Screens/Tasks/ForceCloseAlarmManager.swift",
+                "Screens/Tasks/TaskDescriptor.swift",
+                "Screens/Tasks/TaskModels.swift",
                 "Shared/BackstopSlotStore.swift",
                 "Shared/LastRingtoneStore.swift",
                 "Shared/IntentDiagnostics.swift",

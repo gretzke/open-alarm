@@ -48,7 +48,7 @@ versioned merge strategy.
 - macOS with Xcode 27.1 or newer (the app still runs on iOS 26)
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen) 2.44.1 or newer
 - An iOS 26 simulator or device
-- Swift 6 for the headless scheduling-core tests
+- Swift 6.2 or newer for the native logic tests
 
 Install XcodeGen with Homebrew if needed:
 
@@ -88,19 +88,41 @@ account.
 
 ## Tests and guardrails
 
-Run the Foundation-only scheduling suite without a simulator:
+Run the logic tests on the Mac without a simulator:
 
 ```bash
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test --build-system native
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer make test
 ```
 
-Run the app-level resource and task-registry tests:
+The native package compiles the app's production sources for scheduling,
+`AlarmStore`, intent lifecycle rules, cloud backup reconciliation, onboarding,
+task registry metadata, bedside session state, fold geometry, and nap dawn
+progress. Tests inject device services and scheduling failures at the same
+boundaries used by the iOS app. The existing XCTest and Swift Testing assertions
+run together. `make test` limits SwiftPM to four build jobs.
+
+The ringtone packaging test needs the actual SDK-built app. It is skipped when
+no app path is supplied. Build the app without a simulator, then inspect that
+artifact from the native test runner:
 
 ```bash
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
-  xcodebuild test -project OpenAlarm.xcodeproj -scheme OpenAlarm \
-  -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
+  xcodebuild -project OpenAlarm.xcodeproj -scheme OpenAlarm \
+  -configuration Debug -destination 'generic/platform=iOS' \
+  -derivedDataPath build/ios -jobs 4 CODE_SIGNING_ALLOWED=NO build
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  make test-app-resources \
+  APP_BUNDLE_PATH="$PWD/build/ios/Build/Products/Debug-iphoneos/OpenAlarm.app"
 ```
+
+This checks every catalog excerpt and full track in the built application bundle.
+CI runs it after the SDK build. These unit tests run without a booted simulator.
+
+Use the shared heavy-build claim before starting SwiftPM or Xcode jobs on a
+shared development Mac. Native test success covers the portable logic. It does
+not establish AlarmKit delivery, permission dialogs, Live Activity rendering,
+or UIKit idle-timer integration. SDK compile checks verify the iOS adapters
+without booting a simulator.
 
 Run repository guardrails:
 
@@ -110,7 +132,7 @@ make check
 
 The guardrails reject direct SwiftUI string literals, mismatched English and
 German localization keys, and regressions in the shared glass-button styles.
-GitHub Actions also runs the core suite and a no-signing device-SDK build.
+GitHub Actions also runs the native suite and a no-signing device-SDK build.
 
 ## Architecture
 
@@ -124,8 +146,8 @@ GitHub Actions also runs the core suite and a no-signing device-SDK build.
   only when an installation has no local alarm data.
 - Stop, snooze, and nap controls use `LiveActivityIntent` so the app process can
   reconcile shared state after an interaction.
-- The scheduling core is also exposed as a local Swift package for fast,
-  simulator-free tests.
+- The native Swift package shares production logic with the app. iOS adapters
+  provide AlarmKit scheduling, device services, and task views.
 
 Useful design references:
 
@@ -140,7 +162,7 @@ Useful design references:
 ```text
 OpenAlarm/                       iOS application
 OpenAlarmLiveActivities/         Widget and Live Activity extension
-OpenAlarmSchedulingCoreTests/    Swift package tests
+OpenAlarmSchedulingCoreTests/    Native Swift package tests
 OpenAlarmTests/                  App-level XCTest suite
 docs/                            Architecture and behavior documentation
 maestro/                         UI automation flows

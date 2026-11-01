@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenAlarm
+@testable import OpenAlarmSchedulingCore
 
 final class BedsideLayoutTests: XCTestCase {
     func testFlatDisplayRetainsFullViewport() {

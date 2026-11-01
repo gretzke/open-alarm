@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import OpenAlarm
+@testable import OpenAlarmSchedulingCore
 
 @MainActor
 final class TaskRegistryTests: XCTestCase {
@@ -13,13 +13,13 @@ final class TaskRegistryTests: XCTestCase {
         .scanObject(objectClass: "mug"),
     ]
 
-    func testDescriptorTypeIDsAreUnique() {
+    func testDescriptorTypeIDsAreUnique() async {
         let typeIDs = TaskRegistry.descriptors.map(\.typeID)
 
         XCTAssertEqual(Set(typeIDs).count, typeIDs.count)
     }
 
-    func testExactlyOneDescriptorMatchesEachTaskCase() {
+    func testExactlyOneDescriptorMatchesEachTaskCase() async {
         for task in representativeTasks {
             XCTAssertEqual(
                 TaskRegistry.descriptors.filter { $0.matches(task) }.count,
@@ -29,7 +29,7 @@ final class TaskRegistryTests: XCTestCase {
         }
     }
 
-    func testPickerHidesDummyOutsideTestingWithoutAffectingRuntimeLookup() {
+    func testPickerHidesDummyOutsideTestingWithoutAffectingRuntimeLookup() async {
         XCTAssertFalse(TaskRegistry.pickerDescriptors(testingMode: false).contains { $0.typeID == "dummy" })
         XCTAssertEqual(TaskRegistry.descriptor(for: .dummy).typeID, "dummy")
     }

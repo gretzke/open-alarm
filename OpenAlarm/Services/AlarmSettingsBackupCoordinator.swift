@@ -103,10 +103,6 @@ final class AlarmSettingsBackupCoordinator {
         saveCurrentSettings()
     }
 
-    func isInitialSync(_ notification: Notification) -> Bool {
-        cloudStore.isInitialSync(notification)
-    }
-
     private func restore(_ backup: AlarmSettingsBackup) {
         persistence.restoreAlarmSettings(from: backup)
         persistence.markICloudAlarmSettingsBackupSeeded()

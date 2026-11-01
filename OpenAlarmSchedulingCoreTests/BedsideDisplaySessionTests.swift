@@ -1,9 +1,9 @@
 import XCTest
-@testable import OpenAlarm
+@testable import OpenAlarmSchedulingCore
 
 @MainActor
 final class BedsideDisplaySessionTests: XCTestCase {
-    func testClosingOrBackgroundingRestoresPreviousSetting() {
+    func testClosingOrBackgroundingRestoresPreviousSetting() async {
         var idleTimerDisabled = false
         let session = BedsideDisplaySession(readIdleTimer: { idleTimerDisabled }, writeIdleTimer: { idleTimerDisabled = $0 })
         session.setActive(true)
@@ -19,7 +19,7 @@ final class BedsideDisplaySessionTests: XCTestCase {
         XCTAssertFalse(idleTimerDisabled)
     }
 
-    func testAnExistingKeepAwakeRequestIsPreserved() {
+    func testAnExistingKeepAwakeRequestIsPreserved() async {
         var idleTimerDisabled = true
         let session = BedsideDisplaySession(readIdleTimer: { idleTimerDisabled }, writeIdleTimer: { idleTimerDisabled = $0 })
         session.setActive(true)

@@ -59,7 +59,7 @@ final class ICloudAlarmSettingsStore {
         }
     }
 
-    func isInitialSync(_ notification: Notification) -> Bool {
+    nonisolated static func isInitialSync(_ notification: Notification) -> Bool {
         guard
             let reason = notification.userInfo?[NSUbiquitousKeyValueStoreChangeReasonKey] as? NSNumber
         else {

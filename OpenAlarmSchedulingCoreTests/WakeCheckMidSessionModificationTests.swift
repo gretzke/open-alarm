@@ -1,22 +1,19 @@
-import AlarmKit
 import XCTest
 
-@testable import OpenAlarm
+@testable import OpenAlarmSchedulingCore
 
 @MainActor
 final class WakeCheckMidSessionModificationTests: XCTestCase {
     private var defaults: UserDefaults!
     private var suiteName: String!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
         suiteName = "openalarm-wake-check-tests-\(UUID().uuidString)"
         defaults = UserDefaults(suiteName: suiteName)!
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         defaults.removePersistentDomain(forName: suiteName)
-        super.tearDown()
     }
 
     func testUnskipMidSessionLeavesCanonicalIDUntouched() async throws {
@@ -94,7 +91,7 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
     }
 
     @MainActor
-    func testForceCloseStopClearsSlotWhenStopThrowsButCancelSucceeds() throws {
+    func testForceCloseStopClearsSlotWhenStopThrowsButCancelSucceeds() async throws {
         let alarm = makeAlarm()
         let manager = FakeAlarmManager()
         let suiteName = "forceclose-cancel-tests-\(UUID().uuidString)"
@@ -121,7 +118,7 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
     }
 
     @MainActor
-    func testForceCloseStopRetainsSlotWhenRuntimeReadFails() throws {
+    func testForceCloseStopRetainsSlotWhenRuntimeReadFails() async throws {
         let alarm = makeAlarm()
         let manager = FakeAlarmManager()
         let suiteName = "forceclose-cancel-tests-\(UUID().uuidString)"
@@ -263,7 +260,7 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
         XCTAssertTrue(store.wakeCheckSessions[alarm.id]?.modifiedDuringSession == true)
     }
 
-    func testRebuildRuntimePhasesHealsAwaitingWakeCheckWithoutSession() {
+    func testRebuildRuntimePhasesHealsAwaitingWakeCheckWithoutSession() async {
         let alarm = makeAlarm()
         let (store, _, _) = makeStore(alarm: alarm, withSession: false)
 
@@ -342,7 +339,7 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
         XCTAssertEqual(store.alarms.first?.lifecycleState, .awaitingDisarmChallenge)
     }
 
-    func testStopIntentResolverUsesRegistryOnlyForLiveParent() {
+    func testStopIntentResolverUsesRegistryOnlyForLiveParent() async {
         let alarm = makeAlarm(lifecycleState: .scheduled)
         let bridgeID = UUID()
         let persistence = AlarmPersistence(defaults: defaults)
@@ -356,7 +353,7 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
             alarmKitID: bridgeID
         )
 
-        let resolved = StopIntent.resolveParentAlarm(
+        let resolved = AlarmIntentLifecycle.resolveParentAlarm(
             for: bridgeID,
             in: [alarm],
             persistence: persistence,
@@ -373,14 +370,14 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
             ),
             alarmKitID: deletedParentBridgeID
         )
-        XCTAssertNil(StopIntent.resolveParentAlarm(
+        XCTAssertNil(AlarmIntentLifecycle.resolveParentAlarm(
             for: deletedParentBridgeID,
             in: [alarm],
             persistence: persistence,
             alertReferenceStore: referenceStore
         ))
 
-        XCTAssertNil(StopIntent.resolveParentAlarm(
+        XCTAssertNil(AlarmIntentLifecycle.resolveParentAlarm(
             for: UUID(),
             in: [alarm],
             persistence: persistence,
@@ -585,7 +582,8 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
                 settings: SharedAlarmSettings.featureDefaults
             )
         }
-        await fulfillment(of: [scheduled], timeout: 1)
+        let scheduleWaitResult = await XCTWaiter.fulfillment(of: [scheduled], timeout: 1)
+        XCTAssertEqual(scheduleWaitResult, .completed)
 
         store.deleteAlarm(alarm)
         manager.resumeSchedule()
@@ -622,7 +620,8 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
                 settings: SharedAlarmSettings.featureDefaults
             )
         }
-        await fulfillment(of: [scheduled], timeout: 1)
+        let scheduleWaitResult = await XCTWaiter.fulfillment(of: [scheduled], timeout: 1)
+        XCTAssertEqual(scheduleWaitResult, .completed)
 
         // Session ends while the backup registration is still in flight: the
         // alarm is disabled and the check confirmed, so the late write must be
@@ -643,8 +642,8 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
         let alarm = makeAlarm(lifecycleState: .awaitingDisarmChallenge)
         let (store, manager, _) = makeStore(alarm: alarm, withSession: false)
         let backstopID = UUID()
-        BackstopSlotStore.set(backstopID: backstopID, forParent: alarm.id)
-        defer { BackstopSlotStore.clear(forParent: alarm.id) }
+        BackstopSlotStore.set(backstopID: backstopID, forParent: alarm.id, defaults: defaults)
+        defer { BackstopSlotStore.clear(forParent: alarm.id, defaults: defaults) }
         manager.stopFailureIDs.insert(backstopID)
         manager.cancelFailureIDs.insert(backstopID)
         // Removal cannot be verified when the runtime read fails, so the slot must be retained.
@@ -652,7 +651,7 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
 
         await store.completeDisarmChallenge(for: alarm.id)
 
-        XCTAssertEqual(BackstopSlotStore.backstopID(forParent: alarm.id), backstopID)
+        XCTAssertEqual(BackstopSlotStore.backstopID(forParent: alarm.id, defaults: defaults), backstopID)
         XCTAssertEqual(manager.stopIDs.filter { $0 == backstopID }.count, 2)
         XCTAssertEqual(manager.cancelIDs.filter { $0 == backstopID }.count, 2)
     }
@@ -661,12 +660,12 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
         let alarm = makeAlarm(lifecycleState: .awaitingDisarmChallenge)
         let (store, manager, _) = makeStore(alarm: alarm, withSession: false)
         let backstopID = UUID()
-        BackstopSlotStore.set(backstopID: backstopID, forParent: alarm.id)
-        defer { BackstopSlotStore.clear(forParent: alarm.id) }
+        BackstopSlotStore.set(backstopID: backstopID, forParent: alarm.id, defaults: defaults)
+        defer { BackstopSlotStore.clear(forParent: alarm.id, defaults: defaults) }
 
         await store.completeDisarmChallenge(for: alarm.id)
 
-        XCTAssertNil(BackstopSlotStore.backstopID(forParent: alarm.id))
+        XCTAssertNil(BackstopSlotStore.backstopID(forParent: alarm.id, defaults: defaults))
         XCTAssertEqual(manager.stopIDs.filter { $0 == backstopID }.count, 1)
         XCTAssertEqual(manager.cancelIDs.filter { $0 == backstopID }.count, 1)
     }
@@ -697,6 +696,16 @@ final class WakeCheckMidSessionModificationTests: XCTestCase {
         let notifications = FakeWakeCheckNotificationService()
         let store = AlarmStore(
             alarmManager: manager,
+            permissionService: TestAlarmPermissions(),
+            notificationPermissionService: TestNotificationPermissions(),
+            environment: AlarmStoreEnvironment(
+                liveActivitiesEnabled: { true },
+                isInteractivelyVisible: { true },
+                syncNapActivity: { _ in },
+                stopNapActivity: {},
+                openSettings: {},
+                protectedDataAvailableNotification: nil
+            ),
             userDefaults: defaults,
             wakeCheckNotificationService: notifications
         )
@@ -744,19 +753,19 @@ private final class FakeAlarmManager: AlarmManagerScheduling {
     private var scheduleContinuation: CheckedContinuation<Void, Never>?
 
     var touchedIDs: [UUID] { scheduledIDs + stopIDs + cancelIDs }
-    var alarms: [Alarm] {
+    var alarms: [ScheduledAlarm] {
         get throws {
             if alarmsReadFails { throw TestError.alarmsReadFailed }
             return []
         }
     }
 
-    func alarmUpdatesForStore() -> AsyncStream<[Alarm]>? { nil }
+    func alarmUpdatesForStore() -> AsyncStream<[ScheduledAlarm]>? { nil }
 
     func schedule(
         id: UUID,
-        configuration: AlarmManager.AlarmConfiguration<OpenAlarmMetadata>
-    ) async throws -> Alarm {
+        configuration: AlarmSchedulingRequest
+    ) async throws {
         scheduledIDs.append(id)
         if holdSchedules {
             await withCheckedContinuation { continuation in

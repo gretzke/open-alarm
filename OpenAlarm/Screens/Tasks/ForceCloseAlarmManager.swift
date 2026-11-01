@@ -1,4 +1,3 @@
-import AlarmKit
 import Foundation
 import os
 
@@ -25,7 +24,7 @@ final class ForceCloseAlarmManager {
     init(
         alarm: AlarmDefinition,
         resolvedSettings: SharedAlarmSettings,
-        alarmManager: any AlarmManagerScheduling = AlarmManager.shared,
+        alarmManager: any AlarmManagerScheduling,
         defaults: UserDefaults = OpenAlarmSharedDefaults.userDefaults
     ) {
         self.mainAlarm = alarm
@@ -85,7 +84,7 @@ final class ForceCloseAlarmManager {
         let capturedGeneration = generation
         let newID = UUID()
         let fireDate = Date.now.addingTimeInterval(20)
-        let config = AlarmConfigurationBuilder.makeForceCloseAlarmConfiguration(
+        let config = AlarmSchedulingRequest.makeForceCloseAlarmConfiguration(
             for: mainAlarm,
             fireAt: fireDate,
             resolvedSettings: resolvedSettings
@@ -109,7 +108,7 @@ final class ForceCloseAlarmManager {
                 IntentDiagnostics.log(
                     "ForceClose schedule attempt id=\(newID.uuidString) parent=\(mainAlarm.id.uuidString) fireAt=\(Self.fireTimeFormatter.string(from: fireDate))"
                 )
-                _ = try await alarmManager.schedule(id: newID, configuration: config)
+                try await alarmManager.schedule(id: newID, configuration: config)
                 IntentDiagnostics.log(
                     "ForceClose scheduled id=\(newID.uuidString) parent=\(mainAlarm.id.uuidString) fireAt=\(Self.fireTimeFormatter.string(from: fireDate))"
                 )

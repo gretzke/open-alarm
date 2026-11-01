@@ -1,22 +1,19 @@
-import AlarmKit
 import XCTest
 
-@testable import OpenAlarm
+@testable import OpenAlarmSchedulingCore
 
 @MainActor
 final class AlarmLifecycleRegressionTests: XCTestCase {
     private var defaults: UserDefaults!
     private var suiteName: String!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
         suiteName = "openalarm-lifecycle-regression-tests-\(UUID().uuidString)"
         defaults = UserDefaults(suiteName: suiteName)!
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         defaults.removePersistentDomain(forName: suiteName)
-        super.tearDown()
     }
 
     func testNapDeleteClearsPendingDisarmAndBackstop() async {
@@ -38,13 +35,16 @@ final class AlarmLifecycleRegressionTests: XCTestCase {
         BackstopSlotStore.set(backstopID: backstopID, forParent: nap.id, defaults: defaults)
         let manager = LifecycleFakeAlarmManager()
 
-        await NapDeleteIntent.delete(
+        var cancelledNotificationIDs: [String] = []
+        await AlarmIntentLifecycle.deleteNap(
             napID: nap.id,
             persistence: persistence,
             alarmManager: manager,
-            defaults: defaults
+            defaults: defaults,
+            cancelNotification: { cancelledNotificationIDs.append($0) }
         )
 
+        XCTAssertEqual(cancelledNotificationIDs, [WakeUpCheckNotificationConstants.notificationID(alarmID: nap.id, cycle: 1)])
         XCTAssertFalse(persistence.loadPendingDisarmAlarmIDs().contains(nap.id))
         XCTAssertNil(persistence.loadWakeCheckSessions()[nap.id])
         XCTAssertFalse(persistence.loadPendingWakeUpCheckShowConfirmUIIDs().contains(nap.id))
@@ -64,7 +64,7 @@ final class AlarmLifecycleRegressionTests: XCTestCase {
         BackstopSlotStore.set(backstopID: previousBackstopID, forParent: alarm.id, defaults: defaults)
         let manager = LifecycleFakeAlarmManager(scheduleFails: true)
 
-        await SnoozeIntent.routeLimitReachedToDisarm(
+        await AlarmIntentLifecycle.routeLimitReachedToDisarm(
             intentID: alarm.id,
             alarms: [alarm],
             persistence: persistence,
@@ -129,7 +129,7 @@ final class AlarmLifecycleRegressionTests: XCTestCase {
         forceClose.suspend()
     }
 
-    func testStopRetainsSlotWhenBothCancellationAttemptsFail() {
+    func testStopRetainsSlotWhenBothCancellationAttemptsFail() async {
         let alarm = makeAlarm()
         let backstopID = UUID()
         BackstopSlotStore.set(backstopID: backstopID, forParent: alarm.id, defaults: defaults)
@@ -150,7 +150,7 @@ final class AlarmLifecycleRegressionTests: XCTestCase {
         XCTAssertEqual(manager.cancelIDs.filter { $0 == backstopID }.count, 2)
     }
 
-    func testStopClearsSlotWhenCancellationSucceeds() {
+    func testStopClearsSlotWhenCancellationSucceeds() async {
         let alarm = makeAlarm()
         let backstopID = UUID()
         BackstopSlotStore.set(backstopID: backstopID, forParent: alarm.id, defaults: defaults)
@@ -250,7 +250,7 @@ private final class LifecycleFakeAlarmManager: AlarmManagerScheduling {
     private let alarmsReadFails: Bool
 
     init(
-        scheduleFails: Bool = false,
+        scheduleFails: Bool = true,
         stopFails: Bool = false,
         cancelFails: Bool = false,
         alarmsReadFails: Bool = false
@@ -261,22 +261,21 @@ private final class LifecycleFakeAlarmManager: AlarmManagerScheduling {
         self.alarmsReadFails = alarmsReadFails
     }
 
-    var alarms: [Alarm] {
+    var alarms: [ScheduledAlarm] {
         get throws {
             if alarmsReadFails { throw Failure.alarmsRead }
             return []
         }
     }
 
-    func alarmUpdatesForStore() -> AsyncStream<[Alarm]>? { nil }
+    func alarmUpdatesForStore() -> AsyncStream<[ScheduledAlarm]>? { nil }
 
     func schedule(
         id: UUID,
-        configuration: AlarmManager.AlarmConfiguration<OpenAlarmMetadata>
-    ) async throws -> Alarm {
+        configuration: AlarmSchedulingRequest
+    ) async throws {
         scheduledIDs.append(id)
         if scheduleFails { throw Failure.schedule }
-        throw Failure.schedule // AlarmKit.Alarm cannot be constructed in tests.
     }
 
     func stop(id: UUID) throws {

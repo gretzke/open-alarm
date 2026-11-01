@@ -1,14 +1,8 @@
 import AlarmKit
 import Foundation
 
-enum AlarmPermissionStatus: Equatable {
-    case notDetermined
-    case denied
-    case authorized
-}
-
 @MainActor
-final class AlarmPermissionService {
+final class AlarmPermissionService: AlarmPermissionServicing {
     private let manager: AlarmManager
 
     init(manager: AlarmManager = .shared) {

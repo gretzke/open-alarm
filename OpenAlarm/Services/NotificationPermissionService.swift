@@ -2,7 +2,7 @@ import Foundation
 import UserNotifications
 
 @MainActor
-final class NotificationPermissionService {
+final class NotificationPermissionService: NotificationPermissionServicing {
     private let center: UNUserNotificationCenter
 
     init(center: UNUserNotificationCenter = .current()) {

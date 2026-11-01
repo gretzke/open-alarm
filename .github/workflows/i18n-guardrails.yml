@@ -29,7 +29,7 @@ jobs:
       - name: Select Xcode 27.1
         run: sudo xcode-select -s /Applications/Xcode_27.1.app/Contents/Developer
 
-      - name: Run scheduling core tests
+      - name: Run native logic tests
         run: make test
 
   build:
@@ -44,5 +44,9 @@ jobs:
         # Device-SDK compile: verifies all targets build without needing a
         # simulator runtime on the runner. Signing is disabled.
         run: |
-          xcodebuild -project OpenAlarm.xcodeproj -target OpenAlarm \
-            -sdk iphoneos CODE_SIGNING_ALLOWED=NO build
+          xcodebuild -project OpenAlarm.xcodeproj -scheme OpenAlarm \
+            -configuration Debug -destination 'generic/platform=iOS' \
+            -derivedDataPath build/ios -jobs 4 CODE_SIGNING_ALLOWED=NO build
+
+      - name: Check ringtones in the built app without a simulator
+        run: make test-app-resources APP_BUNDLE_PATH="$PWD/build/ios/Build/Products/Debug-iphoneos/OpenAlarm.app"

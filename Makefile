@@ -1,10 +1,16 @@
-.PHONY: generate check check-i18n check-no-literals check-glass-buttons test
+.PHONY: generate check check-i18n check-no-literals check-glass-buttons test test-app-resources
+
+SWIFT_TEST_JOBS ?= 4
 
 generate:
 	xcodegen generate
 
 test:
-	swift test --build-system native
+	swift test --build-system native --jobs $(SWIFT_TEST_JOBS)
+
+test-app-resources:
+	@test -d "$(APP_BUNDLE_PATH)"
+	OPENALARM_APP_BUNDLE_PATH="$(APP_BUNDLE_PATH)" swift test --build-system native --jobs $(SWIFT_TEST_JOBS) --filter RingtoneResourceTests
 
 check: check-no-literals check-i18n check-glass-buttons
 

@@ -1,12 +1,6 @@
-import ActivityKit
-import AlarmKit
-import AppIntents
 import Combine
 import Foundation
 import os
-import SwiftUI
-import UIKit
-import UserNotifications
 
 // MARK: - DisarmPresentation
 
@@ -45,7 +39,7 @@ final class AlarmStore: ObservableObject {
     @Published var liveActivitiesSystemEnabled: Bool
     @Published var permissionStatus: AlarmPermissionStatus
     @Published var notificationPermissionStatus: NotificationPermissionStatus = .notDetermined
-    @Published var remoteStates: [UUID: Alarm.State] = [:]
+    @Published var remoteStates: [UUID: ScheduledAlarm.State] = [:]
     @Published private(set) var restoredAlarmSettingsFromICloud: Bool
 
     @Published var disarmPresentation: DisarmPresentation?
@@ -100,18 +94,15 @@ final class AlarmStore: ObservableObject {
         persistence.loadPendingDisarmAlarmIDs()
     }
 
-    private var isInteractivelyVisible: Bool {
-        UIApplication.shared.isProtectedDataAvailable
-            && UIApplication.shared.connectedScenes.contains { scene in
-                scene.activationState == .foregroundActive
-            }
-    }
+    private var isInteractivelyVisible: Bool { environment.isInteractivelyVisible() }
 
     // MARK: - Dependencies
 
+    private let defaults: UserDefaults
+    private let environment: AlarmStoreEnvironment
     private let alarmManager: any AlarmManagerScheduling
-    private let permissionService: AlarmPermissionService
-    private let notificationPermissionService: NotificationPermissionService
+    private let permissionService: any AlarmPermissionServicing
+    private let notificationPermissionService: any NotificationPermissionServicing
     private let persistence: AlarmPersistence
     private let settingsBackupCoordinator: AlarmSettingsBackupCoordinator?
     private let alertReferenceStore: AlertReferenceStore
@@ -130,23 +121,24 @@ final class AlarmStore: ObservableObject {
     // MARK: - Init
 
     init(
-        alarmManager: any AlarmManagerScheduling = AlarmManager.shared,
-        permissionService: AlarmPermissionService? = nil,
-        notificationPermissionService: NotificationPermissionService? = nil,
+        alarmManager: any AlarmManagerScheduling,
+        permissionService: any AlarmPermissionServicing,
+        notificationPermissionService: any NotificationPermissionServicing,
+        environment: AlarmStoreEnvironment,
         userDefaults: UserDefaults? = nil,
         iCloudKeyValueStore: (any UbiquitousKeyValueStoring)? = nil,
-        wakeCheckNotificationService: (any WakeUpCheckNotificationServicing)? = nil
+        wakeCheckNotificationService: any WakeUpCheckNotificationServicing
     ) {
         let resolvedDefaults = userDefaults ?? OpenAlarmSharedDefaults.userDefaults
         if userDefaults == nil {
             AlarmPersistence.migrateStandardStoreIfNeeded()
         }
         BackstopSlotStore.migrateLegacySlotIfNeeded(defaults: resolvedDefaults)
+        self.defaults = resolvedDefaults
+        self.environment = environment
         self.alarmManager = alarmManager
-        self.permissionService = permissionService ?? AlarmPermissionService(
-            manager: (alarmManager as? AlarmManager) ?? .shared
-        )
-        self.notificationPermissionService = notificationPermissionService ?? NotificationPermissionService()
+        self.permissionService = permissionService
+        self.notificationPermissionService = notificationPermissionService
         self.persistence = AlarmPersistence(defaults: resolvedDefaults)
         let resolvedICloudKeyValueStore: (any UbiquitousKeyValueStoring)? = {
             if let iCloudKeyValueStore {
@@ -163,7 +155,7 @@ final class AlarmStore: ObservableObject {
             self.settingsBackupCoordinator = nil
         }
         self.alertReferenceStore = AlertReferenceStore(defaults: resolvedDefaults)
-        self.wakeCheckNotificationService = wakeCheckNotificationService ?? WakeUpCheckNotificationService()
+        self.wakeCheckNotificationService = wakeCheckNotificationService
         self.restoredAlarmSettingsFromICloud = false
         self.defaultSharedSettings = persistence.loadDefaultSharedSettings()
         self.napDefaultSharedSettings = persistence.loadNapDefaultSharedSettings()
@@ -172,7 +164,7 @@ final class AlarmStore: ObservableObject {
         self.testingSectionUnlocked = persistence.loadTestingSectionUnlocked()
         self.pinAlarmVolumeEnabled = persistence.loadPinAlarmVolumeEnabled()
         self.liveActivitiesEnabled = persistence.loadLiveActivitiesEnabled()
-        self.liveActivitiesSystemEnabled = ActivityAuthorizationInfo().areActivitiesEnabled
+        self.liveActivitiesSystemEnabled = environment.liveActivitiesEnabled()
         self.permissionStatus = self.permissionService.currentStatus()
 
         observeICloudSettingsIfNeeded()
@@ -219,18 +211,20 @@ final class AlarmStore: ObservableObject {
             }
         }
 
-        protectedDataAvailableObserver = NotificationCenter.default.addObserver(
-            forName: UIApplication.protectedDataDidBecomeAvailableNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                await self?.handleAppOpened()
+        if let notificationName = environment.protectedDataAvailableNotification {
+            protectedDataAvailableObserver = NotificationCenter.default.addObserver(
+                forName: notificationName,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    await self?.handleAppOpened()
+                }
             }
         }
     }
 
-    deinit {
+    isolated deinit {
         alarmUpdatesTask?.cancel()
         pendingWakeCheckUITask?.cancel()
         if let observer = protectedDataAvailableObserver {
@@ -255,11 +249,11 @@ final class AlarmStore: ObservableObject {
 
     private func syncNapLiveActivity() {
         guard areNapLiveActivitiesEnabled else {
-            NapCountdownLiveActivityManager.shared.stop()
+            environment.stopNapActivity()
             return
         }
 
-        NapCountdownLiveActivityManager.shared.sync(with: activeNap)
+        environment.syncNapActivity(activeNap)
     }
 
     // MARK: - App Lifecycle
@@ -489,11 +483,11 @@ final class AlarmStore: ObservableObject {
             disarmPresentation = nil
         }
 
-        if let backstopID = BackstopSlotStore.clear(forParent: alarm.id) {
+        if let backstopID = BackstopSlotStore.clear(forParent: alarm.id, defaults: defaults) {
             try? alarmManager.stop(id: backstopID)
             try? alarmManager.cancel(id: backstopID)
         }
-        LastRingtoneStore.clear(forAlarm: alarm.id)
+        LastRingtoneStore.clear(forAlarm: alarm.id, defaults: defaults)
 
         // Clean up wake-check session if active
         if let session = wakeCheckSessions[alarm.id] {
@@ -538,7 +532,7 @@ final class AlarmStore: ObservableObject {
         }
 
         if shouldStopNapActivity {
-            NapCountdownLiveActivityManager.shared.stop()
+            environment.stopNapActivity()
         }
 
         if deletedAlarm, !alarm.isTryOut {
@@ -800,7 +794,7 @@ final class AlarmStore: ObservableObject {
 
     @discardableResult
     func refreshLiveActivityAuthorizationStatus() -> Bool {
-        let enabled = ActivityAuthorizationInfo().areActivitiesEnabled
+        let enabled = environment.liveActivitiesEnabled()
         liveActivitiesSystemEnabled = enabled
 
         if !enabled && liveActivitiesEnabled {
@@ -811,7 +805,7 @@ final class AlarmStore: ObservableObject {
         if areNapLiveActivitiesEnabled {
             syncNapLiveActivity()
         } else {
-            NapCountdownLiveActivityManager.shared.stop()
+            environment.stopNapActivity()
         }
 
         return enabled
@@ -825,7 +819,7 @@ final class AlarmStore: ObservableObject {
         if areNapLiveActivitiesEnabled {
             syncNapLiveActivity()
         } else {
-            NapCountdownLiveActivityManager.shared.stop()
+            environment.stopNapActivity()
         }
     }
 
@@ -863,10 +857,7 @@ final class AlarmStore: ObservableObject {
     }
 
     func openSettings() {
-        guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else {
-            return
-        }
-        UIApplication.shared.open(settingsURL)
+        environment.openSettings()
     }
 
     // MARK: - Permissions
@@ -1013,7 +1004,7 @@ final class AlarmStore: ObservableObject {
 
     /// Tracks which alarm IDs have already received a notification-tap grace
     /// period extension, persisted so force-quit doesn't re-extend.
-    // Uses same key as StopIntent.graceAppliedKey
+    // Shared with the intent lifecycle helpers.
 
     func applyWakeUpCheckGracePeriodIfNeeded(for alarmID: UUID) async -> Date? {
         guard var session = wakeCheckSessions[alarmID] else { return nil }
@@ -1047,7 +1038,7 @@ final class AlarmStore: ObservableObject {
                         settings: settings,
                         preferredID: session.ringtoneID
                     )
-                    let config = AlarmConfigurationBuilder.makeWakeCheckBackupConfiguration(
+                    let config = AlarmSchedulingRequest.makeWakeCheckBackupConfiguration(
                         for: alarm,
                         deadlineAt: newDeadline,
                         resolvedSettings: settings,
@@ -1061,7 +1052,7 @@ final class AlarmStore: ObservableObject {
                         ringtoneID: ringtoneID,
                         parentAlarmID: alarm.id
                     )
-                    _ = try? await alarmManager.schedule(id: alarmID, configuration: config)
+                    try? await alarmManager.schedule(id: alarmID, configuration: config)
                 }
 
                 return newDeadline
@@ -1076,11 +1067,11 @@ final class AlarmStore: ObservableObject {
     }
 
     private func loadGraceAppliedIDs() -> Set<UUID> {
-        StopIntent.loadGraceAppliedIDs()
+        AlarmIntentLifecycle.loadGraceAppliedIDs(defaults: defaults)
     }
 
     private func saveGraceAppliedIDs(_ ids: Set<UUID>) {
-        StopIntent.saveGraceAppliedIDs(ids)
+        AlarmIntentLifecycle.saveGraceAppliedIDs(ids, defaults: defaults)
     }
 
     func shouldPresentWakeCheckPermissionDeniedPromptOnLaunch() async -> Bool {
@@ -1156,7 +1147,7 @@ final class AlarmStore: ObservableObject {
         )
         let ringtone = RingtoneCatalog.resolve(
             reference?.ringtoneID
-                ?? LastRingtoneStore.lastRingtoneID(forAlarm: alarm.id)
+                ?? LastRingtoneStore.lastRingtoneID(forAlarm: alarm.id, defaults: defaults)
                 ?? settings.ringtoneID
         )
         var playbackSettings = settings
@@ -1237,9 +1228,9 @@ final class AlarmStore: ObservableObject {
         // it alive through an active wake-check session and it would re-ring
         // mid-cycle (R-7.9 violation). Paired with StopIntent's post-write
         // pending-disarm re-check, one side always sees the other's write.
-        if let staleBackstopID = BackstopSlotStore.backstopID(forParent: alarmID) {
+        if let staleBackstopID = BackstopSlotStore.backstopID(forParent: alarmID, defaults: defaults) {
             if cancelBackstopRegistration(id: staleBackstopID) {
-                BackstopSlotStore.clear(forParent: alarmID)
+                BackstopSlotStore.clear(forParent: alarmID, defaults: defaults)
                 IntentDiagnostics.log("AlarmStore completion revoked late backstop parent=\(alarmID.uuidString) id=\(staleBackstopID.uuidString)")
             } else {
                 IntentDiagnostics.log("AlarmStore completion backstop cancel failed retained parent=\(alarmID.uuidString) id=\(staleBackstopID.uuidString)")
@@ -1323,7 +1314,7 @@ final class AlarmStore: ObservableObject {
         // own UUID as the AlarmKit ID: the canonical schedule is never active
         // during a wake check, and StopIntent must resolve the backup firing
         // back to this alarm.
-        let config = AlarmConfigurationBuilder.makeWakeCheckBackupConfiguration(
+        let config = AlarmSchedulingRequest.makeWakeCheckBackupConfiguration(
             for: alarm,
             deadlineAt: deadlineAt,
             resolvedSettings: settings,
@@ -1336,7 +1327,7 @@ final class AlarmStore: ObservableObject {
             ringtoneID: ringtoneID,
             parentAlarmID: alarm.id
         )
-        _ = try? await alarmManager.schedule(id: alarmID, configuration: config)
+        try? await alarmManager.schedule(id: alarmID, configuration: config)
         compensateWakeCheckStartupIfAlarmWasDeleted(alarmID: alarmID, notificationID: notificationID)
         await reconcileLateWakeCheckBackupWrite(alarmID: alarmID, cycle: newCycle)
     }
@@ -1359,7 +1350,7 @@ final class AlarmStore: ObservableObject {
                 settings: settings,
                 preferredID: current.ringtoneID
             )
-            let config = AlarmConfigurationBuilder.makeWakeCheckBackupConfiguration(
+            let config = AlarmSchedulingRequest.makeWakeCheckBackupConfiguration(
                 for: alarm,
                 deadlineAt: current.deadlineAt,
                 resolvedSettings: settings,
@@ -1371,7 +1362,7 @@ final class AlarmStore: ObservableObject {
                 ringtoneID: ringtoneID,
                 parentAlarmID: alarm.id
             )
-            _ = try? await alarmManager.schedule(id: alarmID, configuration: config)
+            try? await alarmManager.schedule(id: alarmID, configuration: config)
             return
         }
 
@@ -1383,49 +1374,6 @@ final class AlarmStore: ObservableObject {
         } else {
             try? alarmManager.stop(id: alarmID)
             try? alarmManager.cancel(id: alarmID)
-        }
-    }
-
-    // MARK: - Error Display
-
-    func userFacingErrorMessage(for error: Error) -> LocalizedStringKey {
-        guard let storeError = error as? AlarmStoreError else {
-            return L10n.alarmEditorErrorGeneric
-        }
-
-        switch storeError {
-        case .permissionDenied:
-            return L10n.alarmEditorErrorPermissionDenied
-        case .scheduleFailed:
-            return L10n.alarmEditorErrorGeneric
-        }
-    }
-
-    // MARK: - View Helpers
-
-    func lifecycleLabel(for state: AlarmLifecycleState) -> LocalizedStringKey {
-        switch state {
-        case .scheduled:
-            return L10n.alarmStateScheduled
-        case .alerting:
-            return L10n.alarmStateAlerting
-        case .awaitingDisarmChallenge:
-            return L10n.alarmStateAlerting
-        case .awaitingWakeCheck:
-            return L10n.alarmStateAwaitingWakeCheck
-        case .completed:
-            return L10n.alarmStateCompleted
-        }
-    }
-
-    func permissionStatusLabel() -> LocalizedStringKey {
-        switch permissionStatus {
-        case .authorized:
-            return L10n.settingsPermissionAuthorized
-        case .notDetermined:
-            return L10n.settingsPermissionNotDetermined
-        case .denied:
-            return L10n.settingsPermissionDenied
         }
     }
 
@@ -1495,7 +1443,7 @@ final class AlarmStore: ObservableObject {
             try? alarmManager.stop(id: alarm.id)
             try? alarmManager.cancel(id: alarm.id)
 
-            let runtimeSchedule = AlarmScheduleResolver.runtimeSchedule(for: alarm)
+            let runtimeSchedule = AlarmSchedule.runtimeSchedule(for: alarm)
             let ringtoneID = nextRingtoneID(for: alarm)
             let config = makeConfiguration(
                 for: alarm,
@@ -1509,7 +1457,7 @@ final class AlarmStore: ObservableObject {
                     parentAlarmID: alarm.id,
                     ringtoneID: ringtoneID
                 )
-                _ = try await alarmManager.schedule(id: alarm.id, configuration: config)
+                try await alarmManager.schedule(id: alarm.id, configuration: config)
                 persistLastScheduledRingtoneID(ringtoneID, for: alarm.id)
             } catch {
                 Self.logger.error("Force reschedule failed for \(alarm.id): \(error.localizedDescription)")
@@ -1523,7 +1471,7 @@ final class AlarmStore: ObservableObject {
             return
         }
 
-        let runtimeSchedule = AlarmScheduleResolver.runtimeSchedule(for: alarm)
+        let runtimeSchedule = AlarmSchedule.runtimeSchedule(for: alarm)
         let ringtoneID = nextRingtoneID(for: alarm)
         let config = makeConfiguration(
             for: alarm,
@@ -1538,7 +1486,7 @@ final class AlarmStore: ObservableObject {
                 parentAlarmID: alarm.id,
                 ringtoneID: ringtoneID
             )
-            _ = try await alarmManager.schedule(id: alarm.id, configuration: config)
+            try await alarmManager.schedule(id: alarm.id, configuration: config)
             persistLastScheduledRingtoneID(ringtoneID, for: alarm.id)
         } catch {
             Self.logger.warning("Schedule failed for \(alarm.id), retrying: \(error.localizedDescription)")
@@ -1551,7 +1499,7 @@ final class AlarmStore: ObservableObject {
                     parentAlarmID: alarm.id,
                     ringtoneID: ringtoneID
                 )
-                _ = try await alarmManager.schedule(id: alarm.id, configuration: config)
+                try await alarmManager.schedule(id: alarm.id, configuration: config)
                 persistLastScheduledRingtoneID(ringtoneID, for: alarm.id)
             } catch {
                 Self.logger.error("Retry schedule failed for \(alarm.id): \(error.localizedDescription)")
@@ -1638,7 +1586,7 @@ final class AlarmStore: ObservableObject {
         let currentParent = alarms.first(where: { $0.id == parentAlarm.id }) ?? parentAlarm
         let ringtoneID = nextRingtoneID(for: currentParent)
 
-        let config = AlarmConfigurationBuilder.makeBridgeConfiguration(
+        let config = AlarmSchedulingRequest.makeBridgeConfiguration(
             for: currentParent,
             bridgeID: bridgeID,
             schedule: .fixed(date),
@@ -1653,7 +1601,7 @@ final class AlarmStore: ObservableObject {
                 ringtoneID: ringtoneID,
                 parentAlarmID: currentParent.id
             )
-            _ = try await alarmManager.schedule(id: bridgeID, configuration: config)
+            try await alarmManager.schedule(id: bridgeID, configuration: config)
             persistLastScheduledRingtoneID(ringtoneID, for: currentParent.id)
         } catch {
             Self.logger.warning("Bridge schedule failed for \(bridgeID), retrying: \(error.localizedDescription)")
@@ -1666,7 +1614,7 @@ final class AlarmStore: ObservableObject {
                     ringtoneID: ringtoneID,
                     parentAlarmID: currentParent.id
                 )
-                _ = try await alarmManager.schedule(id: bridgeID, configuration: config)
+                try await alarmManager.schedule(id: bridgeID, configuration: config)
                 persistLastScheduledRingtoneID(ringtoneID, for: currentParent.id)
             } catch {
                 Self.logger.error("Bridge retry failed for \(bridgeID): \(error.localizedDescription)")
@@ -1676,10 +1624,10 @@ final class AlarmStore: ObservableObject {
 
     private func makeConfiguration(
         for alarm: UserAlarm,
-        schedule: Alarm.Schedule,
+        schedule: AlarmSchedule,
         ringtoneID: String
-    ) -> AlarmManager.AlarmConfiguration<OpenAlarmMetadata> {
-        AlarmConfigurationBuilder.makeConfiguration(
+    ) -> AlarmSchedulingRequest {
+        AlarmSchedulingRequest.makeConfiguration(
             for: alarm,
             schedule: schedule,
             defaultSharedSettings: resolvedDefaultsForAlarm(alarm),
@@ -1691,7 +1639,7 @@ final class AlarmStore: ObservableObject {
         let settings = resolvedSettingsForAlarm(alarm)
         return RingtoneCatalog.randomSelectionID(
             from: settings.selectedRingtoneIDs,
-            excluding: LastRingtoneStore.lastRingtoneID(forAlarm: alarm.id)
+            excluding: LastRingtoneStore.lastRingtoneID(forAlarm: alarm.id, defaults: defaults)
         )
     }
 
@@ -1702,13 +1650,13 @@ final class AlarmStore: ObservableObject {
     ) -> String {
         RingtoneCatalog.resolve(
             preferredID
-                ?? LastRingtoneStore.lastRingtoneID(forAlarm: alarm.id)
+                ?? LastRingtoneStore.lastRingtoneID(forAlarm: alarm.id, defaults: defaults)
                 ?? settings.ringtoneID
         ).id
     }
 
     private func persistLastScheduledRingtoneID(_ ringtoneID: String, for alarmID: UUID) {
-        LastRingtoneStore.set(ringtoneID, forAlarm: alarmID)
+        LastRingtoneStore.set(ringtoneID, forAlarm: alarmID, defaults: defaults)
     }
 
     /// Returns the effective default settings for the given alarm.
@@ -1860,7 +1808,7 @@ final class AlarmStore: ObservableObject {
             alarms.removeAll { $0.id == id }
             runtimePhases.removeValue(forKey: id)
             remoteStates.removeValue(forKey: id)
-            LastRingtoneStore.clear(forAlarm: id)
+            LastRingtoneStore.clear(forAlarm: id, defaults: defaults)
             saveAlarms()
         case .persist(let updatedAlarm):
             if let index = alarms.firstIndex(where: { $0.id == updatedAlarm.id }) {
@@ -1871,7 +1819,7 @@ final class AlarmStore: ObservableObject {
     }
 
     func rebuildRuntimePhases() {
-        let runtimeAlarms: [Alarm]
+        let runtimeAlarms: [ScheduledAlarm]
         do {
             runtimeAlarms = try alarmManager.alarms
         } catch {
@@ -1919,7 +1867,7 @@ final class AlarmStore: ObservableObject {
                             continue alarmLoop
                         case .scheduled, .countdown:
                             break  // bridge is alive, will be collected below
-                        @unknown default:
+                        case .unknown:
                             break
                         }
                     }
@@ -1941,7 +1889,7 @@ final class AlarmStore: ObservableObject {
                     }
                 case .paused:
                     runtimePhases[alarm.id] = .snoozed(alarmKitID: alarm.id)
-                @unknown default:
+                case .unknown:
                     runtimePhases[alarm.id] = .idle
                 }
                 } else if alarm.isEnabled {
@@ -1970,14 +1918,14 @@ final class AlarmStore: ObservableObject {
         }
     }
 
-    private func applyRemoteAlarms(_ incoming: [Alarm]) async {
+    private func applyRemoteAlarms(_ incoming: [ScheduledAlarm]) async {
         // Intents write the truth to persistence. We just reload and sync.
         let persistedAlarms = persistence.loadUserAlarms()
         wakeCheckSessions = persistence.loadWakeCheckSessions()
 
         // Update remote states for UI
         let remoteByID = Dictionary(uniqueKeysWithValues: incoming.map { ($0.id, $0) })
-        var newRemoteStates: [UUID: Alarm.State] = [:]
+        var newRemoteStates: [UUID: ScheduledAlarm.State] = [:]
         for (id, alarm) in remoteByID {
             newRemoteStates[id] = alarm.state
         }
@@ -2082,7 +2030,7 @@ final class AlarmStore: ObservableObject {
     private func sweepStaleBackstops() {
         let pendingDisarmIDs = persistence.loadPendingDisarmAlarmIDs()
 
-        for (parentID, backstopID) in BackstopSlotStore.allSlots() {
+        for (parentID, backstopID) in BackstopSlotStore.allSlots(defaults: defaults) {
             let parentExists = alarms.contains { $0.id == parentID }
             let hasPendingDisarm = pendingDisarmIDs.contains { pendingID in
                 resolveParentAlarm(for: pendingID)?.alarm.id == parentID
@@ -2095,15 +2043,15 @@ final class AlarmStore: ObservableObject {
 
             try? alarmManager.stop(id: backstopID)
             try? alarmManager.cancel(id: backstopID)
-            if BackstopSlotStore.backstopID(forParent: parentID) == backstopID {
-                BackstopSlotStore.clear(forParent: parentID)
+            if BackstopSlotStore.backstopID(forParent: parentID, defaults: defaults) == backstopID {
+                BackstopSlotStore.clear(forParent: parentID, defaults: defaults)
             }
             IntentDiagnostics.log("AlarmStore backstop swept parent=\(parentID.uuidString) id=\(backstopID.uuidString)")
         }
 
         let activeIDs = Set(alarms.map(\.id))
             .union(alarms.flatMap { $0.activeOverride?.bridgeAlarmIDs ?? [] })
-            .union(BackstopSlotStore.allSlots().values)
+            .union(BackstopSlotStore.allSlots(defaults: defaults).values)
         alertReferenceStore.sweep(
             keeping: activeIDs,
             existingParentAlarmIDs: Set(alarms.map(\.id))
@@ -2245,19 +2193,20 @@ final class AlarmStore: ObservableObject {
             object: settingsBackupCoordinator.notificationObject,
             queue: .main
         ) { [weak self] notification in
+            let initialSyncCompleted = ICloudAlarmSettingsStore.isInitialSync(notification)
             Task { @MainActor [weak self] in
-                self?.handleICloudSettingsChange(notification)
+                self?.handleICloudSettingsChange(initialSyncCompleted: initialSyncCompleted)
             }
         }
     }
 
-    private func handleICloudSettingsChange(_ notification: Notification) {
+    private func handleICloudSettingsChange(initialSyncCompleted: Bool) {
         guard let settingsBackupCoordinator else {
             return
         }
 
         let restored = settingsBackupCoordinator.handleCloudChange(
-            initialSyncCompleted: settingsBackupCoordinator.isInitialSync(notification)
+            initialSyncCompleted: initialSyncCompleted
         )
 
         if restored {
