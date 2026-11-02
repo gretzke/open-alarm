@@ -162,7 +162,6 @@ Useful design references:
 OpenAlarm/                       iOS application
 OpenAlarmLiveActivities/         Widget and Live Activity extension
 OpenAlarmSchedulingCoreTests/    Native Swift package tests
-OpenAlarmTests/                  App-level XCTest suite
 docs/                            Architecture and behavior documentation
 maestro/                         UI automation flows
 scripts/                         Guardrails and release automation
