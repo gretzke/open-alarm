@@ -1,6 +1,6 @@
 .PHONY: generate check check-i18n check-no-literals check-glass-buttons test test-app-resources
 
-SWIFT_TEST_JOBS ?= 4
+SWIFT_TEST_JOBS ?= 1
 
 generate:
 	xcodegen generate

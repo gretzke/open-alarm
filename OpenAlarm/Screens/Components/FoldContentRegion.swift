@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 
 /// A single readable pane for full-screen content. Backgrounds can span the fold.

@@ -194,6 +194,8 @@ struct OnboardingPermissionReconciliationTests {
             alarmPermissionStatusProvider: { .authorized },
             notificationPermissionStatusProvider: { .notDetermined },
             taskPermissionStatusProvider: { _ in .notDetermined },
+            requestAlarmAuthorization: { .authorized },
+            openSystemSettings: {},
             shouldSkipOnboarding: { true }
         )
 

@@ -99,7 +99,7 @@ The native package compiles the app's production sources for scheduling,
 task registry metadata, bedside session state, fold geometry, and nap dawn
 progress. Tests inject device services and scheduling failures at the same
 boundaries used by the iOS app. The existing XCTest and Swift Testing assertions
-run together. `make test` limits SwiftPM to four build jobs.
+run together. `make test` uses one build job by default. Set `SWIFT_TEST_JOBS` to override it.
 
 The ringtone packaging test needs the actual SDK-built app. It is skipped when
 no app path is supplied. Build the app without a simulator, then inspect that
@@ -109,7 +109,7 @@ artifact from the native test runner:
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
   xcodebuild -project OpenAlarm.xcodeproj -scheme OpenAlarm \
   -configuration Debug -destination 'generic/platform=iOS' \
-  -derivedDataPath build/ios -jobs 4 CODE_SIGNING_ALLOWED=NO build
+  -derivedDataPath build/ios -jobs 1 CODE_SIGNING_ALLOWED=NO build
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
   make test-app-resources \
   APP_BUNDLE_PATH="$PWD/build/ios/Build/Products/Debug-iphoneos/OpenAlarm.app"
@@ -118,8 +118,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 This checks every catalog excerpt and full track in the built application bundle.
 CI runs it after the SDK build. These unit tests run without a booted simulator.
 
-Use the shared heavy-build claim before starting SwiftPM or Xcode jobs on a
-shared development Mac. Native test success covers the portable logic. It does
+Native test success covers the portable logic. It does
 not establish AlarmKit delivery, permission dialogs, Live Activity rendering,
 or UIKit idle-timer integration. SDK compile checks verify the iOS adapters
 without booting a simulator.
