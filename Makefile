@@ -1,5 +1,8 @@
 .PHONY: generate check check-i18n check-no-literals check-glass-buttons test test-app-resources
 
+DEVELOPER_DIR ?= /Applications/Xcode.app/Contents/Developer
+export DEVELOPER_DIR
+
 SWIFT_TEST_JOBS ?= 1
 
 generate:

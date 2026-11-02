@@ -91,8 +91,12 @@ account.
 Run the logic tests on the Mac without a simulator:
 
 ```bash
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer make test
+make test
 ```
+
+Make targets default `DEVELOPER_DIR` to
+`/Applications/Xcode.app/Contents/Developer`. Set it in your environment or on
+the Make command line to choose another Xcode.
 
 The native package compiles the app's production sources for scheduling,
 `AlarmStore`, intent lifecycle rules, cloud backup reconciliation, onboarding,
@@ -110,8 +114,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
   xcodebuild -project OpenAlarm.xcodeproj -scheme OpenAlarm \
   -configuration Debug -destination 'generic/platform=iOS' \
   -derivedDataPath build/ios -jobs 1 CODE_SIGNING_ALLOWED=NO build
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
-  make test-app-resources \
+make test-app-resources \
   APP_BUNDLE_PATH="$PWD/build/ios/Build/Products/Debug-iphoneos/OpenAlarm.app"
 ```
 
