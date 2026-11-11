@@ -27,7 +27,7 @@ targets:
         PRODUCT_NAME: OpenAlarm
         CODE_SIGN_STYLE: Automatic
         SWIFT_VERSION: 5.0
-        CURRENT_PROJECT_VERSION: 112
+        CURRENT_PROJECT_VERSION: 113
         MARKETING_VERSION: 1.2.0
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: OpenAlarm/Info.plist
@@ -78,7 +78,7 @@ targets:
         PRODUCT_NAME: OpenAlarmLiveActivities
         CODE_SIGN_STYLE: Automatic
         SWIFT_VERSION: 5.0
-        CURRENT_PROJECT_VERSION: 112
+        CURRENT_PROJECT_VERSION: 113
         MARKETING_VERSION: 1.2.0
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: OpenAlarmLiveActivities/Info.plist
