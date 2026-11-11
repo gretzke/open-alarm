@@ -13,7 +13,7 @@ TEAM_ID="<APPLE_DEVELOPER_TEAM_ID>" \
 ./scripts/upload_and_attach_testflight.sh
 ```
 
-The script publishes to internal TestFlight by default. To publish to an external TestFlight group, use an external group ID and set `TESTFLIGHT_DISTRIBUTION=external`; the script uploads an external-eligible build, attaches it to the group, and submits it to Beta App Review. It intentionally does not call the optional beta build notification endpoint, so App Store Connect's default TestFlight notification behavior remains in control.
+The script publishes to internal TestFlight by default. Internal uploads are marked internal-only and cannot be attached to an App Store version. For a build that goes to App Store review, set `APP_STORE_ELIGIBLE=1`. The build still goes to the internal group, and App Store Connect accepts it for submission. To publish to an external TestFlight group, use an external group ID and set `TESTFLIGHT_DISTRIBUTION=external`; the script uploads an external-eligible build, attaches it to the group, and submits it to Beta App Review. It intentionally does not call the optional beta build notification endpoint, so App Store Connect's default TestFlight notification behavior remains in control.
 
 ### Required env vars
 

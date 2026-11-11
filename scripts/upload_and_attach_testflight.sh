@@ -107,6 +107,7 @@ ARCHIVE_PATH="${ARCHIVE_PATH:-build/OpenAlarm.xcarchive}"
 POLL_SECONDS="${POLL_SECONDS:-20}"
 POLL_TIMEOUT_SECONDS="${POLL_TIMEOUT_SECONDS:-1800}"
 TESTFLIGHT_DISTRIBUTION="${TESTFLIGHT_DISTRIBUTION:-internal}"
+APP_STORE_ELIGIBLE="${APP_STORE_ELIGIBLE:-0}"
 
 ASC_KEY_PATH_DEFAULT="$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
 ASC_KEY_PATH="${ASC_KEY_PATH:-$ASC_KEY_PATH_DEFAULT}"
@@ -119,6 +120,7 @@ export ASC_KEY_PATH
 [[ "$POLL_SECONDS" =~ ^[0-9]+$ ]] || die "POLL_SECONDS must be a positive integer"
 [[ "$POLL_TIMEOUT_SECONDS" =~ ^[0-9]+$ ]] || die "POLL_TIMEOUT_SECONDS must be a positive integer"
 [[ "$TESTFLIGHT_DISTRIBUTION" =~ ^(internal|external)$ ]] || die "TESTFLIGHT_DISTRIBUTION must be either 'internal' or 'external'"
+[[ "$APP_STORE_ELIGIBLE" =~ ^[01]$ ]] || die "APP_STORE_ELIGIBLE must be 0 or 1"
 (( POLL_SECONDS > 0 )) || die "POLL_SECONDS must be > 0"
 (( POLL_TIMEOUT_SECONDS > 0 )) || die "POLL_TIMEOUT_SECONDS must be > 0"
 
@@ -294,7 +296,8 @@ ok "Archive created at ${ABS_ARCHIVE_PATH}"
 	<key>method</key>
 	<string>app-store-connect</string>
 PLIST
-  if [[ "$TESTFLIGHT_DISTRIBUTION" == "internal" ]]; then
+  # APP_STORE_ELIGIBLE=1 keeps an internal upload usable for an App Store version.
+  if [[ "$TESTFLIGHT_DISTRIBUTION" == "internal" && "$APP_STORE_ELIGIBLE" != "1" ]]; then
     cat <<'PLIST'
 	<key>testFlightInternalTestingOnly</key>
 	<true/>
