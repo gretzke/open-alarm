@@ -92,11 +92,16 @@ struct TaskConfiguratorContent: View {
         .background(Color.clear)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background {
+            // All edges: on the iPhone Duo outer display the toolbar moves into a
+            // trailing safe-area column, which must share the sheet's glass.
             Color.clear
                 .glassEffect(.regular, in: Rectangle())
-                .ignoresSafeArea(.container, edges: .bottom)
+                .ignoresSafeArea()
         }
-        .presentationDetents([.fraction(0.28), .fraction(0.44), .large], selection: $settingsDetent)
+        // No .large: on iOS 27.1, settling at full height closed the configurator
+        // back to the task list and lost the draft. The settings scroll inside
+        // the sheet instead.
+        .presentationDetents([.fraction(0.28), .fraction(0.44)], selection: $settingsDetent)
         .presentationDragIndicator(.visible)
         .presentationContentInteraction(.scrolls)
         .presentationBackground(.clear)
@@ -143,8 +148,7 @@ struct TaskConfiguratorContent: View {
         let fraction: CGFloat
         switch settingsDetent {
         case .fraction(0.28): fraction = 0.28
-        case .fraction(0.44): fraction = 0.44
-        default: return window.size.height * 0.5
+        default: fraction = 0.44
         }
         let fullHeight = window.safeAreaInsets.top + window.size.height + window.safeAreaInsets.bottom
         return fullHeight * (1 - fraction) - window.safeAreaInsets.top - OASpacing.l
@@ -249,7 +253,7 @@ struct DummyConfigurator: View {
     var body: some View {
         Text(L10n.taskDummyDescription)
             .font(.body)
-            .foregroundStyle(OAColor.textSecondary)
+            .foregroundStyle(OAColor.textPrimary.opacity(0.8))
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

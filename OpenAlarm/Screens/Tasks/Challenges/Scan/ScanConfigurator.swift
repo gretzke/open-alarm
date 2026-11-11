@@ -29,7 +29,7 @@ struct ScanConfigurator: View {
                                 .multilineTextAlignment(.center)
                                 .lineLimit(2)
                         }
-                        .foregroundStyle(selectedID == entry.id ? OAColor.textPrimary : OAColor.textSecondary)
+                        .foregroundStyle(OAColor.textPrimary.opacity(selectedID == entry.id ? 1 : 0.75))
                         .frame(maxWidth: .infinity, minHeight: 84)
                         .padding(OASpacing.xs)
                         .background(
@@ -38,7 +38,7 @@ struct ScanConfigurator: View {
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: OARadius.chip, style: .continuous)
-                                .stroke(selectedID == entry.id ? OAColor.actionCyan : OAColor.textSecondary.opacity(0.25), lineWidth: 1)
+                                .stroke(selectedID == entry.id ? OAColor.actionCyan : OAColor.textPrimary.opacity(0.2), lineWidth: 1)
                         )
                     }
                     .buttonStyle(.plain)

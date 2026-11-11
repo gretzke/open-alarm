@@ -31,9 +31,11 @@ struct ConfiguratorSlider: View {
 
                 Spacer(minLength: 0)
 
+                // Primary ink: the sheet is translucent glass over the dawn gradient,
+                // where the fixed secondary gray loses contrast.
                 Text(verbatim: format(value))
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(OAColor.textSecondary)
+                    .foregroundStyle(OAColor.textPrimary)
             }
 
             Slider(
