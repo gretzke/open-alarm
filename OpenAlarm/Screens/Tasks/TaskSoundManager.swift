@@ -62,6 +62,13 @@ final class TaskSoundManager: ObservableObject {
         }
     }
 
+#if DEBUG
+    /// Screenshot hook: shows the active-sound controls without audio playback.
+    func startSilentlyForScreenshots() {
+        isAlarmSoundActive = true
+    }
+#endif
+
     func stopPlaying() {
         isPlaybackRequested = false
         isAlarmSoundActive = false

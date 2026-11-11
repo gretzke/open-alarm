@@ -61,6 +61,13 @@ struct TaskContainerView: View {
         }
         .interactiveDismissDisabled()
         .onAppear {
+#if DEBUG
+            // Screenshot hook: no audio, backstop alarm, or Live Activity for a synthetic alarm.
+            if DebugLaunchPresentation.isChallengeActive {
+                soundManager.startSilentlyForScreenshots()
+                return
+            }
+#endif
             // Adopt the orphan until the rolling replacement is registered, so
             // a force-quit during the first schedule attempt never leaves a gap.
             let orphanedID = BackstopSlotStore.backstopID(forParent: alarm.id)
@@ -91,86 +98,105 @@ struct TaskContainerView: View {
     }
 
     private var dismissScreen: some View {
-        AdaptiveScreenScrollView {
-            VStack {
-                soundControlHeader
+        VStack(spacing: 0) {
+            // Outside the scroll view, so Mute sits at the same top-right
+            // position as on the challenge screens.
+            soundControlHeader(showsTaskProgress: false)
 
-                Spacer()
+            AdaptiveScreenScrollView {
+                VStack {
+                    Spacer()
 
-                VStack(spacing: OASpacing.m) {
-                    Text(alarm.name.isEmpty ? String(localized: "task_dismiss_title") : alarm.name)
-                        .font(OADawnType.chip)
-                        .foregroundStyle(dawnInk)
-                        .padding(.horizontal, OASpacing.m)
-                        .padding(.vertical, OASpacing.s)
-                        .background(dawnInk.opacity(0.18), in: Capsule())
+                    VStack(spacing: OASpacing.m) {
+                        Text(alarm.name.isEmpty ? String(localized: "task_dismiss_title") : alarm.name)
+                            .font(OADawnType.chip)
+                            .foregroundStyle(dawnInk)
+                            .padding(.horizontal, OASpacing.m)
+                            .padding(.vertical, OASpacing.s)
+                            .background(dawnInk.opacity(0.18), in: Capsule())
 
-                    Text(alarmTime)
-                        .font(OADawnType.display(dismissTimeFontSize))
-                        .monospacedDigit()
-                        .foregroundStyle(dawnInk)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
+                        Text(alarmTime)
+                            .font(OADawnType.display(dismissTimeFontSize))
+                            .monospacedDigit()
+                            .foregroundStyle(dawnInk)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
 
-                    if !tasks.isEmpty {
-                        Text(L10n.taskDismissTasksHint(tasks.count))
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(dawnInk.opacity(0.82))
-                            .multilineTextAlignment(.center)
+                        if !tasks.isEmpty {
+                            Text(L10n.taskDismissTasksHint(tasks.count))
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(dawnInk.opacity(0.82))
+                                .multilineTextAlignment(.center)
+                        }
                     }
+
+                    Spacer()
+
+                    Button {
+                        isDismissed = true
+                    } label: {
+                        Text(String(localized: "task_dismiss_alarm_button"))
+                            .font(OADawnType.button)
+                            .foregroundStyle(DawnPalette.inkDark)
+                            .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+                            .contentShape(Rectangle())
+                    }
+                    .background(Color.white, in: Capsule())
+                    .buttonStyle(.plain)
+
+                    Spacer()
                 }
-
-                Spacer()
-
-                Button {
-                    isDismissed = true
-                } label: {
-                    Text(String(localized: "task_dismiss_alarm_button"))
-                        .font(OADawnType.button)
-                        .foregroundStyle(DawnPalette.inkDark)
-                        .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
-                        .contentShape(Rectangle())
-                }
-                .background(Color.white, in: Capsule())
-                .buttonStyle(.plain)
-
-                Spacer()
+                .padding()
             }
-            .padding()
         }
     }
 
     @ViewBuilder
     private var challengeScreen: some View {
         if currentTaskIndex < tasks.count {
-            VStack {
-                soundControlHeader
+            GeometryReader { geometry in
+                // Wide, short panes move the task chip into the Mute row to give the
+                // puzzle more height. The task view keeps its position in the
+                // hierarchy, so its state survives rotation and fold changes.
+                let showsProgressInHeader = tasks.count > 1 && geometry.size.width > geometry.size.height
 
-                if tasks.count > 1 {
-                    Text(String(localized: "task_progress \(currentTaskIndex + 1) \(tasks.count)"))
-                        .font(OADawnType.chip)
-                        .foregroundStyle(dawnInk)
-                        .padding(.horizontal, OASpacing.m)
-                        .padding(.vertical, OASpacing.s)
-                        .background(dawnInk.opacity(0.18), in: Capsule())
-                        .padding(.top)
-                }
+                VStack {
+                    soundControlHeader(showsTaskProgress: showsProgressInHeader)
 
-                ZStack {
-                    taskView(for: tasks[currentTaskIndex])
-
-                    if isShowingTaskSuccess {
-                        TaskSuccessOverlay()
+                    if tasks.count > 1, !showsProgressInHeader {
+                        taskProgressChip
+                            .padding(.top)
                     }
+
+                    ZStack {
+                        taskView(for: tasks[currentTaskIndex])
+
+                        if isShowingTaskSuccess {
+                            TaskSuccessOverlay()
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .animation(.easeInOut(duration: 0.2), value: isShowingTaskSuccess)
                 }
-                .animation(.easeInOut(duration: 0.2), value: isShowingTaskSuccess)
             }
         }
     }
 
-    @ViewBuilder
-    private var soundControlHeader: some View {
+    private var taskProgressChip: some View {
+        Text(String(localized: "task_progress \(currentTaskIndex + 1) \(tasks.count)"))
+            .font(OADawnType.chip)
+            .foregroundStyle(dawnInk)
+            .padding(.horizontal, OASpacing.m)
+            .padding(.vertical, OASpacing.s)
+            .background(dawnInk.opacity(0.18), in: Capsule())
+    }
+
+    private func soundControlHeader(showsTaskProgress: Bool) -> some View {
         HStack {
+            if showsTaskProgress {
+                taskProgressChip
+            }
+
             Spacer(minLength: 0)
 
             if soundManager.isAlarmSoundActive {

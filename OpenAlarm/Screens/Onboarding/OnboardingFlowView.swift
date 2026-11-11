@@ -77,109 +77,111 @@ private struct WakeCheckPermissionPrePromptStepView: View {
     let onCancel: () -> Void
 
     var body: some View {
-        AdaptiveScreenScrollView {
-            VStack(spacing: 24) {
-                VStack(spacing: 16) {
-                    Image(systemName: "checkmark.bubble")
-                        .font(.system(size: 52, weight: .semibold))
-                        .foregroundStyle(OAColor.actionCyan)
+        PinnedActionsScrollView {
+            VStack(spacing: 16) {
+                Image(systemName: "checkmark.bubble")
+                    .font(.system(size: 52, weight: .semibold))
+                    .foregroundStyle(OAColor.actionCyan)
 
-                    Text(L10n.alarmEditorWakeCheckPermissionPromptTitle)
-                        .font(.title.bold())
-                        .foregroundStyle(OAColor.textPrimary)
-                        .multilineTextAlignment(.center)
-
-                    Text(L10n.alarmEditorWakeCheckPermissionPromptBody)
-                        .font(.body)
-                        .foregroundStyle(OAColor.textSecondary)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(OASpacing.onboardingMargin)
-                .oaGlassCard()
-
-                VStack(spacing: 12) {
-                    Button(action: onRequestPermission) {
-                        Text(L10n.actionNext)
-                            .font(OAType.buttonLabel)
-                            .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
-                    }
-                    .buttonStyle(.glassProminent)
-                    .tint(OAColor.actionCyan)
-                    .accessibilityIdentifier("onboarding_wake_check_permission_next")
-
-                    Button(action: onCancel) {
-                        Text(L10n.actionCancel)
-                            .font(OAType.buttonLabel)
-                            .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
-                    }
-                    .buttonStyle(.glass)
+                Text(L10n.alarmEditorWakeCheckPermissionPromptTitle)
+                    .font(.title.bold())
                     .foregroundStyle(OAColor.textPrimary)
-                    .accessibilityIdentifier("onboarding_wake_check_permission_cancel")
-                }
+                    .multilineTextAlignment(.center)
+
+                Text(L10n.alarmEditorWakeCheckPermissionPromptBody)
+                    .font(.body)
+                    .foregroundStyle(OAColor.textSecondary)
+                    .multilineTextAlignment(.center)
             }
             .padding(OASpacing.onboardingMargin)
-            .frame(maxWidth: .infinity)
-            .background(OAColor.background.ignoresSafeArea())
-        }
-    }
-}
-
-private struct WelcomeStepView: View {
-    let onNext: () -> Void
-
-    var body: some View {
-        AdaptiveScreenScrollView {
-            VStack(spacing: 24) {
-                VStack(spacing: 20) {
-                    Image("BrandIcon")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: 220)
-                        .shadow(color: OAColor.glassGlow, radius: 18, x: 0, y: 10)
-
-                    Text(L10n.onboardingWelcomeTitle)
-                        .font(.title.bold())
-                        .foregroundStyle(OAColor.textPrimary)
-                        .multilineTextAlignment(.center)
-
-                    VStack(spacing: 14) {
-                        VStack(alignment: .leading, spacing: 12) {
-                            BenefitRow(text: L10n.onboardingWelcomeNoSubscriptions)
-                            BenefitRow(text: L10n.onboardingWelcomeNoAds)
-                            BenefitRow(text: L10n.onboardingWelcomeNoTracking)
-                            BenefitRow(text: L10n.onboardingWelcomeOpenSource)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                        HStack(spacing: 8) {
-                            Image(systemName: "infinity")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(OAColor.actionCyan)
-
-                            Text(L10n.onboardingWelcomeForever)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(OAColor.actionCyan)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.top, 2)
-                    }
-                }
-                .padding(OASpacing.onboardingMargin)
-                .oaGlassCard()
-
-                Button(action: onNext) {
+            .oaGlassCard()
+        } actions: {
+            VStack(spacing: 12) {
+                Button(action: onRequestPermission) {
                     Text(L10n.actionNext)
                         .font(OAType.buttonLabel)
                         .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
                 }
                 .buttonStyle(.glassProminent)
                 .tint(OAColor.actionCyan)
-                .accessibilityIdentifier("onboarding_welcome_next")
+                .accessibilityIdentifier("onboarding_wake_check_permission_next")
+
+                Button(action: onCancel) {
+                    Text(L10n.actionCancel)
+                        .font(OAType.buttonLabel)
+                        .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+                }
+                .buttonStyle(.glass)
+                .foregroundStyle(OAColor.textPrimary)
+                .accessibilityIdentifier("onboarding_wake_check_permission_cancel")
+            }
+        }
+        .background(OAColor.background.ignoresSafeArea())
+    }
+}
+
+private struct WelcomeStepView: View {
+    let onNext: () -> Void
+
+    @State private var availableHeight: CGFloat = 0
+
+    var body: some View {
+        PinnedActionsScrollView {
+            VStack(spacing: 20) {
+                Image("BrandIcon")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: brandIconSide, maxHeight: brandIconSide)
+                    .shadow(color: OAColor.glassGlow, radius: 18, x: 0, y: 10)
+
+                Text(L10n.onboardingWelcomeTitle)
+                    .font(.title.bold())
+                    .foregroundStyle(OAColor.textPrimary)
+                    .multilineTextAlignment(.center)
+
+                VStack(spacing: 14) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        BenefitRow(text: L10n.onboardingWelcomeNoSubscriptions)
+                        BenefitRow(text: L10n.onboardingWelcomeNoAds)
+                        BenefitRow(text: L10n.onboardingWelcomeNoTracking)
+                        BenefitRow(text: L10n.onboardingWelcomeOpenSource)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    HStack(spacing: 8) {
+                        Image(systemName: "infinity")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(OAColor.actionCyan)
+
+                        Text(L10n.onboardingWelcomeForever)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(OAColor.actionCyan)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 2)
+                }
             }
             .padding(OASpacing.onboardingMargin)
-            .frame(maxWidth: .infinity)
-            .background(OAColor.background.ignoresSafeArea())
+            .oaGlassCard()
+        } actions: {
+            Button(action: onNext) {
+                Text(L10n.actionNext)
+                    .font(OAType.buttonLabel)
+                    .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+            }
+            .buttonStyle(.glassProminent)
+            .tint(OAColor.actionCyan)
+            .accessibilityIdentifier("onboarding_welcome_next")
         }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { availableHeight = $0 }
+        .background(OAColor.background.ignoresSafeArea())
+    }
+
+    /// Short panes (outer landscape, tabletop) shrink the icon so the title and
+    /// benefits stay visible. The rest of the step needs about 420 pt.
+    private var brandIconSide: CGFloat {
+        guard availableHeight > 0 else { return 220 }
+        return min(220, max(72, availableHeight - 420))
     }
 }
 
@@ -256,57 +258,53 @@ private struct AlarmPermissionPrePromptStepView: View {
     @State private var isRequesting = false
 
     var body: some View {
-        AdaptiveScreenScrollView {
-            VStack(spacing: 24) {
-                VStack(spacing: 16) {
-                    Image(systemName: "alarm.waves.left.and.right.fill")
-                        .font(.system(size: 52, weight: .semibold))
-                        .foregroundStyle(OAColor.actionCyan)
+        PinnedActionsScrollView {
+            VStack(spacing: 16) {
+                Image(systemName: "alarm.waves.left.and.right.fill")
+                    .font(.system(size: 52, weight: .semibold))
+                    .foregroundStyle(OAColor.actionCyan)
 
-                    Text(L10n.onboardingPermissionRequestTitle)
-                        .font(.title.bold())
-                        .foregroundStyle(OAColor.textPrimary)
-                        .multilineTextAlignment(.center)
+                Text(L10n.onboardingPermissionRequestTitle)
+                    .font(.title.bold())
+                    .foregroundStyle(OAColor.textPrimary)
+                    .multilineTextAlignment(.center)
 
-                    Text(L10n.onboardingPermissionRequestBody)
-                        .font(.body)
-                        .foregroundStyle(OAColor.textSecondary)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(OASpacing.onboardingMargin)
-                .oaGlassCard()
-
-                Button {
-                    guard !isRequesting else {
-                        return
-                    }
-
-                    isRequesting = true
-                    Task {
-                        await requestPermission()
-                        isRequesting = false
-                    }
-                } label: {
-                    HStack(spacing: 10) {
-                        if isRequesting {
-                            ProgressView()
-                                .tint(OAColor.textPrimary)
-                        }
-
-                        Text(isRequesting ? L10n.actionRequesting : L10n.actionNext)
-                            .font(OAType.buttonLabel)
-                    }
-                    .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
-                }
-                .buttonStyle(.glassProminent)
-                .tint(OAColor.actionCyan)
-                .disabled(isRequesting)
-                .accessibilityIdentifier("onboarding_permission_request_next")
+                Text(L10n.onboardingPermissionRequestBody)
+                    .font(.body)
+                    .foregroundStyle(OAColor.textSecondary)
+                    .multilineTextAlignment(.center)
             }
             .padding(OASpacing.onboardingMargin)
-            .frame(maxWidth: .infinity)
-            .background(OAColor.background.ignoresSafeArea())
+            .oaGlassCard()
+        } actions: {
+            Button {
+                guard !isRequesting else {
+                    return
+                }
+
+                isRequesting = true
+                Task {
+                    await requestPermission()
+                    isRequesting = false
+                }
+            } label: {
+                HStack(spacing: 10) {
+                    if isRequesting {
+                        ProgressView()
+                            .tint(OAColor.textPrimary)
+                    }
+
+                    Text(isRequesting ? L10n.actionRequesting : L10n.actionNext)
+                        .font(OAType.buttonLabel)
+                }
+                .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+            }
+            .buttonStyle(.glassProminent)
+            .tint(OAColor.actionCyan)
+            .disabled(isRequesting)
+            .accessibilityIdentifier("onboarding_permission_request_next")
         }
+        .background(OAColor.background.ignoresSafeArea())
     }
 }
 
@@ -314,39 +312,35 @@ private struct AlarmPermissionDeniedStepView: View {
     let onOpenSettings: () -> Void
 
     var body: some View {
-        AdaptiveScreenScrollView {
-            VStack(spacing: 24) {
-                VStack(spacing: 16) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 50, weight: .semibold))
-                        .foregroundStyle(OAColor.danger)
+        PinnedActionsScrollView {
+            VStack(spacing: 16) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 50, weight: .semibold))
+                    .foregroundStyle(OAColor.danger)
 
-                    Text(L10n.onboardingPermissionDeniedTitle)
-                        .font(.title.bold())
-                        .foregroundStyle(OAColor.textPrimary)
-                        .multilineTextAlignment(.center)
+                Text(L10n.onboardingPermissionDeniedTitle)
+                    .font(.title.bold())
+                    .foregroundStyle(OAColor.textPrimary)
+                    .multilineTextAlignment(.center)
 
-                    Text(L10n.onboardingPermissionDeniedBody)
-                        .font(.body)
-                        .foregroundStyle(OAColor.textSecondary)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(OASpacing.onboardingMargin)
-                .oaGlassCard()
-
-                Button(action: onOpenSettings) {
-                    Text(L10n.actionOpenSettings)
-                        .font(OAType.buttonLabel)
-                        .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
-                }
-                .buttonStyle(.glassProminent)
-                .tint(OAColor.actionCyan)
-                .accessibilityIdentifier("onboarding_permission_denied_open_settings")
+                Text(L10n.onboardingPermissionDeniedBody)
+                    .font(.body)
+                    .foregroundStyle(OAColor.textSecondary)
+                    .multilineTextAlignment(.center)
             }
             .padding(OASpacing.onboardingMargin)
-            .frame(maxWidth: .infinity)
-            .background(OAColor.background.ignoresSafeArea())
+            .oaGlassCard()
+        } actions: {
+            Button(action: onOpenSettings) {
+                Text(L10n.actionOpenSettings)
+                    .font(OAType.buttonLabel)
+                    .frame(maxWidth: .infinity, minHeight: OASize.controlHeight)
+            }
+            .buttonStyle(.glassProminent)
+            .tint(OAColor.actionCyan)
+            .accessibilityIdentifier("onboarding_permission_denied_open_settings")
         }
+        .background(OAColor.background.ignoresSafeArea())
     }
 }
 

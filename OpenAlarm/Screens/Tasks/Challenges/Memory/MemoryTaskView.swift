@@ -36,29 +36,39 @@ struct MemoryTaskView: View {
     }
 
     var body: some View {
-        AdaptiveScreenScrollView {
-            VStack(spacing: OASpacing.xl) {
-                Spacer(minLength: 0)
+        PuzzleArrangementLayout(
+            puzzle: .grid(count: spec.gridSize, maxSide: 420),
+            spacing: OASpacing.xl,
+            cellSpacing: OASpacing.s,
+            minimumCell: mode.minimumPuzzleCell,
+            columnShare: 0.25,
+            shortfall: .shrinkLead
+        ) {
+            // The instruction yields to the grid on short panes. The grid never
+            // scrolls, because a scrolled grid would hide part of the flash.
+            Text(L10n.taskMemoryInstruction)
+                .font(OADawnType.chip)
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+                .lineLimit(3)
+                .minimumScaleFactor(0.7)
+                .frame(maxHeight: .infinity)
+                .clipped()
+                .accessibilityHidden(true)
 
-                Text(L10n.taskMemoryInstruction)
-                    .font(OADawnType.chip)
-                    .foregroundStyle(.white)
+            grid
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel(Text(L10n.taskMemoryInstruction))
 
-                grid
-                    .frame(maxWidth: 420)
-
-                HStack(spacing: OASpacing.s) {
-                    ForEach(0..<rounds, id: \.self) { index in
-                        Circle()
-                            .fill(index < roundsDone ? Color.white : Color.white.opacity(0.35))
-                            .frame(width: OASpacing.s, height: OASpacing.s)
-                    }
+            HStack(spacing: OASpacing.s) {
+                ForEach(0..<rounds, id: \.self) { index in
+                    Circle()
+                        .fill(index < roundsDone ? Color.white : Color.white.opacity(0.35))
+                        .frame(width: OASpacing.s, height: OASpacing.s)
                 }
-
-                Spacer(minLength: 0)
             }
-            .padding(OASpacing.screenMargin)
         }
+        .padding(OASpacing.screenMargin)
         .onAppear(perform: startPlayback)
         .onDisappear {
             roundAdvanceTask?.cancel()
@@ -67,17 +77,12 @@ struct MemoryTaskView: View {
     }
 
     private var grid: some View {
-        let columns = Array(
-            repeating: GridItem(.flexible(minimum: OASize.minTouchTarget), spacing: OASpacing.s),
-            count: spec.gridSize
-        )
-
-        return ZStack {
+        ZStack {
             Group {
                 if reduceMotion {
-                    gridCells(columns: columns)
+                    gridCells
                 } else {
-                    gridCells(columns: columns)
+                    gridCells
                         .keyframeAnimator(initialValue: GridShakeValues(), trigger: shakeGeneration) { content, value in
                             content.offset(x: value.offset)
                         } keyframes: { _ in
@@ -98,25 +103,34 @@ struct MemoryTaskView: View {
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: isShowingRoundSuccess)
     }
 
-    private func gridCells(columns: [GridItem]) -> some View {
-        LazyVGrid(columns: columns, spacing: OASpacing.s) {
-            ForEach(0..<(spec.gridSize * spec.gridSize), id: \.self) { index in
-                Button {
-                    handleTap(index)
-                } label: {
-                    RoundedRectangle(cornerRadius: OARadius.chip, style: .continuous)
-                        .fill(isLit(index) ? Color.white : Color.white.opacity(0.18))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: OARadius.chip, style: .continuous)
-                                .stroke(Color.white.opacity(0.32), lineWidth: 1)
-                        )
-                        .frame(maxWidth: .infinity, minHeight: OASize.minTouchTarget)
-                        .aspectRatio(1, contentMode: .fit)
+    /// Equal rows and columns of flexible cells, so the cells fill the square
+    /// that PuzzleArrangementLayout proposes.
+    private var gridCells: some View {
+        VStack(spacing: OASpacing.s) {
+            ForEach(0..<spec.gridSize, id: \.self) { row in
+                HStack(spacing: OASpacing.s) {
+                    ForEach(0..<spec.gridSize, id: \.self) { column in
+                        cell(at: row * spec.gridSize + column)
+                    }
                 }
-                .buttonStyle(.plain)
-                .disabled(isPlaying || didComplete)
             }
         }
+    }
+
+    private func cell(at index: Int) -> some View {
+        Button {
+            handleTap(index)
+        } label: {
+            RoundedRectangle(cornerRadius: OARadius.chip, style: .continuous)
+                .fill(isLit(index) ? Color.white : Color.white.opacity(0.18))
+                .overlay(
+                    RoundedRectangle(cornerRadius: OARadius.chip, style: .continuous)
+                        .stroke(Color.white.opacity(0.32), lineWidth: 1)
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .buttonStyle(.plain)
+        .disabled(isPlaying || didComplete)
     }
 
     private func isLit(_ index: Int) -> Bool {

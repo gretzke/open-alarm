@@ -44,71 +44,111 @@ struct MathTaskView: View {
     }
 
     private var taskContent: some View {
-        AdaptiveScreenScrollView {
-            VStack(spacing: OASpacing.l) {
-                Spacer()
-
-                Text(currentProblem.displayString)
-                    .font(OADawnType.display(problemFontSize))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
-
-                Text(userAnswer.isEmpty ? "?" : userAnswer)
-                    .accessibilityLabel(String(localized: "a11y_math_answer_field"))
-                    .font(OADawnType.display(answerFontSize))
-                    .foregroundStyle(.white)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity, minHeight: 64)
-                    .background(Color.white.opacity(0.24), in: RoundedRectangle(cornerRadius: OARadius.chip, style: .continuous))
-
-                if showWrongAnswer {
-                    Text(String(localized: "task_math_wrong_answer"))
-                        .font(.subheadline)
-                        .foregroundStyle(.white)
+        GeometryReader { geometry in
+            // Scrolls only when even minimum-size keys cannot fit, which happens at
+            // accessibility text sizes. At the default size the budget always fits.
+            ScrollView {
+                PuzzleArrangementLayout(
+                    puzzle: .keypad(columns: 3, rows: 4, maxWidth: 360, maxKeyHeight: 64),
+                    spacing: OASpacing.l,
+                    cellSpacing: OASpacing.s,
+                    minimumCell: mode.minimumPuzzleCell,
+                    columnShare: 0.5,
+                    shortfall: .overflow,
+                    budget: CGSize(
+                        width: max(0, geometry.size.width - Self.contentPadding * 2),
+                        height: max(0, geometry.size.height - Self.contentPadding * 2)
+                    )
+                ) {
+                    problemBlock
+                    keypad
+                    progressDots
                 }
-
-                keypad
-
-                HStack(spacing: OASpacing.s) {
-                    ForEach(0..<totalCount, id: \.self) { index in
-                        Circle()
-                            .fill(index < solvedCount ? Color.white : Color.white.opacity(0.35))
-                            .frame(width: 8, height: 8)
-                    }
-                }
-                .accessibilityLabel(String(localized: "task_math_progress \(solvedCount) \(totalCount)"))
-
-                Spacer()
+                .padding(Self.contentPadding)
             }
-            .padding()
+            .scrollBounceBehavior(.basedOnSize)
         }
     }
 
-    private var keypad: some View {
-        LazyVGrid(
-            columns: Array(repeating: GridItem(.flexible(), spacing: OASpacing.s), count: 3),
-            spacing: OASpacing.s
-        ) {
-            ForEach(KeypadKey.allCases, id: \.self) { key in
-                let isPrimary = key == .go
-                Button {
-                    handleKeyTap(key)
-                } label: {
-                    key.label
-                        .font(OADawnType.button)
-                        .foregroundStyle(isPrimary ? DawnPalette.inkDark : .white)
-                        .frame(maxWidth: .infinity, minHeight: 56)
-                        .background(
-                            isPrimary ? Color.white : Color.white.opacity(0.18),
-                            in: RoundedRectangle(cornerRadius: OARadius.chip, style: .continuous)
-                        )
-                }
-                .buttonStyle(.plain)
-                .disabled(isShowingRoundSuccess)
-                .accessibilityLabel(key.accessibilityLabel)
+    private static let contentPadding: CGFloat = OASpacing.l
+
+    private var problemBlock: some View {
+        VStack(spacing: OASpacing.l) {
+            Text(currentProblem.displayString)
+                .font(OADawnType.display(problemFontSize))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+
+            Text(userAnswer.isEmpty ? "?" : userAnswer)
+                .accessibilityLabel(String(localized: "a11y_math_answer_field"))
+                .font(OADawnType.display(answerFontSize))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .frame(maxWidth: .infinity, minHeight: 64)
+                .background(Color.white.opacity(0.24), in: RoundedRectangle(cornerRadius: OARadius.chip, style: .continuous))
+
+            // The line stays reserved, so the message never moves the keypad.
+            Text(String(localized: "task_math_wrong_answer"))
+                .font(.subheadline)
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+                .opacity(showWrongAnswer ? 1 : 0)
+                .accessibilityHidden(!showWrongAnswer)
+        }
+    }
+
+    private var progressDots: some View {
+        HStack(spacing: OASpacing.s) {
+            ForEach(0..<totalCount, id: \.self) { index in
+                Circle()
+                    .fill(index < solvedCount ? Color.white : Color.white.opacity(0.35))
+                    .frame(width: 8, height: 8)
             }
         }
+        .accessibilityLabel(String(localized: "task_math_progress \(solvedCount) \(totalCount)"))
+    }
+
+    /// Equal rows of flexible keys, so the keys fill the size that
+    /// PuzzleArrangementLayout proposes (44 to 64 pt high).
+    private var keypad: some View {
+        VStack(spacing: OASpacing.s) {
+            ForEach(Array(stride(from: 0, to: KeypadKey.allCases.count, by: 3)), id: \.self) { rowStart in
+                HStack(spacing: OASpacing.s) {
+                    ForEach(KeypadKey.allCases[rowStart..<(rowStart + 3)], id: \.self) { key in
+                        keyButton(key)
+                    }
+                }
+            }
+        }
+    }
+
+    private func keyButton(_ key: KeypadKey) -> some View {
+        let isPrimary = key == .go
+        return Button {
+            handleKeyTap(key)
+        } label: {
+            key.label
+                .font(OADawnType.button)
+                // Keys are at least 44 pt high, so the label stops growing at AX1 and
+                // scales down if a long localized label needs it.
+                .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .foregroundStyle(isPrimary ? DawnPalette.inkDark : .white)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(
+                    isPrimary ? Color.white : Color.white.opacity(0.18),
+                    in: RoundedRectangle(cornerRadius: OARadius.chip, style: .continuous)
+                )
+        }
+        .buttonStyle(.plain)
+        .disabled(isShowingRoundSuccess)
+        .accessibilityLabel(key.accessibilityLabel)
     }
 
     private func submitAnswer() {

@@ -11,6 +11,7 @@
 		0307D6667335FD1E43043C32 /* AlarmStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D063C3267CB009AC3D00E6D2 /* AlarmStateMachine.swift */; };
 		0661D2BC0EEF16771BA13F05 /* ringtone_dawn_deliberatethought_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = EFE0FE93EE69CDC902F19F54 /* ringtone_dawn_deliberatethought_full.m4a */; };
 		071ACA76C3342060EC83CC10 /* DawnTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79B6CE9DEB0B98BEACCA5515 /* DawnTheme.swift */; };
+		076CBDEA7A2694B2FB1FB09D /* PinnedActionsScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F5180853570F0597E4EB97B /* PinnedActionsScrollView.swift */; };
 		08EDCBF40E0AA06D78A70739 /* ringtone_classic_ghanta.caf in Resources */ = {isa = PBXBuildFile; fileRef = 0FB54A2E0E42CF750EFF27AB /* ringtone_classic_ghanta.caf */; };
 		0A39F0AB2C10B4CD2F005BAB /* ringtone_energetic_glitterblast_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 5CE5FCD2600C609E90F47E0C /* ringtone_energetic_glitterblast_full.m4a */; };
 		0A5C064A6B365225CCCFE1E9 /* ringtone_nature_oceanwaves.caf in Resources */ = {isa = PBXBuildFile; fileRef = EE2C8CF871CAFC34471270A1 /* ringtone_nature_oceanwaves.caf */; };
@@ -187,6 +188,7 @@
 		CF554590636629F370F85DE7 /* StepsTaskView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8898AEB724F91549B8C9D621 /* StepsTaskView.swift */; };
 		D103B10F135185661E92DB3A /* NapCountdownLiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDB2A8D48318B1F111F45CB8 /* NapCountdownLiveActivityManager.swift */; };
 		D1C61ACF0B21323B34CD376F /* ringtone_energetic_avemarimba_full.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 98C384CAAF45F80462446E52 /* ringtone_energetic_avemarimba_full.m4a */; };
+		D229A4DB80A9E5FDA1235059 /* PuzzleArrangementLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = F01B65AC35C833AE28E1592D /* PuzzleArrangementLayout.swift */; };
 		D49705DD3A3207EFCCD09343 /* ringtone_energetic_ravingenergy.caf in Resources */ = {isa = PBXBuildFile; fileRef = FBEBADE083B2A5AEB4973E85 /* ringtone_energetic_ravingenergy.caf */; };
 		D4A18E5AE979E432B0C56496 /* ringtone_energetic_glitterblast.caf in Resources */ = {isa = PBXBuildFile; fileRef = 84EC93E32D54DC4BAD6F0C6E /* ringtone_energetic_glitterblast.caf */; };
 		D6FBEA6EE9CC6CDEDABF8BA5 /* AlarmStoreEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8391103A3BE9CA2B22F5035 /* AlarmStoreEnvironment.swift */; };
@@ -308,6 +310,7 @@
 		453CBBCD833D2EBEDD7AC537 /* TaskConfiguratorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskConfiguratorSheet.swift; sourceTree = "<group>"; };
 		47FED3CC874E76CAE49F2083 /* TaskPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskPickerView.swift; sourceTree = "<group>"; };
 		4A618400BCD854BA5ECB76F5 /* StepsConfigurator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepsConfigurator.swift; sourceTree = "<group>"; };
+		4F5180853570F0597E4EB97B /* PinnedActionsScrollView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedActionsScrollView.swift; sourceTree = "<group>"; };
 		4F973148B1D637236F6F06CC /* OpenAlarmLiveActivities.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = OpenAlarmLiveActivities.entitlements; sourceTree = "<group>"; };
 		4FC2F16B5F5A09820714276E /* ringtone_classic_bedsideclock.caf */ = {isa = PBXFileReference; path = ringtone_classic_bedsideclock.caf; sourceTree = "<group>"; };
 		525A2ECDDC1B2BCF59BAE164 /* BridgeDateCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeDateCalculator.swift; sourceTree = "<group>"; };
@@ -410,6 +413,7 @@
 		EEAF59FC336FBD5B9C75BF30 /* AlarmScheduling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmScheduling.swift; sourceTree = "<group>"; };
 		EF31DE975F3205E7AB2835DB /* MemoryPatternGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryPatternGenerator.swift; sourceTree = "<group>"; };
 		EFE0FE93EE69CDC902F19F54 /* ringtone_dawn_deliberatethought_full.m4a */ = {isa = PBXFileReference; path = ringtone_dawn_deliberatethought_full.m4a; sourceTree = "<group>"; };
+		F01B65AC35C833AE28E1592D /* PuzzleArrangementLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PuzzleArrangementLayout.swift; sourceTree = "<group>"; };
 		F41086C8E7E964C70B596FAD /* ringtone_energetic_voxelrevolution.caf */ = {isa = PBXFileReference; path = ringtone_energetic_voxelrevolution.caf; sourceTree = "<group>"; };
 		F52C8F1CE7608625F167AE21 /* TaskDescriptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDescriptor.swift; sourceTree = "<group>"; };
 		F549476BCB2B8DF8CA9FA439 /* ringtone_dawn_magicscout.caf */ = {isa = PBXFileReference; path = ringtone_dawn_magicscout.caf; sourceTree = "<group>"; };
@@ -759,6 +763,8 @@
 				A0A332FB8767D07D2F81AAFA /* ConfiguratorControls.swift */,
 				840D2DE6DCAF06323C7F8AF7 /* FoldAwareContent.swift */,
 				161BD942365808133536F543 /* FoldContentRegion.swift */,
+				4F5180853570F0597E4EB97B /* PinnedActionsScrollView.swift */,
+				F01B65AC35C833AE28E1592D /* PuzzleArrangementLayout.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -1128,6 +1134,8 @@
 				BD8A90252F2F3669200E2C4F /* OpenAlarmTheme.swift in Sources */,
 				616C230F6BD6A626D73F1446 /* PedometerService.swift in Sources */,
 				97794EE39BAED4DE945EB93C /* PermissionModels.swift in Sources */,
+				076CBDEA7A2694B2FB1FB09D /* PinnedActionsScrollView.swift in Sources */,
+				D229A4DB80A9E5FDA1235059 /* PuzzleArrangementLayout.swift in Sources */,
 				A4672A8205B28B9695842B5A /* RingtoneCatalog.swift in Sources */,
 				DEB0E205CFE5E0F1AA8A3999 /* RingtonePickerView.swift in Sources */,
 				D9432E52F3D120C62E8C328D /* ScanConfigurator.swift in Sources */,

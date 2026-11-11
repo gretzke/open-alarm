@@ -4,6 +4,7 @@ import SwiftUI
 struct AlarmHomeView: View {
     var onPresentNapBedside: (UUID) -> Void = { _ in }
     @EnvironmentObject private var alarmStore: AlarmStore
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @State private var editorRoute: AlarmEditorRoute?
     @State private var editorDetent: PresentationDetent = .fraction(0.82)
     @State private var isPresentingNapEditor = false
@@ -54,9 +55,15 @@ struct AlarmHomeView: View {
                 )
             )
             .environmentObject(alarmStore)
-            .presentationDetents([.fraction(0.4), .large])
+            .presentationDetents(napEditorDetents)
             .presentationDragIndicator(.visible)
         }
+    }
+
+    /// A short window (outer landscape) has no room for the 0.4 detent: it hides
+    /// the selected row of the duration wheels.
+    private var napEditorDetents: Set<PresentationDetent> {
+        verticalSizeClass == .compact ? [.large] : [.fraction(0.4), .large]
     }
 
     // MARK: - Sections

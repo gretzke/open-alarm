@@ -105,26 +105,49 @@ struct TaskConfiguratorContent: View {
     }
 
     private var preview: some View {
-        GeometryReader { geometry in
+        GeometryReader { window in
+            let visibleBottom = previewVisibleBottom(in: window)
+
             ZStack(alignment: .top) {
                 DawnBackground(progress: previewProgress)
 
-                ZStack {
-                    previewTaskView
-                        .id(PreviewIdentity(configuration: previewConfiguration, generation: previewGeneration))
+                // One readable pane in tabletop and book, like the challenge itself.
+                FoldAwareContent {
+                    GeometryReader { pane in
+                        let paneTop = pane.frame(in: .named(Self.previewCoordinateSpace)).minY
+                        let height = max(0, min(pane.size.height, visibleBottom - paneTop))
 
-                    if isShowingPreviewSuccess {
-                        TaskSuccessOverlay()
+                        ZStack {
+                            previewTaskView
+                                .id(PreviewIdentity(configuration: previewConfiguration, generation: previewGeneration))
+
+                            if isShowingPreviewSuccess {
+                                TaskSuccessOverlay()
+                            }
+                        }
+                        .frame(width: pane.size.width, height: height)
                     }
                 }
-                .frame(
-                    width: geometry.size.width,
-                    height: geometry.size.height * 0.5,
-                    alignment: .top
-                )
             }
+            .coordinateSpace(.named(Self.previewCoordinateSpace))
         }
         .animation(.easeInOut(duration: 0.2), value: isShowingPreviewSuccess)
+        .animation(.easeInOut(duration: 0.25), value: settingsDetent)
+    }
+
+    private static let previewCoordinateSpace = "configuratorPreview"
+
+    /// The bottom of the area above the settings sheet, in the preview's coordinates.
+    /// The sheet's detent is a fraction of the full window height.
+    private func previewVisibleBottom(in window: GeometryProxy) -> CGFloat {
+        let fraction: CGFloat
+        switch settingsDetent {
+        case .fraction(0.28): fraction = 0.28
+        case .fraction(0.44): fraction = 0.44
+        default: return window.size.height * 0.5
+        }
+        let fullHeight = window.safeAreaInsets.top + window.size.height + window.safeAreaInsets.bottom
+        return fullHeight * (1 - fraction) - window.safeAreaInsets.top - OASpacing.l
     }
 
     @ViewBuilder
